@@ -1,6 +1,6 @@
 class R(val id: Int, val type: String, val prevNode: Int, val nextNode: Int, var next: Int? = null) {
     init {
-        listOf(Graph.nodes[prevNode], Graph.nodes[nextNode]).forEach {
+        listOf(Graph.nodes[prevNode]).forEach { // , Graph.nodes[nextNode]
             if (it.nextRel == null) {
                 it.nextRel = id
             } else {

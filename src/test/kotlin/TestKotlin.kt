@@ -11,6 +11,8 @@ class TestKotlin {
 
     @BeforeTest
     fun setup() {
+        Graph.clear()
+
         n1 = N(Graph.nodes.size, "AgriFarm")
         Graph.nodes += n1!!
         Graph.props += P(Graph.props.size, n1!!.id, "name", "Errano", PropType.STRING)
@@ -30,7 +32,7 @@ class TestKotlin {
         Graph.nodes += n4
 
         Graph.rels += R(Graph.rels.size, "hasParcel", n1!!.id, n2!!.id)
-        Graph.rels += R(Graph.rels.size, "hasDevice", n1!!.id, n2!!.id)
+        Graph.rels += R(Graph.rels.size, "hasDevice", n1!!.id, n3!!.id)
         Graph.rels += R(Graph.rels.size, "hasDevice", n2!!.id, n3!!.id)
         Graph.rels += R(Graph.rels.size, "hasDevice", n2!!.id, n4.id)
 
@@ -67,34 +69,42 @@ class TestKotlin {
         n1!!.getProps().forEach({ println(it.toString()) })
         assertEquals(n1!!.getRels().size, 2)
         n1!!.getRels().forEach({ println(it.toString()) })
+        assertEquals(n2!!.getRels().size, 2, n2!!.getRels().toString())
         assertEquals(n1!!.getTS().size, 6)
         n1!!.getTS().forEach({ println(it.toString()) })
         assertEquals(n2!!.getTS().size, 3)
         n2!!.getTS().forEach({ println(it.toString()) })
     }
 
+    fun pattern2string(patterns: List<List<N>>): String {
+        return patterns.map { pattern -> pattern.map { node -> node.toString() }.joinToString(", ") }.joinToString("\n")
+    }
+
     fun printPatterns(patterns: List<List<N>>) {
-        println(patterns.map { pattern -> pattern.map {node -> node.toString() }.joinToString(", ") }.joinToString("\n"))
+        println(pattern2string(patterns))
     }
 
     @Test
     fun testSearch1() {
         val patterns = Graph.search(listOf("AgriParcel"))
-        assertEquals(patterns.size, 1)
-        printPatterns(patterns)
+        assertEquals(1, patterns.size, pattern2string(patterns))
     }
 
     @Test
     fun testSearch2() {
         val patterns = Graph.search(listOf("AgriFarm", "AgriParcel"))
-        assertEquals(patterns.size, 1)
-        printPatterns(patterns)
+        assertEquals(1, patterns.size, pattern2string(patterns))
     }
 
     @Test
     fun testSearch3() {
         val patterns = Graph.search(listOf("AgriFarm", "AgriParcel", "Device"))
-        assertEquals(patterns.size, 2)
-        printPatterns(patterns)
+        assertEquals(2, patterns.size, pattern2string(patterns))
+    }
+
+    @Test
+    fun testSearch4() {
+        val patterns = Graph.search(listOf("AgriFarm", "Device"))
+        assertEquals(1, patterns.size, pattern2string(patterns))
     }
 }
