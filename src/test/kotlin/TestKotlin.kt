@@ -64,16 +64,24 @@ class TestKotlin {
     }
 
     @Test
+    fun testRel() {
+        listOf(Pair(n1!!, 2), Pair(n2!!, 2), Pair(n3!!, 0)).forEach {
+            assertEquals(it.first.getRels().size, it.second, it.first.getRels().toString())
+        }
+    }
+
+    @Test
     fun testProps() {
-        assertEquals(n1!!.getProps().size, 3)
-        n1!!.getProps().forEach({ println(it.toString()) })
-        assertEquals(n1!!.getRels().size, 2)
-        n1!!.getRels().forEach({ println(it.toString()) })
-        assertEquals(n2!!.getRels().size, 2, n2!!.getRels().toString())
-        assertEquals(n1!!.getTS().size, 6)
-        n1!!.getTS().forEach({ println(it.toString()) })
-        assertEquals(n2!!.getTS().size, 3)
-        n2!!.getTS().forEach({ println(it.toString()) })
+        listOf(Pair(n1!!, 3), Pair(n2!!, 3), Pair(n3!!, 2)).forEach {
+            assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
+        }
+    }
+
+    @Test
+    fun testTS() {
+        listOf(Pair(n1!!, 6), Pair(n2!!, 3), Pair(n3!!, 0)).forEach {
+            assertEquals(it.second, it.first.getTS().size, it.first.getTS().toString())
+        }
     }
 
     fun pattern2string(patterns: List<List<N>>): String {
