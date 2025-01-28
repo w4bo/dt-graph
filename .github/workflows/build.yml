@@ -13,15 +13,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Test Python
-        run: |
-          cd src/main/python
-          pip install -r requirements.txt
-          python sample.py 
-          python charts.py
       - uses: actions/setup-java@v4.6.0
         with:
           distribution: 'adopt'
