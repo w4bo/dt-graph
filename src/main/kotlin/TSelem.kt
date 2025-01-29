@@ -1,4 +1,4 @@
-class TSelem(val id: Int, tsId: Int, val timestamp: Long, val type: String, val value: Int, val location: Pair<Double, Double>? = null, var next: Int? = null) {
+class TSelem(val id: Int, tsId: Int, val timestamp: Long, val value: Int, val location: Pair<Double, Double>? = null, var next: Int? = null) {
     init {
         val ts: TS = Graph.ts[tsId]
         if (ts.values.size > 0) {
@@ -9,6 +9,6 @@ class TSelem(val id: Int, tsId: Int, val timestamp: Long, val type: String, val 
     }
 
     override fun toString(): String {
-        return "<id: $id, type: $type, timestamp: $timestamp, value: $value>"
+        return "<id: $id, timestamp: $timestamp, value: $value>"
     }
 }

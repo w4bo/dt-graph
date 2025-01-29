@@ -1,47 +1,31 @@
 class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
-    fun getProps(next: Int? = nextProp): List<P> {
+    fun getProps(next: Int? = nextProp, filter: PropType? = null): List<P> {
         return if (next == null) {
             listOf()
         } else {
             val p = Graph.props[next]
-            listOf(p) + getProps(p.next)
+            (if (filter == null || p.type == filter) listOf(p) else listOf()) + getProps(p.next, filter)
         }
     }
 
-    fun findProp(propType: PropType, next: Int? = nextProp): P? {
-        return if (next == null) {
-            null
-        } else {
-            val p = Graph.props[next]
-            if (p.type == propType) p else findProp(propType, p.next)
-        }
-    }
-
-    fun getTS(): List<TSelem> {
-        val ts = findProp(PropType.TS)
-        if (ts != null) {
-            val ts = Graph.ts[(ts.value as Number).toInt()]
+    fun getTS(): List<Pair<P, List<TSelem>>> {
+        return getProps(filter = PropType.TS).map { p ->
+            val ts = Graph.ts[(p.value as Number).toInt()]
             fun getTSelems(next: Int? = 0): List<TSelem> {
                 return if (next == null) {
                     listOf()
                 } else {
-                    val p = ts.values[next]
-                    listOf(p) + getTSelems(p.next)
+                    val pNext = ts.values[next]
+                    listOf(pNext) + getTSelems(pNext.next)
                 }
             }
-            return getTSelems()
-        } else {
-            return listOf()
+            Pair(p, getTSelems())
         }
-    }
-
-    fun getTSByType() {
-
     }
 
     fun getRels(next: Int? = nextRel): List<R> {
         return if (next == null) {
-            listOf<R>()
+            listOf()
         } else {
             val p = Graph.rels[next]
             listOf(p) + getRels(p.next)

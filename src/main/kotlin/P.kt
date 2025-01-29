@@ -11,6 +11,6 @@ class P(val id: Int, val node: Int, val key: String, val value: Any, val type: P
     }
 
     override fun toString(): String {
-        return "{id: $id, node: $node, key: $key, value: $value}"
+        return "{id: $id, node: $node, key: $key, value: $value, type: $type}"
     }
 }
