@@ -1,3 +1,5 @@
+package it.unibo.graph
+
 class TSelem(val id: Int, tsId: Int, val timestamp: Long, val value: Int, val location: Pair<Double, Double>? = null, var next: Int? = null) {
     init {
         val ts: TS = Graph.ts[tsId]

@@ -1,3 +1,5 @@
+package it.unibo.graph
+
 class Statistic(
     val offset: Int,
     var maxTime: Long = Long.MIN_VALUE,     // Largest timestamp in the time series

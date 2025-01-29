@@ -1,4 +1,6 @@
-class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
+package it.unibo.graph
+
+open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
     fun getProps(next: Int? = nextProp, filter: PropType? = null): List<P> {
         return if (next == null) {
             listOf()
