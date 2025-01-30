@@ -32,7 +32,7 @@ open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextPr
             Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
             Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
             else -> listOf(r)
-        } + getRels(r.fromNextRel, direction)
+        } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction)
     }
 
     override fun toString(): String {

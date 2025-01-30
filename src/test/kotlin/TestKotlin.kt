@@ -13,6 +13,7 @@ class TestKotlin {
     var n1: N? = null
     var n2: N? = null
     var n3: N? = null
+    var n5: N? = null
 
     @BeforeTest
     fun setup() {
@@ -22,7 +23,7 @@ class TestKotlin {
         n1 = Graph.addNode("AgriFarm")
         n2 = Graph.addNode("AgriParcel")
         n3 = Graph.addNode("Device")
-        val n5 = Graph.addNode("Person")
+        n5 = Graph.addNode("Person")
         val n6 = Graph.addNode("Person")
 
         Graph.addProperty(n1!!.id, "name", "Errano", PropType.STRING)
@@ -37,8 +38,8 @@ class TestKotlin {
         Graph.addRel("hasDevice", n2!!.id, n3!!.id)
         Graph.addRel("foo", n2!!.id, n2!!.id)
         Graph.addRel("hasDevice", n2!!.id, n4.id)
-        Graph.addRel("hasOwner", n3!!.id, n5.id)
-        Graph.addRel("hasOwner", n4.id, n5.id)
+        Graph.addRel("hasOwner", n3!!.id, n5!!.id)
+        Graph.addRel("hasOwner", n4.id, n5!!.id)
         Graph.addRel("hasManutentor", n3!!.id, n6.id)
         Graph.addRel("hasManutentor", n4.id, n6.id)
 
@@ -75,7 +76,7 @@ class TestKotlin {
 
     @Test
     fun testRel() {
-        listOf(Pair(n1!!, 2), Pair(n2!!, 4), Pair(n3!!, 4)).forEach {
+        listOf(Pair(n1!!, 2), Pair(n2!!, 4), Pair(n3!!, 4), Pair(n5!!, 2)).forEach {
             assertEquals(it.second, it.first.getRels().size, it.first.getRels().toString())
         }
     }
