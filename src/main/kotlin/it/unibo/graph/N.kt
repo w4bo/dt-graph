@@ -3,10 +3,10 @@ package it.unibo.graph
 open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
     fun getProps(next: Int? = nextProp, filter: PropType? = null): List<P> {
         return if (next == null) {
-            listOf()
+            emptyList()
         } else {
             val p = Graph.props[next]
-            (if (filter == null || p.type == filter) listOf(p) else listOf()) + getProps(p.next, filter)
+            (if (filter == null || p.type == filter) listOf(p) else emptyList()) + getProps(p.next, filter)
         }
     }
 

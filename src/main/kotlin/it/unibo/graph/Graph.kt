@@ -38,7 +38,7 @@ object Graph {
 
         for (node in nodes) {
             if (!visited.contains(node.id)) {
-                dfs(node, 0, listOf())
+                dfs(node, 0, emptyList())
             }
         }
         return acc
