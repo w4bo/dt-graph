@@ -50,8 +50,8 @@ object Graph {
         return n
     }
 
-    fun addProperty(nodeid: Int, key: String, value: Any, type: PropType): P {
-        val p = P(props.size, nodeid, key, value, type)
+    fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
+        val p = P(props.size, nodeId, key, value, type)
         props += p
         return p
     }
@@ -68,8 +68,8 @@ object Graph {
         return n
     }
 
-    fun addProperty2(nodeid: Int, key: String, value: Any, type: PropType): P {
-        val p = CustomProperty<String>(props.size, nodeid, key, value, type)
+    fun addProperty2(nodeId: Int, key: String, value: Any, type: PropType): P {
+        val p = CustomProperty<String>(props.size, nodeId, key, value, type)
         props += p
         return p
     }

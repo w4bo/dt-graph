@@ -1,9 +1,11 @@
 package it.unibo.graph
 
+enum class Direction { IN, OUT }
+
 open class R(val id: Int, val type: String, val fromN: Int, val toN: Int, var fromNextRel: Int? = null, var toNextRel: Int? = null) {
     init {
-        val from = Graph.nodes[fromN] // Graph.nodes[nextNode]
-        val to = Graph.nodes[toN] // Graph.nodes[nextNode]
+        val from = Graph.nodes[fromN]
+        val to = Graph.nodes[toN]
 
         if (from.nextRel == null) {
             from.nextRel = id
