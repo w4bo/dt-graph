@@ -40,6 +40,7 @@ class CustomVertex(id: Int, type: String, val graph: Graph) : Vertex, N(id, type
     }
 
     override fun vertices(direction: Direction?, vararg edgeLabels: String?): Iterator<Vertex> {
-        throw NotImplementedException()
+        // TODO(Manca filtro sulla direzione)
+        return getRels().map { r -> it.unibo.graph.Graph.nodes[r.nextNode] as CustomVertex }.iterator()
     }
 }

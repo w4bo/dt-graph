@@ -145,5 +145,6 @@ class TestKotlin {
         val g = GraphTraversalSource(graph)
         kotlin.test.assertEquals(2, g.V().hasLabel("Person").toList().size)
         kotlin.test.assertEquals(1, g.V().hasLabel("Person").has("name", "Alice").toList().size)
+        kotlin.test.assertEquals(2, g.V().hasLabel("Person").out("knows").values<String>("name").toList().size)
     }
 }
