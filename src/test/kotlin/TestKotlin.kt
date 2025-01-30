@@ -75,7 +75,7 @@ class TestKotlin {
 
     @Test
     fun testRel() {
-        listOf(Pair(n1!!, 2), Pair(n2!!, 3), Pair(n3!!, 2)).forEach {
+        listOf(Pair(n1!!, 2), Pair(n2!!, 4), Pair(n3!!, 4)).forEach {
             assertEquals(it.second, it.first.getRels().size, it.first.getRels().toString())
         }
     }
@@ -145,6 +145,7 @@ class TestKotlin {
         val g = GraphTraversalSource(graph)
         kotlin.test.assertEquals(2, g.V().hasLabel("Person").toList().size)
         kotlin.test.assertEquals(1, g.V().hasLabel("Person").has("name", "Alice").toList().size)
-        kotlin.test.assertEquals(2, g.V().hasLabel("Person").out("knows").values<String>("name").toList().size)
+        kotlin.test.assertEquals(listOf("Bob", "Person"), g.V().hasLabel("Person").out("knows").values<String>("name").toList())
+        kotlin.test.assertEquals(listOf("Alice", "Person"), g.V().hasLabel("Person").`in`("knows").values<String>("name").toList())
     }
 }

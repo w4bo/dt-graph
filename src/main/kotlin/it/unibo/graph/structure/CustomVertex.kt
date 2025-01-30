@@ -19,7 +19,12 @@ class CustomVertex(id: Int, type: String, val graph: Graph) : Vertex, N(id, type
         return graph
     }
 
-    override fun <V : Any?> property(cardinality: VertexProperty.Cardinality?, key: String?, value: V, vararg keyValues: Any?): VertexProperty<V> {
+    override fun <V : Any?> property(
+        cardinality: VertexProperty.Cardinality?,
+        key: String?,
+        value: V,
+        vararg keyValues: Any?
+    ): VertexProperty<V> {
         return it.unibo.graph.Graph.addProperty2(id, key!!, value.toString(), PropType.STRING) as CustomProperty<V>
     }
 
@@ -39,8 +44,9 @@ class CustomVertex(id: Int, type: String, val graph: Graph) : Vertex, N(id, type
         return getRels().map { it as CustomEdge }.iterator()
     }
 
-    override fun vertices(direction: Direction?, vararg edgeLabels: String?): Iterator<Vertex> {
-        // TODO(Manca filtro sulla direzione)
-        return getRels().map { r -> it.unibo.graph.Graph.nodes[r.nextNode] as CustomVertex }.iterator()
+    override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
+        return getRels(direction = if (direction == Direction.IN) it.unibo.graph.Direction.IN else it.unibo.graph.Direction.OUT)
+            .map { r -> it.unibo.graph.Graph.nodes[if (direction == Direction.IN) r.fromN else r.toN] as CustomVertex }
+            .iterator()
     }
 }

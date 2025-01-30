@@ -1,5 +1,7 @@
 package it.unibo.graph
 
+enum class Direction { IN, OUT }
+
 open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
     fun getProps(next: Int? = nextProp, filter: PropType? = null): List<P> {
         return if (next == null) {
@@ -25,12 +27,16 @@ open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextPr
         }
     }
 
-    fun getRels(next: Int? = nextRel): List<R> {
+    fun getRels(next: Int? = nextRel, direction: Direction? = null): List<R> {
         return if (next == null) {
             listOf()
         } else {
-            val p = Graph.rels[next]
-            listOf(p) + getRels(p.next)
+            val r = Graph.rels[next]
+            (if (direction == Direction.IN) {
+                if (r.toN == id) listOf(r) else listOf()
+            } else if (direction == Direction.OUT) {
+                if (r.fromN == id) listOf(r) else listOf()
+            } else listOf(r)) + getRels(r.fromNextRel, direction)
         }
     }
 

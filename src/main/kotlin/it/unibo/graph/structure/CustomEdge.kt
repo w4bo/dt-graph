@@ -29,6 +29,6 @@ class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int, val graph:
     }
 
     override fun vertices(direction: Direction?): Iterator<Vertex> {
-        return listOf(it.unibo.graph.Graph.nodes[prevNode] as Vertex, it.unibo.graph.Graph.nodes[nextNode] as Vertex).iterator()
+        return listOf(it.unibo.graph.Graph.nodes[fromN] as Vertex, it.unibo.graph.Graph.nodes[toN] as Vertex).iterator()
     }
 }
