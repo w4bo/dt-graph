@@ -4,10 +4,10 @@ import it.unibo.graph.PropType
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
-import org.apache.tinkerpop.gremlin.structure.Graph
-import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.Edge
+import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
+import org.apache.tinkerpop.gremlin.structure.Vertex
 
 class CustomGraph : Graph {
     override fun addVertex(vararg keyValues: Any?): Vertex {

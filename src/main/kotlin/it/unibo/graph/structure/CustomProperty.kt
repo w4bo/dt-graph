@@ -1,12 +1,11 @@
 package it.unibo.graph.structure
 
-import it.unibo.graph.Graph
 import it.unibo.graph.P
 import it.unibo.graph.PropType
+import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.Property
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
-import org.apache.commons.lang3.NotImplementedException
 
 class CustomProperty<V>(id: Int, node: Int, key: String, value: Any, type: PropType) : VertexProperty<V>,
     P(id, node, key, value, type) {

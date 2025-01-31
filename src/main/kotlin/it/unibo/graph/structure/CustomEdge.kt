@@ -1,8 +1,9 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.R
-import org.apache.tinkerpop.gremlin.structure.*
 import org.apache.commons.lang3.NotImplementedException
+import org.apache.tinkerpop.gremlin.structure.*
+
 class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int, val graph: Graph): Edge, R(id, type, prevNode, nextNode) {
     override fun id(): Any {
         return id

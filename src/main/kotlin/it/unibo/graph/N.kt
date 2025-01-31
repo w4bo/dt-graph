@@ -1,12 +1,12 @@
 package it.unibo.graph
 
 open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
-    fun getProps(next: Int? = nextProp, filter: PropType? = null): List<P> {
+    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
         return if (next == null) {
             emptyList()
         } else {
             val p = Graph.props[next]
-            (if (filter == null || p.type == filter) listOf(p) else emptyList()) + getProps(p.next, filter)
+            (if ((filter == null || p.type == filter) && (name == null || p.key == name)) listOf(p) else emptyList()) + getProps(p.next, filter, name)
         }
     }
 
@@ -25,14 +25,18 @@ open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextPr
         }
     }
 
-    fun getRels(next: Int? = nextRel, direction: Direction? = null): List<R> {
+    fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
         if (next == null) return emptyList()
         val r = Graph.rels[next]
-        return when (direction) {
-            Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
-            Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
-            else -> listOf(r)
-        } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction)
+        return if (label == null || r.type == label) {
+            when (direction) {
+                Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
+                Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
+                else -> listOf(r)
+            }
+        } else {
+            emptyList()
+        } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction, label)
     }
 
     override fun toString(): String {

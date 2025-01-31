@@ -30,7 +30,7 @@ object Graph {
                 }
                 if (visited.contains(node.id)) { return }
                 visited += node.id
-                node.getRels(direction = Direction.OUT).forEach {
+                node.getRels(direction = Direction.OUT, label = null).forEach {
                     dfs(nodes[it.toN], index + 1, cur_path)
                 }
             }

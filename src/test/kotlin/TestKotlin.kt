@@ -3,7 +3,7 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
@@ -146,7 +146,7 @@ class TestKotlin {
         val g = GraphTraversalSource(graph)
         kotlin.test.assertEquals(2, g.V().hasLabel("Person").toList().size)
         kotlin.test.assertEquals(1, g.V().hasLabel("Person").has("name", "Alice").toList().size)
-        kotlin.test.assertEquals(listOf("Bob", "Person"), g.V().hasLabel("Person").out("knows").values<String>("name").toList())
-        kotlin.test.assertEquals(listOf("Alice", "Person"), g.V().hasLabel("Person").`in`("knows").values<String>("name").toList())
+        kotlin.test.assertEquals(listOf("Bob"), g.V().hasLabel("Person").out("knows").values<String>("name").toList())
+        kotlin.test.assertEquals(listOf("Alice"), g.V().hasLabel("Person").`in`("knows").values<String>("name").toList())
     }
 }

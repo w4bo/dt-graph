@@ -33,19 +33,30 @@ class CustomVertex(id: Int, type: String, val graph: Graph) : Vertex, N(id, type
     }
 
     override fun <V : Any?> properties(vararg propertyKeys: String?): Iterator<VertexProperty<V>> {
-        return getProps(filter = null).map { it as CustomProperty<V> }.iterator()
+        val key = if (propertyKeys.isEmpty()) { null } else { propertyKeys[0] }
+        return getProps(name = key).map { it as CustomProperty<V> }.iterator()
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
         return it.unibo.graph.Graph.addRel2(label, id, inVertex.id() as Int, graph) as CustomEdge
     }
 
-    override fun edges(direction: Direction?, vararg edgeLabels: String?): Iterator<Edge> {
-        return getRels().map { it as CustomEdge }.iterator()
+    fun dir2dir(direction: Direction): it.unibo.graph.Direction {
+        return if (direction == Direction.IN) { it.unibo.graph.Direction.IN } else { it.unibo.graph.Direction.OUT }
+    }
+
+    fun getFirst(edgeLabels: Array<out String>): String? {
+        return if (edgeLabels.isEmpty()) { null } else { edgeLabels[0] }
+    }
+
+    override fun edges(direction: Direction, vararg edgeLabels: String): Iterator<Edge> {
+        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
+            .map { it as CustomEdge }
+            .iterator()
     }
 
     override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
-        return getRels(direction = if (direction == Direction.IN) it.unibo.graph.Direction.IN else it.unibo.graph.Direction.OUT)
+        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
             .map { r -> it.unibo.graph.Graph.nodes[if (direction == Direction.IN) r.fromN else r.toN] as CustomVertex }
             .iterator()
     }
