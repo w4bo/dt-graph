@@ -1,5 +1,6 @@
 import it.unibo.graph.structure.CustomGraph
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.`__` as underscore
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -56,4 +57,16 @@ class TestTinkerPop {
                 .toSet()
         )
     }
+
+//    @Test
+//    fun test3() {
+//        kotlin.test.assertEquals(
+//            setOf("GB1", "GB2"),
+//            g.V()
+//                .hasLabel("AgriFarm")
+//                .repeat(underscore.out("hasDevice"))
+//                .values<String>("name")
+//                .toSet()
+//        )
+//    }
 }

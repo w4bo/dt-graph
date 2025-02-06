@@ -11,7 +11,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex
 
 class CustomGraph : Graph {
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        val n = it.unibo.graph.Graph.addNode2(keyValues[1].toString(), this) as CustomVertex
+        val n = it.unibo.graph.Graph.addNode2(keyValues[1].toString(), this, null) as CustomVertex
         keyValues.toList().forEachIndexed { idx, v -> if (idx % 2 == 0) {
             it.unibo.graph.Graph.addProperty2(n.id, v!!.toString(), keyValues[idx + 1]!!, PropType.STRING)}
         }

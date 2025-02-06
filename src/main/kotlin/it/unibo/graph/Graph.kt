@@ -44,8 +44,8 @@ object Graph {
         return acc
     }
 
-    fun addNode(label: String): N {
-        val n = N(nodes.size, label)
+    fun addNode(label: String, value: Long? = null): N {
+        val n = N(nodes.size, label, value=value)
         nodes += n
         return n
     }
@@ -62,8 +62,8 @@ object Graph {
         return r
     }
 
-    fun addNode2(label: String, graph: org.apache.tinkerpop.gremlin.structure.Graph): N {
-        val n = CustomVertex(nodes.size, label, graph)
+    fun addNode2(label: String, graph: org.apache.tinkerpop.gremlin.structure.Graph, value: Long?=null): N {
+        val n = CustomVertex(nodes.size, label, graph, value=value)
         nodes += n
         return n
     }

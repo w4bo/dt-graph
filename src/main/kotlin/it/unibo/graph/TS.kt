@@ -30,9 +30,9 @@ class Statistic(
     }
 }
 
-// The TS class represents a time series with a unique ID, a list of elements (TSelem),
+// The TS class represents a time series with a unique ID, a list of elements (N),
 // and various properties to track statistics and the spatial bounding box (MBR).
-class TS(val id: Int, val values: MutableList<TSelem> = mutableListOf()) {
+class TS(val id: Int, val values: MutableList<N> = mutableListOf()) {
 
     var sparseIndex: List<Pair<Long, Statistic>> = mutableListOf()
     var curStatistic = Statistic(0)
@@ -41,26 +41,26 @@ class TS(val id: Int, val values: MutableList<TSelem> = mutableListOf()) {
     var elements = 0
     var limit = 2
 
-    fun add(ts: TSelem) {
+    fun add(ts: N) {
         elements = (elements + 1) % limit
         if (elements == 0) {
             curStatistic = Statistic(values.size)
-            sparseIndex += Pair(ts.timestamp, curStatistic)
+            sparseIndex += Pair(ts.timestamp!!, curStatistic)
         }
         // Add the new element to the list of values.
         values += ts
 
         // update local statistics
-        curStatistic.updateTime(ts.timestamp)
-        curStatistic.updateValue(ts.value)
+        curStatistic.updateTime(ts.timestamp!!)
+        curStatistic.updateValue(ts.value!!)
         curStatistic.count++
         if (ts.location != null) {
             curStatistic.updateLocation(ts.location)
         }
 
         // update global statistics
-        allStatistic.updateTime(ts.timestamp)
-        allStatistic.updateValue(ts.value)
+        allStatistic.updateTime(ts.timestamp!!)
+        allStatistic.updateValue(ts.value!!)
         allStatistic.count++
         if (ts.location != null) {
             allStatistic.updateLocation(ts.location)

@@ -1,6 +1,17 @@
 package it.unibo.graph
 
-open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextProp: Int? = null) {
+import org.apache.commons.lang3.NotImplementedException
+
+open class N(
+    val id: Int, // node id
+    val type: String, // node label
+    var nextRel: Int? = null, // if graph node, link to the next relationship
+    var nextProp: Int? = null, // if graph node, link to the next property
+    val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: id of the TS
+    val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
+    val location: Pair<Double, Double>? = null, // location
+    var relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
+) {
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
         return if (next == null) {
             emptyList()
@@ -10,33 +21,33 @@ open class N(val id: Int, val type: String, var nextRel: Int? = null, var nextPr
         }
     }
 
-    fun getTS(): List<Pair<P, List<TSelem>>> {
-        return getProps(filter = PropType.TS).map { p ->
-            val ts = Graph.ts[(p.value as Number).toInt()]
-            fun getTSelems(next: Int? = 0): List<TSelem> {
-                return if (next == null) {
-                    emptyList()
-                } else {
-                    val pNext = ts.values[next]
-                    listOf(pNext) + getTSelems(pNext.next)
-                }
-            }
-            Pair(p, getTSelems())
-        }
+    fun getTS(): List<N> {
+        return Graph.ts[value!!.toInt()].values
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
-        if (next == null) return emptyList()
-        val r = Graph.rels[next]
-        return if (label == null || r.type == label) {
-            when (direction) {
-                Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
-                Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
-                else -> listOf(r)
+        return if (label == "hasTS") { // Jump to the time series
+            listOf(R(-1, "hasTS", id, value!!.toInt()))
+        } else { // Iterate within the graph
+            if (timestamp != null) { // If TS snapshot
+                when (direction) {
+                    Direction.IN -> throw NotImplementedException()
+                    else -> relationships.filter { label == null || it.type == label }.toList()
+                }
+            } else { // Graph node
+                if (next == null) return emptyList()
+                val r = Graph.rels[next]
+                if (label == null || r.type == label) {
+                    when (direction) {
+                        Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
+                        Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
+                        else -> listOf(r)
+                    }
+                } else {
+                    emptyList()
+                } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction, label)
             }
-        } else {
-            emptyList()
-        } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction, label)
+        }
     }
 
     override fun toString(): String {
