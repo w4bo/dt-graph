@@ -2,9 +2,9 @@ package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
-import org.apache.commons.lang3.mutable.Mutable
 import org.rocksdb.*
 import java.io.*
+import kotlin.reflect.KClass
 
 interface Graph {
     fun clear()
@@ -31,17 +31,24 @@ interface Graph {
     fun getTS(id: Int): TS
 }
 
-open class GraphMemory : Graph {
+fun <T : TS> makeTS(type: KClass<T>, id: Int): TS {
+    return when (type::class) {
+        MemoryTS::class -> CustomTS(MemoryTS(id))
+        else -> throw IllegalArgumentException()
+    }
+}
+
+open class GraphMemory() : Graph { // private val tsType: KClass<T>
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
     private val props: MutableList<P> = ArrayList()
-    private val ts: MutableList<TS> = ArrayList()
+    private val tss: MutableList<TS> = ArrayList()
 
     override fun clear() {
         nodes.clear()
         rels.clear()
         props.clear()
-        ts.clear()
+        tss.clear()
     }
 
     override fun nextNodeId(): Int = nodes.size
@@ -70,12 +77,12 @@ open class GraphMemory : Graph {
     }
 
     override fun addTS(): TS {
-        val ts1 = TS(nextTSId())
-        ts += ts1
-        return ts1
+        val ts = CustomTS(MemoryTS(nextTSId()))
+        tss += ts
+        return ts
     }
 
-    override fun nextTSId(): Int = ts.size
+    override fun nextTSId(): Int = tss.size
 
     override fun getProps(): MutableList<P> {
         return props
@@ -102,7 +109,7 @@ open class GraphMemory : Graph {
     }
 
     override fun getTS(id: Int): TS {
-        return ts[id]
+        return tss[id]
     }
 }
 
@@ -115,6 +122,8 @@ class GraphRocksDB : Graph {
     var edgeId = 0
     var propId = 0
     var tsId = 0
+    val DB_NAME = "testdb"
+    private val tss: MutableList<TS> = ArrayList()
 
     init {
         val options = DBOptions()
@@ -127,13 +136,16 @@ class GraphRocksDB : Graph {
             ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
         )
         val cfHandles: List<ColumnFamilyHandle> = ArrayList()
-        db = RocksDB.open(options, "testdb", cfDescriptors, cfHandles)
+        db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
         nodes = cfHandles[1]
         edges = cfHandles[2]
         properties = cfHandles[3]
     }
 
-    override fun clear() {}
+    override fun clear() {
+        // tss.clear()
+        File(DB_NAME).deleteRecursively()
+    }
 
     // Serialize an object to byte array
     fun serialize(obj: Serializable): ByteArray {
@@ -173,7 +185,11 @@ class GraphRocksDB : Graph {
         return r
     }
 
-    override fun addTS(): TS = TS(nextTSId())
+    override fun addTS(): TS {
+        val ts = CustomTS(MemoryTS(nextTSId()))
+        tss += ts
+        return ts
+    }
 
     override fun getProps(): MutableList<P> {
         throw NotImplementedException()
@@ -181,8 +197,9 @@ class GraphRocksDB : Graph {
 
     override fun getNodes(): MutableList<N> {
         var acc: MutableList<N> = mutableListOf()
-        val iterator = db.newIterator() // Iterate and filter entries for "users"
+        val iterator = db.newIterator(nodes) // Iterate and filter entries for "users"
         // iterator.seek("users:".toByteArray()) // Start at "users:"
+        iterator.seekToFirst()
         while (iterator.isValid) {
             // val key = String(iterator.key())
             // if (!key.startsWith("users:")) break // Stop if outside "users" prefix
@@ -211,9 +228,7 @@ class GraphRocksDB : Graph {
         return deserialize<R>(b)
     }
 
-    override fun getTS(id: Int): TS {
-        throw NotImplementedException()
-    }
+    override fun getTS(id: Int): TS = tss[id]
 }
 
 object App {

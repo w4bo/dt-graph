@@ -28,7 +28,7 @@ open class N (
     }
 
     fun getTS(): List<N> {
-        return App.g.getTS(value!!.toInt()).values
+        return App.g.getTS(value!!.toInt()).getValues()
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
@@ -62,6 +62,6 @@ open class N (
 
     override fun equals(other: Any?): Boolean {
         if (other !is N) return false
-        return id == other.id && type == other.type && value == other.value && nextProp == other.nextProp && nextRel == other.nextRel && timestamp == other.timestamp && location == other.location && relationships == other.relationships
+        return id == other.id && type == other.type
     }
 }

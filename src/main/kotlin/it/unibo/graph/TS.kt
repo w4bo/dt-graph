@@ -1,5 +1,6 @@
 package it.unibo.graph
 
+import it.unibo.graph.structure.CustomVertex
 import java.io.Serializable
 
 class Statistic(
@@ -32,9 +33,36 @@ class Statistic(
     }
 }
 
-// The TS class represents a time series with a unique ID, a list of elements (N),
-// and various properties to track statistics and the spatial bounding box (MBR).
-class TS(val id: Int, val values: MutableList<N> = mutableListOf()): Serializable {
+interface TS: Serializable {
+    fun getTSID(): Long
+    fun nextId(): Int
+    fun add(label:String, timestamp: Long, value: Long) = add(N(nextId(), label, timestamp=timestamp, value=value))
+    fun add(n: N): N
+    fun getValues(): List<N>
+}
+
+class MemoryTS(val id: Int) : TS {
+    private val values: MutableList<N> = mutableListOf()
+
+    override fun getTSID(): Long = id.toLong()
+
+    override fun nextId(): Int = values.size
+
+    override fun add(n: N): N {
+        values += n
+        return n
+    }
+
+    override fun getValues(): List<N> = values
+}
+
+class CustomTS(ts: TS): TS by ts {
+    override fun add(label: String, timestamp: Long, value: Long): N {
+        return add(CustomVertex(nextId(), label, timestamp = timestamp, value = value))
+    }
+}
+
+class FooTS(val id: Int, val values: MutableList<N> = mutableListOf()) {
 
     var sparseIndex: List<Pair<Long, Statistic>> = mutableListOf()
     var curStatistic = Statistic(0)

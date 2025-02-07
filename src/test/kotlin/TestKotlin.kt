@@ -1,10 +1,12 @@
 import it.unibo.graph.App
 import it.unibo.graph.N
 import it.unibo.graph.PropType
+import it.unibo.graph.TS
 import it.unibo.graph.structure.CustomEdge
 import it.unibo.graph.structure.CustomVertex
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -24,8 +26,8 @@ class TestKotlin {
 
     @BeforeTest
     fun setup() {
+//    init {
         g.clear()
-
         n1 = g.addNode("AgriFarm")
         n4 = g.addNode("Device")
         n2 = g.addNode("AgriParcel")
@@ -51,32 +53,31 @@ class TestKotlin {
         g.addEdge("hasManutentor", n4!!.id, n6.id)
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
-        val ts1 = g.addTS()
-        val m1 = CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 10)
-        ts1.add(m1)
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 11))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 12))
-        n7 = g.addNode("Humidity", value = ts1.id.toLong())
+        val ts1: TS = g.addTS()
+        val m1 = ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
+        ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
+        ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
+        n7 = g.addNode("Humidity", value = ts1.getTSID())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
         m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id)
         m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id)
 
         val ts2 = g.addTS()
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 10))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 11))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 12))
-        n8 = g.addNode("Temperature", value = ts2.id.toLong())
+        ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 10)
+        ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
+        ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
+        n8 = g.addNode("Temperature", value = ts2.getTSID())
         g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 13))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 14))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 15))
+        ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 13)
+        ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 14)
+        ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 15)
 
         val ts3 = g.addTS()
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 23))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 24))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 25))
-        n9 = g.addNode("SolarRadiation", value = ts3.id.toLong())
+        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
+        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
+        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
+        n9 = g.addNode("SolarRadiation", value = ts3.getTSID())
         g.addEdge("hasSolarRadiation", n5!!.id, n9!!.id)
     }
 
@@ -125,7 +126,19 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode() {
+    fun tstTSAsNode0() {
+        val g = GraphTraversalSource(g)
+        kotlin.test.assertEquals(
+            1, g.V()
+                .hasLabel("Device")
+                .out("hasHumidity")
+                .hasLabel("Humidity")
+                .toList().size
+        )
+    }
+
+    @Test
+    fun tstTSAsNode1() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             6, g.V()
@@ -177,4 +190,9 @@ class TestKotlin {
                 .out("hasFriend").toList().size
         )
     }
+
+//    @AfterTest
+//    fun clean() {
+//        g.clear()
+//    }
 }
