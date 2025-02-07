@@ -43,7 +43,11 @@ class CustomVertex(
         val key = if (propertyKeys.isEmpty()) { null } else { propertyKeys[0] }
         return getProps(name = key)
             .map {
-                if (it is CustomProperty<*> ) { it as CustomProperty<V> } else { CustomProperty(it.id, it.node, it.key, it.value, it.type) }
+                if (it is CustomProperty<*>) {
+                    it as CustomProperty<V>
+                } else {
+                    CustomProperty(it.id, it.node, it.key, it.value, it.type)
+                }
             }
             .iterator()
     }
