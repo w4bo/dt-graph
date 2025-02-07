@@ -1,6 +1,9 @@
 package it.unibo.graph.structure
 
-import it.unibo.graph.*
+import it.unibo.graph.N
+import it.unibo.graph.P
+import it.unibo.graph.PropType
+import it.unibo.graph.R
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
