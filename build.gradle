@@ -1,10 +1,7 @@
 plugins {
     id 'java-library'
-    id 'scala'
     id 'idea'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'checkstyle'
-    id 'com.github.alisiikh.scalastyle' version '3.5.0'
     id 'org.jetbrains.kotlin.jvm' version '1.7.10'
 }
 
@@ -17,6 +14,8 @@ test {
         showStackTraces true
         showStandardStreams = false
     }
+    useJUnitPlatform()
+    maxHeapSize = '1G'
 }
 
 sourceCompatibility = 1.8
@@ -24,19 +23,7 @@ targetCompatibility = 1.8
 
 shadowJar { zip64 = true }
 
-javadoc { failOnError true }
-
-scalastyle {
-    config = file("${projectDir}/config/scalastyle_config.xml")
-    verbose = true
-    failOnWarning = false
-}
-
-// In this section you declare where to find the dependencies of your project
-repositories {
-    mavenCentral()
-    maven { url "https://repository.cloudera.com/artifactory/cloudera-repos/" }
-}
+repositories { mavenCentral() }
 
 idea {
     module {
@@ -50,14 +37,9 @@ dependencies {
     implementation 'org.apache.tinkerpop:gremlin-server:3.6.2' // Optional for Gremlin Server
     implementation 'org.apache.tinkerpop:gremlin-driver:3.6.2' // Gremlin client for remote queries
     implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.6.2' // In-memory graph (for testing)
-
+    implementation 'org.rocksdb:rocksdbjni:9.9.3'
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
-}
-
-test {
-    useJUnitPlatform()
-    maxHeapSize = '1G'
 }
 
 if (hasProperty('buildScan')) {
@@ -67,4 +49,4 @@ if (hasProperty('buildScan')) {
     }
 }
 
-defaultTasks 'clean', 'build', 'check', 'javadoc', 'shadowJar'
+defaultTasks 'clean', 'build', 'check', 'shadowJar'
