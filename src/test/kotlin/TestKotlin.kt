@@ -41,16 +41,16 @@ class TestKotlin {
         g.addProperty(n3!!.id, "name", "GB", PropType.STRING)
         g.addProperty(n3!!.id, "location", "GeoJSON", PropType.GEOMETRY)
 
-        g.addRel("hasParcel", n1!!.id, n2!!.id)
-        g.addRel("hasDevice", n1!!.id, n3!!.id)
-        g.addRel("hasDevice", n2!!.id, n3!!.id)
-        g.addRel("foo", n2!!.id, n2!!.id)
-        g.addRel("hasDevice", n2!!.id, n4!!.id)
-        g.addRel("hasOwner", n3!!.id, n5!!.id)
-        g.addRel("hasOwner", n4!!.id, n5!!.id)
-        g.addRel("hasManutentor", n3!!.id, n6.id)
-        g.addRel("hasManutentor", n4!!.id, n6.id)
-        g.addRel("hasFriend", n5!!.id, n6.id)
+        g.addEdge("hasParcel", n1!!.id, n2!!.id)
+        g.addEdge("hasDevice", n1!!.id, n3!!.id)
+        g.addEdge("hasDevice", n2!!.id, n3!!.id)
+        g.addEdge("foo", n2!!.id, n2!!.id)
+        g.addEdge("hasDevice", n2!!.id, n4!!.id)
+        g.addEdge("hasOwner", n3!!.id, n5!!.id)
+        g.addEdge("hasOwner", n4!!.id, n5!!.id)
+        g.addEdge("hasManutentor", n3!!.id, n6.id)
+        g.addEdge("hasManutentor", n4!!.id, n6.id)
+        g.addEdge("hasFriend", n5!!.id, n6.id)
 
         val ts1 = g.addTS()
 
@@ -59,7 +59,7 @@ class TestKotlin {
         ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
         ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
         n7 = g.addNode("Humidity", value = ts1.id.toLong())
-        g.addRel("hasHumidity", n4!!.id, n7!!.id)
+        g.addEdge("hasHumidity", n4!!.id, n7!!.id)
         m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id, g)
         m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id, g)
 
@@ -68,7 +68,7 @@ class TestKotlin {
         ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
         ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
         n8 = g.addNode("Temperature", value = ts2.id.toLong())
-        g.addRel("hasTemperature", n4!!.id, n8!!.id)
+        g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
         ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 13))
         ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 14))
@@ -79,7 +79,7 @@ class TestKotlin {
         ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 24))
         ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 25))
         n9 = g.addNode("SolarRadiation", value = ts3.id.toLong())
-        g.addRel("hasSolarRadiation", n5!!.id, n9!!.id)
+        g.addEdge("hasSolarRadiation", n5!!.id, n9!!.id)
     }
 
     @Test

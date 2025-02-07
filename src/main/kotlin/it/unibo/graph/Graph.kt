@@ -5,10 +5,20 @@ import org.rocksdb.*
 
 interface Graph {
     fun clear()
-    fun addNode(label: String, value: Long? = null): N
-    fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P
-    fun addRel(label: String, fromNode: Int, toNode: Int): R
+    fun createNode(label: String, value: Long? = null): N = N(nextNodeId(), label, value = value)
+    fun nextNodeId(): Int
+    fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
+    fun addNode(n: N): N
+    fun createProperty(nodeId: Int, key: String, value: Any, type: PropType): P = P(nextPropertyId(), nodeId, key, value, type)
+    fun nextPropertyId(): Int
+    fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
+    fun addProperty(p: P): P
+    fun createEdge(label: String, fromNode: Int, toNode: Int): R = R(nextEdgeId(), label, fromNode, toNode)
+    fun nextEdgeId(): Int
+    fun addEdge(r: R): R
+    fun addEdge(label: String, fromNode: Int, toNode: Int): R = addEdge(createEdge(label, fromNode, toNode))
     fun addTS(): TS
+    fun nextTSId(): Int
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
@@ -31,29 +41,34 @@ open class GraphMemory : Graph {
         ts.clear()
     }
 
-    override fun addNode(label: String, value: Long?): N {
-        val n = N(nodes.size, label, value = value)
+    override fun nextNodeId(): Int = nodes.size
+
+    override fun addNode(n: N): N {
         nodes += n
         return n
     }
 
-    override fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
-        val p = P(props.size, nodeId, key, value, type)
+    override fun nextPropertyId(): Int = props.size
+
+    override fun addProperty(p: P): P {
         props += p
         return p
     }
 
-    override fun addRel(label: String, fromNode: Int, toNode: Int): R {
-        val r = R(rels.size, label, fromNode, toNode)
+    override fun nextEdgeId(): Int = rels.size
+
+    override fun addEdge(r: R): R {
         rels += r
         return r
     }
 
     override fun addTS(): TS {
-        val ts1 = TS(ts.size)
+        val ts1 = TS(nextTSId())
         ts += ts1
         return ts1
     }
+
+    override fun nextTSId(): Int = ts.size
 
     override fun getProps(): MutableList<P> {
         return props
@@ -106,19 +121,35 @@ class GraphRocksDB : Graph {
         TODO("Not yet implemented")
     }
 
-    override fun addNode(label: String, value: Long?): N {
+    override fun nextNodeId(): Int {
         TODO("Not yet implemented")
     }
 
-    override fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
+    override fun addNode(n: N): N {
         TODO("Not yet implemented")
     }
 
-    override fun addRel(label: String, fromNode: Int, toNode: Int): R {
+    override fun nextPropertyId(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun addProperty(p: P): P {
+        TODO("Not yet implemented")
+    }
+
+    override fun nextEdgeId(): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun addEdge(r: R): R {
         TODO("Not yet implemented")
     }
 
     override fun addTS(): TS {
+        TODO("Not yet implemented")
+    }
+
+    override fun nextTSId(): Int {
         TODO("Not yet implemented")
     }
 

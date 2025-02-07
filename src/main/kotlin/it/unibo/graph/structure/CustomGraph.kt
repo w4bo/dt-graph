@@ -62,7 +62,7 @@ class CustomGraph: GraphMemory(), Graph {
         return p
     }
 
-    override fun addRel(label: String, fromNode: Int, toNode: Int): R {
+    override fun addEdge(label: String, fromNode: Int, toNode: Int): R {
         val r = CustomEdge(getEdges().size, label, fromNode, toNode, this)
         getEdges() += r
         return r

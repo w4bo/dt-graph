@@ -54,7 +54,7 @@ class CustomVertex(
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
-        return App.g.addRel(label, id, inVertex.id() as Int) as CustomEdge
+        return App.g.addEdge(label, id, inVertex.id() as Int) as CustomEdge
     }
 
     fun dir2dir(direction: Direction): it.unibo.graph.Direction {
