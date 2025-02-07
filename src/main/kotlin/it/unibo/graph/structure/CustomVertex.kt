@@ -40,12 +40,12 @@ class CustomVertex(
     }
 
     override fun <V : Any?> properties(vararg propertyKeys: String?): Iterator<VertexProperty<V>> {
-        val key = if (propertyKeys.isEmpty()) {
-            null
-        } else {
-            propertyKeys[0]
-        }
-        return getProps(name = key).map { it as CustomProperty<V> }.iterator()
+        val key = if (propertyKeys.isEmpty()) { null } else { propertyKeys[0] }
+        return getProps(name = key)
+            .map {
+                if (it is CustomProperty<*> ) { it as CustomProperty<V> } else { CustomProperty(it.id, it.node, it.key, it.value, it.type) }
+            }
+            .iterator()
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {

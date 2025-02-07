@@ -166,6 +166,21 @@ class TestKotlin {
     }
 
     @Test
+    fun tstTSAsNode4() {
+        val g = GraphTraversalSource(graph)
+        kotlin.test.assertEquals(
+            listOf(12.5), g.V()
+                .hasLabel("Device")
+                .out("hasHumidity")
+                .hasLabel("Humidity")
+                .out("hasTS")
+                .values<Number>("value")
+                .mean<Number>()
+                .toList()
+        )
+    }
+
+    @Test
     fun tstTSAsNode2() {
         val g = GraphTraversalSource(graph)
         kotlin.test.assertEquals(
