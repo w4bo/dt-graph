@@ -24,10 +24,18 @@ open class R(val id: Int, val type: String, val fromN: Int, val toN: Int, var fr
                 toNextRel = to.nextRel
                 to.nextRel = id
             }
+
+            App.g.addNode(from)
+            App.g.addNode(to)
         }
     }
 
     override fun toString(): String {
         return "($fromN)-[id: $id, type: $type}->($toN)"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is R) return false
+        return id == other.id
     }
 }

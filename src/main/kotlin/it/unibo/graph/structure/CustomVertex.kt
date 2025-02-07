@@ -9,7 +9,6 @@ import org.apache.tinkerpop.gremlin.structure.*
 class CustomVertex(
     id: Int,
     type: String,
-    val graph: Graph,
     value: Long? = null,
     timestamp: Long? = null,
     location: Pair<Double, Double>? = null
@@ -24,7 +23,7 @@ class CustomVertex(
     }
 
     override fun graph(): Graph {
-        return graph
+        return App.g
     }
 
     override fun <V : Any?> property(
@@ -89,5 +88,9 @@ class CustomVertex(
                 }
             }
             .iterator()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
     }
 }

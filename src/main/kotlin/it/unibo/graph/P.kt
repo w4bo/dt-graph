@@ -4,8 +4,7 @@ import java.io.Serializable
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
-open class P(val id: Int, val node: Int, val key: String, val value: Any, val type: PropType, var next: Int? = null):
-    Serializable {
+open class P(val id: Int, val node: Int, val key: String, val value: Any, val type: PropType, var next: Int? = null): Serializable {
     init {
         val n = App.g.getNode(node)
         if (n.nextProp == null) n.nextProp = id
@@ -13,9 +12,15 @@ open class P(val id: Int, val node: Int, val key: String, val value: Any, val ty
             next = n.nextProp
             n.nextProp = id
         }
+        App.g.addNode(n)
     }
 
     override fun toString(): String {
         return "{id: $id, node: $node, key: $key, value: $value, type: $type}"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is P) return false
+        return id == other.id
     }
 }

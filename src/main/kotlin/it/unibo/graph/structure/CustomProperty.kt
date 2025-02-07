@@ -41,4 +41,8 @@ class CustomProperty<V>(id: Int, node: Int, key: String, value: Any, type: PropT
     override fun <U : Any?> properties(vararg propertyKeys: String?): MutableIterator<Property<U>> {
         throw NotImplementedException()
     }
+
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
+    }
 }

@@ -52,30 +52,30 @@ class TestKotlin {
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
         val ts1 = g.addTS()
-        val m1 = CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 10)
+        val m1 = CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 10)
         ts1.add(m1)
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 11))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 12))
         n7 = g.addNode("Humidity", value = ts1.id.toLong())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
-        m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id, g)
-        m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id, g)
+        m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id)
+        m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id)
 
         val ts2 = g.addTS()
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 10))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 10))
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 11))
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 12))
         n8 = g.addNode("Temperature", value = ts2.id.toLong())
         g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 13))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 14))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 15))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 13))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 14))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 15))
 
         val ts3 = g.addTS()
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 23))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 24))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 25))
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 23))
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 24))
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", timestamp = System.currentTimeMillis(), value = 25))
         n9 = g.addNode("SolarRadiation", value = ts3.id.toLong())
         g.addEdge("hasSolarRadiation", n5!!.id, n9!!.id)
     }
@@ -85,16 +85,33 @@ class TestKotlin {
         assertEquals(42, 40 + 2)
     }
 
+//    @Test
+//    fun putAndGet() {
+//        val n = g.addNode("foo")
+//        val p = g.addProperty(n.id, "name", "GB", PropType.STRING)
+//        val m = g.addNode("bar")
+//        val r = g.addEdge("foo", n.id, m.id)
+//        assertEquals(n, g.getNode(n.id), g.getNode(n.id).toString())
+//        assertEquals(r, g.getEdge(r.id), g.getEdge(r.id).toString())
+//        assertEquals(p, g.getProp(p.id), g.getProp(p.id).toString())
+//    }
+
     @Test
     fun testRel() {
-        listOf(Pair(n1!!, 2), Pair(n2!!, 4), Pair(n3!!, 4), Pair(n4!!, 5), Pair(n5!!, 4)).forEach {
+        listOf(
+            Pair(g.getNode(n1!!.id), 2),
+            Pair(g.getNode(n2!!.id), 4),
+            Pair(g.getNode(n3!!.id), 4),
+            Pair(g.getNode(n4!!.id), 5),
+            Pair(g.getNode(n5!!.id), 4)
+        ).forEach {
             assertEquals(it.second, it.first.getRels().size, it.first.getRels().toString())
         }
     }
 
     @Test
     fun testProps() {
-        listOf(Pair(n1!!, 2), Pair(n2!!, 2), Pair(n3!!, 2)).forEach {
+        listOf(Pair(g.getNode(n1!!.id), 2), Pair(g.getNode(n2!!.id), 2), Pair(g.getNode(n3!!.id), 2)).forEach {
             assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
         }
     }

@@ -1,10 +1,10 @@
 package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
+import org.apache.commons.lang3.NotImplementedException
+import org.apache.commons.lang3.mutable.Mutable
 import org.rocksdb.*
-import java.io.ByteArrayOutputStream
-import java.io.ObjectOutputStream
-import java.io.Serializable
+import java.io.*
 
 interface Graph {
     fun clear()
@@ -47,7 +47,11 @@ open class GraphMemory : Graph {
     override fun nextNodeId(): Int = nodes.size
 
     override fun addNode(n: N): N {
-        nodes += n
+        if (n.id >= nodes.size) {
+            nodes += n
+        } else {
+            nodes[n.id] = n
+        }
         return n
     }
 
@@ -129,15 +133,20 @@ class GraphRocksDB : Graph {
         properties = cfHandles[3]
     }
 
-    override fun clear() {
-        TODO("Not yet implemented")
-    }
+    override fun clear() {}
 
     // Serialize an object to byte array
     fun serialize(obj: Serializable): ByteArray {
         ByteArrayOutputStream().use { bos ->
             ObjectOutputStream(bos).use { out -> out.writeObject(obj) }
             return bos.toByteArray()
+        }
+    }
+
+    // Deserialize a byte array to an object
+    inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
+        ByteArrayInputStream(bytes).use { bis ->
+            ObjectInputStream(bis).use { `in` -> return `in`.readObject() as T }
         }
     }
 
@@ -150,51 +159,64 @@ class GraphRocksDB : Graph {
     override fun nextTSId(): Int = tsId++
 
     override fun addNode(n: N): N {
-        //db.put(rocksdbNodes, "${n.id}".toByteArray(), serialize(n))
+        db.put(nodes, "${n.id}".toByteArray(), serialize(n))
         return n
     }
 
     override fun addProperty(p: P): P {
-        TODO("Not yet implemented")
+        db.put(properties, "${p.id}".toByteArray(), serialize(p))
+        return p
     }
 
     override fun addEdge(r: R): R {
-        TODO("Not yet implemented")
+        db.put(edges, "${r.id}".toByteArray(), serialize(r))
+        return r
     }
 
-    override fun addTS(): TS {
-        TODO("Not yet implemented")
-    }
+    override fun addTS(): TS = TS(nextTSId())
 
     override fun getProps(): MutableList<P> {
-        TODO("Not yet implemented")
+        throw NotImplementedException()
     }
 
     override fun getNodes(): MutableList<N> {
-        TODO("Not yet implemented")
+        var acc: MutableList<N> = mutableListOf()
+        val iterator = db.newIterator() // Iterate and filter entries for "users"
+        // iterator.seek("users:".toByteArray()) // Start at "users:"
+        while (iterator.isValid) {
+            // val key = String(iterator.key())
+            // if (!key.startsWith("users:")) break // Stop if outside "users" prefix
+            acc += deserialize<N>(iterator.value())
+            iterator.next()
+        }
+        return acc
     }
 
     override fun getEdges(): MutableList<R> {
-        TODO("Not yet implemented")
+        throw NotImplementedException()
     }
 
     override fun getProp(id: Int): P {
-        TODO("Not yet implemented")
+        val b = db.get(properties, "$id".toByteArray())
+        return deserialize<P>(b)
     }
 
     override fun getNode(id: Int): N {
-        TODO("Not yet implemented")
+        val b = db.get(nodes, "$id".toByteArray())
+        return deserialize<N>(b)
     }
 
     override fun getEdge(id: Int): R {
-        TODO("Not yet implemented")
+        val b = db.get(edges, "$id".toByteArray())
+        return deserialize<R>(b)
     }
 
     override fun getTS(id: Int): TS {
-        TODO("Not yet implemented")
+        throw NotImplementedException()
     }
 }
 
 object App {
-    val g: CustomGraph = CustomGraph(GraphMemory())
+//     val g: CustomGraph = CustomGraph(GraphMemory())
+    val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

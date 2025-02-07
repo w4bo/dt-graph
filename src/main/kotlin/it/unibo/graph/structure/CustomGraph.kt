@@ -12,18 +12,19 @@ import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
 import org.apache.tinkerpop.gremlin.structure.Vertex
 
-class CustomGraph(g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g  {
+class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        val n = CustomVertex(nextNodeId(), keyValues[1].toString(), this, value=null)
+        val n = CustomVertex(nextNodeId(), keyValues[1].toString(), value = null)
         addNode(n)
         keyValues
             .toList()
-            .forEachIndexed { idx, v -> if (idx % 2 == 0) {
-                addProperty(n.id, v!!.toString(), keyValues[idx + 1]!!, PropType.STRING)}
+            .forEachIndexed { idx, v ->
+                if (idx % 2 == 0) {
+                    addProperty(n.id, v!!.toString(), keyValues[idx + 1]!!, PropType.STRING)
+                }
             }
         return n
     }
-
 
     override fun <C : GraphComputer?> compute(graphComputerClass: Class<C>?): C {
         throw NotImplementedException()
@@ -58,14 +59,14 @@ class CustomGraph(g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g  {
     }
 
     override fun addNode(label: String, value: Long?): N {
-        return addNode(CustomVertex(getNodes().size, label, this, value=value))
+        return addNode(CustomVertex(nextNodeId(), label, value = value))
     }
 
     override fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
-        return addProperty(CustomProperty<String>(getProps().size, nodeId, key, value, type))
+        return addProperty(CustomProperty<String>(nextPropertyId(), nodeId, key, value, type))
     }
 
     override fun addEdge(label: String, fromNode: Int, toNode: Int): R {
-        return addEdge(CustomEdge(getEdges().size, label, fromNode, toNode, this))
+        return addEdge(CustomEdge(nextEdgeId(), label, fromNode, toNode))
     }
 }

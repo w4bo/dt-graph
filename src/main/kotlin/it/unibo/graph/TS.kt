@@ -61,8 +61,8 @@ class TS(val id: Int, val values: MutableList<N> = mutableListOf()): Serializabl
         }
 
         // update global statistics
-        allStatistic.updateTime(ts.timestamp!!)
-        allStatistic.updateValue(ts.value!!)
+        allStatistic.updateTime(ts.timestamp)
+        allStatistic.updateValue(ts.value)
         allStatistic.count++
         if (ts.location != null) {
             allStatistic.updateLocation(ts.location)

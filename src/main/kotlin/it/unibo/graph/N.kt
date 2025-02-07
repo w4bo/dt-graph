@@ -59,4 +59,9 @@ open class N (
     override fun toString(): String {
         return "(id: $id, type: $type)"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is N) return false
+        return id == other.id && type == other.type && value == other.value && nextProp == other.nextProp && nextRel == other.nextRel && timestamp == other.timestamp && location == other.location && relationships == other.relationships
+    }
 }

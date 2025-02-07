@@ -5,7 +5,7 @@ import it.unibo.graph.R
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
-class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int, val graph: Graph): Edge, R(id, type, prevNode, nextNode) {
+class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int): Edge, R(id, type, prevNode, nextNode) {
     override fun id(): Any {
         return id
     }
@@ -15,7 +15,7 @@ class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int, val graph:
     }
 
     override fun graph(): Graph {
-        return graph
+        return App.g
     }
 
     override fun <V : Any?> property(key: String?, value: V): Property<V> {
@@ -32,5 +32,9 @@ class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int, val graph:
 
     override fun vertices(direction: Direction?): Iterator<Vertex> {
         return listOf(App.g.getNode(fromN) as Vertex, App.g.getNode(toN) as Vertex).iterator()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return super.equals(other)
     }
 }
