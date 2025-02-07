@@ -9,7 +9,7 @@ import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
 import org.apache.tinkerpop.gremlin.structure.Vertex
 
-class CustomGraph(val g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g  {
+class CustomGraph(g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g  {
     override fun addVertex(vararg keyValues: Any?): Vertex {
         val n = CustomVertex(nextNodeId(), keyValues[1].toString(), this, value=null)
         addNode(n)
@@ -31,7 +31,7 @@ class CustomGraph(val g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g
     }
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
-        return g.getNodes().map { it as CustomVertex }.iterator()
+        return getNodes().map { it as CustomVertex }.iterator()
     }
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {
