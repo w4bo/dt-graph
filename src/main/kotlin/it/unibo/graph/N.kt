@@ -1,8 +1,9 @@
 package it.unibo.graph
 
 import org.apache.commons.lang3.NotImplementedException
+import java.io.Serializable
 
-open class N(
+open class N (
     val id: Int, // node id
     val type: String, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
@@ -11,7 +12,7 @@ open class N(
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     val location: Pair<Double, Double>? = null, // location
     var relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
-) {
+): Serializable {
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
         if (value != null && name == "value") return listOf(P(-1, id, "value", value, PropType.DOUBLE))
         return if (next == null) {

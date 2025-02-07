@@ -9,14 +9,18 @@ import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
 import org.apache.tinkerpop.gremlin.structure.Vertex
 
-class CustomGraph: GraphMemory(), Graph {
+class CustomGraph(val g: it.unibo.graph.Graph): Graph, it.unibo.graph.Graph by g  {
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        val n = addNode(keyValues[1].toString(), null) as CustomVertex
-        keyValues.toList().forEachIndexed { idx, v -> if (idx % 2 == 0) {
-            addProperty(n.id, v!!.toString(), keyValues[idx + 1]!!, PropType.STRING)}
-        }
+        val n = CustomVertex(nextNodeId(), keyValues[1].toString(), this, value=null)
+        addNode(n)
+        keyValues
+            .toList()
+            .forEachIndexed { idx, v -> if (idx % 2 == 0) {
+                addProperty(n.id, v!!.toString(), keyValues[idx + 1]!!, PropType.STRING)}
+            }
         return n
     }
+
 
     override fun <C : GraphComputer?> compute(graphComputerClass: Class<C>?): C {
         throw NotImplementedException()
@@ -27,7 +31,7 @@ class CustomGraph: GraphMemory(), Graph {
     }
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
-        return getNodes().map { it as CustomVertex }.iterator()
+        return g.getNodes().map { it as CustomVertex }.iterator()
     }
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {
@@ -47,24 +51,18 @@ class CustomGraph: GraphMemory(), Graph {
     }
 
     override fun close() {
-        return clear()
+        clear()
     }
 
     override fun addNode(label: String, value: Long?): N {
-        val n = CustomVertex(getNodes().size, label, this, value=value)
-        getNodes() += n
-        return n
+        return addNode(CustomVertex(getNodes().size, label, this, value=value))
     }
 
     override fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
-        val p = CustomProperty<String>(getProps().size, nodeId, key, value, type)
-        getProps() += p
-        return p
+        return addProperty(CustomProperty<String>(getProps().size, nodeId, key, value, type))
     }
 
     override fun addEdge(label: String, fromNode: Int, toNode: Int): R {
-        val r = CustomEdge(getEdges().size, label, fromNode, toNode, this)
-        getEdges() += r
-        return r
+        return addEdge(CustomEdge(getEdges().size, label, fromNode, toNode, this))
     }
 }

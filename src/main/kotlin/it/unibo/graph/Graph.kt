@@ -2,6 +2,9 @@ package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
 import org.rocksdb.*
+import java.io.ByteArrayOutputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 
 interface Graph {
     fun clear()
@@ -100,44 +103,58 @@ open class GraphMemory : Graph {
 }
 
 class GraphRocksDB : Graph {
-    val rocksdbNodes: ColumnFamilyDescriptor
-    val rocksdbEdges: ColumnFamilyDescriptor
-    val rocksdbProperties: ColumnFamilyDescriptor
+    val nodes: ColumnFamilyHandle
+    val edges: ColumnFamilyHandle
+    val properties: ColumnFamilyHandle
     val db: RocksDB
+    var nodeId = 0
+    var edgeId = 0
+    var propId = 0
+    var tsId = 0
 
     init {
         val options = DBOptions()
         options.setCreateIfMissing(true)
         options.setCreateMissingColumnFamilies(true)
-        rocksdbNodes = ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions())
-        rocksdbEdges = ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions())
-        rocksdbProperties = ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
-        val cfDescriptors = listOf(rocksdbNodes, rocksdbEdges, rocksdbProperties)
+        val cfDescriptors = listOf(
+            ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
+        )
         val cfHandles: List<ColumnFamilyHandle> = ArrayList()
         db = RocksDB.open(options, "testdb", cfDescriptors, cfHandles)
+        nodes = cfHandles[1]
+        edges = cfHandles[2]
+        properties = cfHandles[3]
     }
 
     override fun clear() {
         TODO("Not yet implemented")
     }
 
-    override fun nextNodeId(): Int {
-        TODO("Not yet implemented")
+    // Serialize an object to byte array
+    fun serialize(obj: Serializable): ByteArray {
+        ByteArrayOutputStream().use { bos ->
+            ObjectOutputStream(bos).use { out -> out.writeObject(obj) }
+            return bos.toByteArray()
+        }
     }
+
+    override fun nextNodeId(): Int = nodeId++
+
+    override fun nextPropertyId(): Int = propId++
+
+    override fun nextEdgeId(): Int = edgeId++
+
+    override fun nextTSId(): Int = tsId++
 
     override fun addNode(n: N): N {
-        TODO("Not yet implemented")
-    }
-
-    override fun nextPropertyId(): Int {
-        TODO("Not yet implemented")
+        //db.put(rocksdbNodes, "${n.id}".toByteArray(), serialize(n))
+        return n
     }
 
     override fun addProperty(p: P): P {
-        TODO("Not yet implemented")
-    }
-
-    override fun nextEdgeId(): Int {
         TODO("Not yet implemented")
     }
 
@@ -146,10 +163,6 @@ class GraphRocksDB : Graph {
     }
 
     override fun addTS(): TS {
-        TODO("Not yet implemented")
-    }
-
-    override fun nextTSId(): Int {
         TODO("Not yet implemented")
     }
 
@@ -183,5 +196,5 @@ class GraphRocksDB : Graph {
 }
 
 object App {
-    val g: Graph = CustomGraph()
+    val g: CustomGraph = CustomGraph(GraphMemory())
 }

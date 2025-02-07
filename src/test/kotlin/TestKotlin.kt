@@ -2,7 +2,6 @@ import it.unibo.graph.App
 import it.unibo.graph.N
 import it.unibo.graph.PropType
 import it.unibo.graph.structure.CustomEdge
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.structure.CustomVertex
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -13,7 +12,7 @@ import kotlin.test.assertTrue
 
 class TestKotlin {
 
-    val g = App.g as CustomGraph
+    val g = App.g
     var n1: N? = null
     var n2: N? = null
     var n3: N? = null
@@ -53,7 +52,6 @@ class TestKotlin {
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
         val ts1 = g.addTS()
-
         val m1 = CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 10)
         ts1.add(m1)
         ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))

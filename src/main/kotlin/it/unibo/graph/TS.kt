@@ -1,5 +1,7 @@
 package it.unibo.graph
 
+import java.io.Serializable
+
 class Statistic(
     val offset: Int,
     var maxTime: Long = Long.MIN_VALUE,     // Largest timestamp in the time series
@@ -32,7 +34,7 @@ class Statistic(
 
 // The TS class represents a time series with a unique ID, a list of elements (N),
 // and various properties to track statistics and the spatial bounding box (MBR).
-class TS(val id: Int, val values: MutableList<N> = mutableListOf()) {
+class TS(val id: Int, val values: MutableList<N> = mutableListOf()): Serializable {
 
     var sparseIndex: List<Pair<Long, Statistic>> = mutableListOf()
     var curStatistic = Statistic(0)
