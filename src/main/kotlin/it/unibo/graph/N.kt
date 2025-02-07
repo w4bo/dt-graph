@@ -17,7 +17,7 @@ open class N(
         return if (next == null) {
             emptyList()
         } else {
-            val p = Graph.props[next]
+            val p = App.g.getProp(next)
             (if ((filter == null || p.type == filter) && (name == null || p.key == name)) listOf(p) else emptyList()) + getProps(
                 p.next,
                 filter,
@@ -27,7 +27,7 @@ open class N(
     }
 
     fun getTS(): List<N> {
-        return Graph.ts[value!!.toInt()].values
+        return App.g.getTS(value!!.toInt()).values
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
@@ -41,7 +41,7 @@ open class N(
                 }
             } else { // Graph node
                 if (next == null) return emptyList()
-                val r = Graph.rels[next]
+                val r = App.g.getEdge(next)
                 if (label == null || r.type == label) {
                     when (direction) {
                         Direction.IN -> if (r.toN == id) listOf(r) else emptyList()

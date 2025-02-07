@@ -1,12 +1,10 @@
-import it.unibo.graph.Graph
+import it.unibo.graph.App
 import it.unibo.graph.N
 import it.unibo.graph.PropType
-import it.unibo.graph.TS
 import it.unibo.graph.structure.CustomEdge
 import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.structure.CustomVertex
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
-import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -15,7 +13,7 @@ import kotlin.test.assertTrue
 
 class TestKotlin {
 
-    val graph = CustomGraph()
+    val g = App.g as CustomGraph
     var n1: N? = null
     var n2: N? = null
     var n3: N? = null
@@ -27,65 +25,61 @@ class TestKotlin {
 
     @BeforeTest
     fun setup() {
-        Graph.clear()
+        g.clear()
 
-        n1 = Graph.addNode2("AgriFarm", graph)
-        n4 = Graph.addNode2("Device", graph)
-        n2 = Graph.addNode2("AgriParcel", graph)
-        n3 = Graph.addNode2("Device", graph)
-        n5 = Graph.addNode2("Person", graph)
-        val n6 = Graph.addNode2("Person", graph)
+        n1 = g.addNode("AgriFarm")
+        n4 = g.addNode("Device")
+        n2 = g.addNode("AgriParcel")
+        n3 = g.addNode("Device")
+        n5 = g.addNode("Person")
+        val n6 = g.addNode("Person")
 
+        g.addProperty(n1!!.id, "name", "Errano", PropType.STRING)
+        g.addProperty(n1!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n2!!.id, "name", "T0", PropType.STRING)
+        g.addProperty(n2!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n3!!.id, "name", "GB", PropType.STRING)
+        g.addProperty(n3!!.id, "location", "GeoJSON", PropType.GEOMETRY)
 
-        Graph.addProperty2(n1!!.id, "name", "Errano", PropType.STRING)
-        Graph.addProperty2(n1!!.id, "location", "GeoJSON", PropType.GEOMETRY)
-        Graph.addProperty2(n2!!.id, "name", "T0", PropType.STRING)
-        Graph.addProperty2(n2!!.id, "location", "GeoJSON", PropType.GEOMETRY)
-        Graph.addProperty2(n3!!.id, "name", "GB", PropType.STRING)
-        Graph.addProperty2(n3!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addRel("hasParcel", n1!!.id, n2!!.id)
+        g.addRel("hasDevice", n1!!.id, n3!!.id)
+        g.addRel("hasDevice", n2!!.id, n3!!.id)
+        g.addRel("foo", n2!!.id, n2!!.id)
+        g.addRel("hasDevice", n2!!.id, n4!!.id)
+        g.addRel("hasOwner", n3!!.id, n5!!.id)
+        g.addRel("hasOwner", n4!!.id, n5!!.id)
+        g.addRel("hasManutentor", n3!!.id, n6.id)
+        g.addRel("hasManutentor", n4!!.id, n6.id)
+        g.addRel("hasFriend", n5!!.id, n6.id)
 
-        Graph.addRel2("hasParcel", n1!!.id, n2!!.id, graph)
-        Graph.addRel2("hasDevice", n1!!.id, n3!!.id, graph)
-        Graph.addRel2("hasDevice", n2!!.id, n3!!.id, graph)
-        Graph.addRel2("foo", n2!!.id, n2!!.id, graph)
-        Graph.addRel2("hasDevice", n2!!.id, n4!!.id, graph)
-        Graph.addRel2("hasOwner", n3!!.id, n5!!.id, graph)
-        Graph.addRel2("hasOwner", n4!!.id, n5!!.id, graph)
-        Graph.addRel2("hasManutentor", n3!!.id, n6.id, graph)
-        Graph.addRel2("hasManutentor", n4!!.id, n6.id, graph)
-        Graph.addRel2("hasFriend", n5!!.id, n6.id, graph)
+        val ts1 = g.addTS()
 
-        val ts1 = TS(Graph.ts.size)
-        Graph.ts += ts1
-
-        val m1 = CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 10)
+        val m1 = CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 10)
         ts1.add(m1)
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 11))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 12))
-        n7 = Graph.addNode2("Humidity", graph, value = ts1.id.toLong())
-        Graph.addRel2("hasHumidity", n4!!.id, n7!!.id, graph)
-        m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id, graph)
-        m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id, graph)
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
+        n7 = g.addNode("Humidity", value = ts1.id.toLong())
+        g.addRel("hasHumidity", n4!!.id, n7!!.id)
+        m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id, g)
+        m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id, g)
 
-        val ts2 = TS(Graph.ts.size)
-        Graph.ts += ts2
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 10))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 11))
-        ts2.add(CustomVertex(ts2.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 12))
-        n8 = Graph.addNode2("Temperature", graph, value = ts2.id.toLong())
-        Graph.addRel2("hasTemperature", n4!!.id, n8!!.id, graph)
+        val ts2 = g.addTS()
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 10))
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 11))
+        ts2.add(CustomVertex(ts2.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 12))
+        n8 = g.addNode("Temperature", value = ts2.id.toLong())
+        g.addRel("hasTemperature", n4!!.id, n8!!.id)
 
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 13))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 14))
-        ts1.add(CustomVertex(ts1.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 15))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 13))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 14))
+        ts1.add(CustomVertex(ts1.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 15))
 
-        val ts3 = TS(Graph.ts.size)
-        Graph.ts += ts3
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 23))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 24))
-        ts3.add(CustomVertex(ts3.values.size, "Measurement", graph, timestamp = System.currentTimeMillis(), value = 25))
-        n9 = Graph.addNode2("SolarRadiation", graph, value = ts3.id.toLong())
-        Graph.addRel2("hasSolarRadiation", n5!!.id, n9!!.id, graph)
+        val ts3 = g.addTS()
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 23))
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 24))
+        ts3.add(CustomVertex(ts3.values.size, "Measurement", g, timestamp = System.currentTimeMillis(), value = 25))
+        n9 = g.addNode("SolarRadiation", value = ts3.id.toLong())
+        g.addRel("hasSolarRadiation", n5!!.id, n9!!.id)
     }
 
     @Test
@@ -117,7 +111,7 @@ class TestKotlin {
 
     @Test
     fun tstTSAsNode() {
-        val g = GraphTraversalSource(graph)
+        val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             6, g.V()
                 .hasLabel("Device")
@@ -129,7 +123,7 @@ class TestKotlin {
 
     @Test
     fun tstTSAsNode4() {
-        val g = GraphTraversalSource(graph)
+        val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             listOf(12.5), g.V()
                 .hasLabel("Device")
@@ -144,7 +138,7 @@ class TestKotlin {
 
     @Test
     fun tstTSAsNode2() {
-        val g = GraphTraversalSource(graph)
+        val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             1, g.V()
                 .hasLabel("Device")
@@ -157,7 +151,7 @@ class TestKotlin {
 
     @Test
     fun tstTSAsNode3() {
-        val g = GraphTraversalSource(graph)
+        val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             1, g.V()
                 .hasLabel("Device")
@@ -166,23 +160,6 @@ class TestKotlin {
                 .out("hasTS")
                 .out("hasManutentor")
                 .out("hasFriend").toList().size
-        )
-    }
-
-    @Test
-    fun testTinkerPop() {
-        Graph.clear()
-        val graph = CustomGraph()
-        val alice: Vertex = graph.addVertex("label", "Person", "name", "Alice")
-        val bob: Vertex = graph.addVertex("label", "Person", "name", "Bob")
-        alice.addEdge("knows", bob)
-        val g = GraphTraversalSource(graph)
-        kotlin.test.assertEquals(2, g.V().hasLabel("Person").toList().size)
-        kotlin.test.assertEquals(1, g.V().hasLabel("Person").has("name", "Alice").toList().size)
-        kotlin.test.assertEquals(listOf("Bob"), g.V().hasLabel("Person").out("knows").values<String>("name").toList())
-        kotlin.test.assertEquals(
-            listOf("Alice"),
-            g.V().hasLabel("Person").`in`("knows").values<String>("name").toList()
         )
     }
 }

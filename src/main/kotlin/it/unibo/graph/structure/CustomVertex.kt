@@ -1,5 +1,6 @@
 package it.unibo.graph.structure
 
+import it.unibo.graph.App
 import it.unibo.graph.N
 import it.unibo.graph.PropType
 import org.apache.commons.lang3.NotImplementedException
@@ -32,7 +33,7 @@ class CustomVertex(
         value: V,
         vararg keyValues: Any?
     ): VertexProperty<V> {
-        return it.unibo.graph.Graph.addProperty2(id, key!!, value.toString(), PropType.STRING) as CustomProperty<V>
+        return App.g.addProperty(id, key!!, value.toString(), PropType.STRING) as CustomProperty<V>
     }
 
     override fun remove() {
@@ -53,7 +54,7 @@ class CustomVertex(
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
-        return it.unibo.graph.Graph.addRel2(label, id, inVertex.id() as Int, graph) as CustomEdge
+        return App.g.addRel(label, id, inVertex.id() as Int) as CustomEdge
     }
 
     fun dir2dir(direction: Direction): it.unibo.graph.Direction {
@@ -82,9 +83,9 @@ class CustomVertex(
         return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
             .flatMap { r ->
                 if (r.type == "hasTS") {
-                    it.unibo.graph.Graph.ts[r.toN].values.map { it as CustomVertex }
+                    App.g.getTS(r.toN).values.map { it as CustomVertex }
                 } else {
-                    listOf(it.unibo.graph.Graph.nodes[if (direction == Direction.IN) r.fromN else r.toN] as CustomVertex)
+                    listOf(App.g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)
                 }
             }
             .iterator()

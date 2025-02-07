@@ -5,8 +5,8 @@ enum class Direction { IN, OUT }
 open class R(val id: Int, val type: String, val fromN: Int, val toN: Int, var fromNextRel: Int? = null, var toNextRel: Int? = null) {
     init {
         if (id != -1) {
-            val from = Graph.nodes[fromN]
-            val to = Graph.nodes[toN]
+            val from = App.g.getNode(fromN)
+            val to = App.g.getNode(toN)
 
             if (from.nextRel == null) {
                 from.nextRel = id

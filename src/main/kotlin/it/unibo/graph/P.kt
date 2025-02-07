@@ -4,7 +4,7 @@ enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
 open class P(val id: Int, val node: Int, val key: String, val value: Any, val type: PropType, var next: Int? = null) {
     init {
-        val n = Graph.nodes[node]
+        val n = App.g.getNode(node)
         if (n.nextProp == null) n.nextProp = id
         else {
             next = n.nextProp
