@@ -17,33 +17,6 @@ object Graph {
         ts.clear()
     }
 
-    fun search(labels: List<String>): MutableList<List<N>> {
-        var visited: Set<Int> = mutableSetOf()
-        var acc: MutableList<List<N>> = mutableListOf()
-
-        fun dfs(node: N, index: Int, path: List<N>) {
-            if (node.type == labels[index]) {
-                val cur_path = path + listOf(node)
-                if (cur_path.size == labels.size) {
-                    acc.add(cur_path)
-                    return
-                }
-                if (visited.contains(node.id)) { return }
-                visited += node.id
-                node.getRels(direction = Direction.OUT, label = null).forEach {
-                    dfs(nodes[it.toN], index + 1, cur_path)
-                }
-            }
-        }
-
-        for (node in nodes) {
-            if (!visited.contains(node.id)) {
-                dfs(node, 0, emptyList())
-            }
-        }
-        return acc
-    }
-
     fun addNode(label: String, value: Long? = null): N {
         val n = N(nodes.size, label, value=value)
         nodes += n
@@ -78,10 +51,5 @@ object Graph {
         val r = CustomEdge(rels.size, label, fromNode, toNode, graph)
         rels += r
         return r
-    }
-
-    @JvmStatic
-    fun main(args: Array<String>) {
-
     }
 }

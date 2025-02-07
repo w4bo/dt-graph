@@ -115,44 +115,6 @@ class TestKotlin {
         }
     }
 
-    fun pattern2string(patterns: List<List<N>>): String {
-        return patterns.joinToString("\n") { pattern -> pattern.joinToString(", ") { node -> node.toString() } }
-    }
-
-    fun printPatterns(patterns: List<List<N>>) {
-        println(pattern2string(patterns))
-    }
-
-    @Test
-    fun testSearch1() {
-        val patterns = Graph.search(listOf("AgriParcel"))
-        assertEquals(1, patterns.size, pattern2string(patterns))
-    }
-
-    @Test
-    fun testSearch2() {
-        val patterns = Graph.search(listOf("AgriFarm", "AgriParcel"))
-        assertEquals(1, patterns.size, pattern2string(patterns))
-    }
-
-    @Test
-    fun testSearch3() {
-        val patterns = Graph.search(listOf("AgriFarm", "AgriParcel", "Device"))
-        assertEquals(2, patterns.size, pattern2string(patterns))
-    }
-
-    @Test
-    fun testSearch4() {
-        val patterns = Graph.search(listOf("AgriFarm", "Device"))
-        assertEquals(1, patterns.size, pattern2string(patterns))
-    }
-
-    @Test
-    fun testSearch5() {
-        val patterns = Graph.search(listOf("AgriFarm", "AgriParcel", "Device", "Person"))
-        assertEquals(4, patterns.size, pattern2string(patterns))
-    }
-
     @Test
     fun tstTSAsNode() {
         val g = GraphTraversalSource(graph)
