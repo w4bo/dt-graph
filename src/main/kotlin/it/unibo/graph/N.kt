@@ -14,7 +14,7 @@ open class N (
     var relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
 ): Serializable {
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
-        if (value != null && name == "value") return listOf(P(-1, id, "value", value, PropType.DOUBLE))
+        if (value != null && name == "value") return listOf(P(DUMMY_PROPERTY, id, "value", value, PropType.DOUBLE))
         return if (next == null) {
             emptyList()
         } else {

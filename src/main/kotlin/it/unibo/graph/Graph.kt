@@ -6,6 +6,21 @@ import org.rocksdb.*
 import java.io.*
 import kotlin.reflect.KClass
 
+// Serialize an object to byte array
+fun serialize(obj: Serializable): ByteArray {
+    ByteArrayOutputStream().use { bos ->
+        ObjectOutputStream(bos).use { out -> out.writeObject(obj) }
+        return bos.toByteArray()
+    }
+}
+
+// Deserialize a byte array to an object
+inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
+    ByteArrayInputStream(bytes).use { bis ->
+        ObjectInputStream(bis).use { `in` -> return `in`.readObject() as T }
+    }
+}
+
 interface Graph {
     fun clear()
     fun createNode(label: String, value: Long? = null): N = N(nextNodeId(), label, value = value)
@@ -28,14 +43,7 @@ interface Graph {
     fun getEdge(id: Int): R
 }
 
-fun <T : TS> makeTS(type: KClass<T>, id: Int): TS {
-    return when (type::class) {
-        MemoryTS::class -> CustomTS(MemoryTS(id))
-        else -> throw IllegalArgumentException()
-    }
-}
-
-open class GraphMemory(): Graph { // private val tsType: KClass<T>
+open class GraphMemory: Graph { // private val tsType: KClass<T>
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
     private val props: MutableList<P> = ArrayList()
@@ -96,7 +104,7 @@ open class GraphMemory(): Graph { // private val tsType: KClass<T>
     }
 }
 
-class GraphRocksDB() : Graph {
+class GraphRocksDB : Graph {
     val nodes: ColumnFamilyHandle
     val edges: ColumnFamilyHandle
     val properties: ColumnFamilyHandle
@@ -104,7 +112,7 @@ class GraphRocksDB() : Graph {
     var nodeId = 0
     var edgeId = 0
     var propId = 0
-    val DB_NAME = "testdb"
+    val DB_NAME = "db_graph"
 
     init {
         val options = DBOptions()
@@ -135,21 +143,6 @@ class GraphRocksDB() : Graph {
         nodeId = 0
         edgeId = 0
         propId = 0
-    }
-
-    // Serialize an object to byte array
-    fun serialize(obj: Serializable): ByteArray {
-        ByteArrayOutputStream().use { bos ->
-            ObjectOutputStream(bos).use { out -> out.writeObject(obj) }
-            return bos.toByteArray()
-        }
-    }
-
-    // Deserialize a byte array to an object
-    inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
-        ByteArrayInputStream(bytes).use { bis ->
-            ObjectInputStream(bis).use { `in` -> return `in`.readObject() as T }
-        }
     }
 
     override fun nextNodeId(): Int = nodeId++
@@ -212,7 +205,8 @@ class GraphRocksDB() : Graph {
 }
 
 object App {
-    val tsm = MemoryTSManager()
+//    val tsm = MemoryTSManager()
 //    val g: CustomGraph = CustomGraph(GraphMemory())
-        val g: CustomGraph = CustomGraph(GraphRocksDB())
+    val tsm = RocksDBTSM()
+    val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

@@ -4,10 +4,8 @@ import it.unibo.graph.N
 import it.unibo.graph.PropType
 import it.unibo.graph.TS
 import it.unibo.graph.structure.CustomEdge
-import it.unibo.graph.structure.CustomVertex
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
-import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -60,7 +58,7 @@ class TestKotlin {
         val m1 = ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
-        n7 = g.addNode("Humidity", value = ts1.getTSID())
+        n7 = g.addNode("Humidity", value = ts1.getTSId())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
         m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id)
         m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id)
@@ -69,7 +67,7 @@ class TestKotlin {
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 10)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
-        n8 = g.addNode("Temperature", value = ts2.getTSID())
+        n8 = g.addNode("Temperature", value = ts2.getTSId())
         g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 13)
@@ -80,7 +78,7 @@ class TestKotlin {
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
-        n9 = g.addNode("SolarRadiation", value = ts3.getTSID())
+        n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
         g.addEdge("hasSolarRadiation", n5!!.id, n9!!.id)
     }
 
@@ -182,9 +180,4 @@ class TestKotlin {
                 .out("hasFriend").toList().size
         )
     }
-
-//    @AfterTest
-//    fun clean() {
-//        g.clear()
-//    }
 }

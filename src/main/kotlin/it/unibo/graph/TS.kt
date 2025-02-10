@@ -1,6 +1,7 @@
 package it.unibo.graph
 
 import it.unibo.graph.structure.CustomVertex
+import org.rocksdb.RocksDB
 import java.io.Serializable
 
 class Statistic(
@@ -34,9 +35,8 @@ class Statistic(
 }
 
 interface TS: Serializable {
-    fun getTSID(): Long
-    fun nextId(): Int
-    fun add(label:String, timestamp: Long, value: Long) = add(N(nextId(), label, timestamp=timestamp, value=value))
+    fun getTSId(): Long
+    fun add(label:String, timestamp: Long, value: Long) = add(N((timestamp as Number).toInt(), label, timestamp=timestamp, value=value))
     fun add(n: N): N
     fun getValues(): List<N>
 }
@@ -44,9 +44,7 @@ interface TS: Serializable {
 class MemoryTS(val id: Int) : TS {
     private val values: MutableList<N> = mutableListOf()
 
-    override fun getTSID(): Long = id.toLong()
-
-    override fun nextId(): Int = values.size
+    override fun getTSId(): Long = id.toLong()
 
     override fun add(n: N): N {
         values += n
@@ -56,9 +54,29 @@ class MemoryTS(val id: Int) : TS {
     override fun getValues(): List<N> = values
 }
 
+class RocksDBTS(val id: Int, val db: RocksDB) : TS {
+    override fun getTSId(): Long = id.toLong()
+
+    override fun add(n: N): N {
+        db.put("TS$id|${n.id}".toByteArray(), serialize(n))
+        return n
+    }
+
+    override fun getValues(): List<N> {
+        val acc: MutableList<N> = mutableListOf()
+        val iterator = db.newIterator()
+        iterator.seekToFirst()
+        while (iterator.isValid) {
+            acc += deserialize<N>(iterator.value())
+            iterator.next()
+        }
+        return acc
+    }
+}
+
 class CustomTS(ts: TS): TS by ts {
     override fun add(label: String, timestamp: Long, value: Long): N {
-        return add(CustomVertex(nextId(), label, timestamp = timestamp, value = value))
+        return add(CustomVertex((timestamp as Number).toInt(), label, timestamp = timestamp, value = value))
     }
 }
 

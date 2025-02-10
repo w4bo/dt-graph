@@ -2,6 +2,8 @@ outputs/*.csv
 results/dummy.pdf
 metastore_db/
 testdb*
+db_graph
+db_ts
 
 # These are useless since we use gradle import
 .idea/
