@@ -20,15 +20,12 @@ interface Graph {
     fun nextEdgeId(): Int
     fun addEdge(r: R): R
     fun addEdge(label: String, fromNode: Int, toNode: Int): R = addEdge(createEdge(label, fromNode, toNode))
-    fun addTS(): TS
-    fun nextTSId(): Int
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
     fun getProp(id: Int): P
     fun getNode(id: Int): N
     fun getEdge(id: Int): R
-    fun getTS(id: Int): TS
 }
 
 fun <T : TS> makeTS(type: KClass<T>, id: Int): TS {
@@ -38,17 +35,15 @@ fun <T : TS> makeTS(type: KClass<T>, id: Int): TS {
     }
 }
 
-open class GraphMemory() : Graph { // private val tsType: KClass<T>
+open class GraphMemory(): Graph { // private val tsType: KClass<T>
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
     private val props: MutableList<P> = ArrayList()
-    private val tss: MutableList<TS> = ArrayList()
 
     override fun clear() {
         nodes.clear()
         rels.clear()
         props.clear()
-        tss.clear()
     }
 
     override fun nextNodeId(): Int = nodes.size
@@ -76,14 +71,6 @@ open class GraphMemory() : Graph { // private val tsType: KClass<T>
         return r
     }
 
-    override fun addTS(): TS {
-        val ts = CustomTS(MemoryTS(nextTSId()))
-        tss += ts
-        return ts
-    }
-
-    override fun nextTSId(): Int = tss.size
-
     override fun getProps(): MutableList<P> {
         return props
     }
@@ -107,13 +94,9 @@ open class GraphMemory() : Graph { // private val tsType: KClass<T>
     override fun getEdge(id: Int): R {
         return rels[id]
     }
-
-    override fun getTS(id: Int): TS {
-        return tss[id]
-    }
 }
 
-class GraphRocksDB : Graph {
+class GraphRocksDB() : Graph {
     val nodes: ColumnFamilyHandle
     val edges: ColumnFamilyHandle
     val properties: ColumnFamilyHandle
@@ -121,9 +104,7 @@ class GraphRocksDB : Graph {
     var nodeId = 0
     var edgeId = 0
     var propId = 0
-    var tsId = 0
     val DB_NAME = "testdb"
-    private val tss: MutableList<TS> = ArrayList()
 
     init {
         val options = DBOptions()
@@ -143,8 +124,17 @@ class GraphRocksDB : Graph {
     }
 
     override fun clear() {
-        // tss.clear()
-        File(DB_NAME).deleteRecursively()
+         listOf(nodes, edges, properties).forEach {
+             val iterator = db.newIterator(it)
+             iterator.seekToFirst()
+             while (iterator.isValid) {
+                 db.delete(it, iterator.key())
+                 iterator.next()
+             }
+         }
+        nodeId = 0
+        edgeId = 0
+        propId = 0
     }
 
     // Serialize an object to byte array
@@ -168,8 +158,6 @@ class GraphRocksDB : Graph {
 
     override fun nextEdgeId(): Int = edgeId++
 
-    override fun nextTSId(): Int = tsId++
-
     override fun addNode(n: N): N {
         db.put(nodes, "${n.id}".toByteArray(), serialize(n))
         return n
@@ -185,18 +173,12 @@ class GraphRocksDB : Graph {
         return r
     }
 
-    override fun addTS(): TS {
-        val ts = CustomTS(MemoryTS(nextTSId()))
-        tss += ts
-        return ts
-    }
-
     override fun getProps(): MutableList<P> {
         throw NotImplementedException()
     }
 
     override fun getNodes(): MutableList<N> {
-        var acc: MutableList<N> = mutableListOf()
+        val acc: MutableList<N> = mutableListOf()
         val iterator = db.newIterator(nodes) // Iterate and filter entries for "users"
         // iterator.seek("users:".toByteArray()) // Start at "users:"
         iterator.seekToFirst()
@@ -227,11 +209,10 @@ class GraphRocksDB : Graph {
         val b = db.get(edges, "$id".toByteArray())
         return deserialize<R>(b)
     }
-
-    override fun getTS(id: Int): TS = tss[id]
 }
 
 object App {
-//     val g: CustomGraph = CustomGraph(GraphMemory())
-    val g: CustomGraph = CustomGraph(GraphRocksDB())
+    val tsm = MemoryTSManager()
+//    val g: CustomGraph = CustomGraph(GraphMemory())
+        val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

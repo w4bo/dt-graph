@@ -28,7 +28,7 @@ open class N (
     }
 
     fun getTS(): List<N> {
-        return App.g.getTS(value!!.toInt()).getValues()
+        return App.tsm.getTS(value!!.toInt()).getValues()
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {

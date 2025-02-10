@@ -1,4 +1,5 @@
 import it.unibo.graph.App
+import it.unibo.graph.App.tsm
 import it.unibo.graph.N
 import it.unibo.graph.PropType
 import it.unibo.graph.TS
@@ -28,6 +29,8 @@ class TestKotlin {
     fun setup() {
 //    init {
         g.clear()
+        tsm.clear()
+
         n1 = g.addNode("AgriFarm")
         n4 = g.addNode("Device")
         n2 = g.addNode("AgriParcel")
@@ -53,7 +56,7 @@ class TestKotlin {
         g.addEdge("hasManutentor", n4!!.id, n6.id)
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
-        val ts1: TS = g.addTS()
+        val ts1: TS = tsm.addTS()
         val m1 = ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
@@ -62,7 +65,7 @@ class TestKotlin {
         m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id)
         m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id)
 
-        val ts2 = g.addTS()
+        val ts2 = tsm.addTS()
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 10)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
@@ -73,7 +76,7 @@ class TestKotlin {
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 14)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 15)
 
-        val ts3 = g.addTS()
+        val ts3 = tsm.addTS()
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
@@ -85,17 +88,6 @@ class TestKotlin {
     fun testSum() {
         assertEquals(42, 40 + 2)
     }
-
-//    @Test
-//    fun putAndGet() {
-//        val n = g.addNode("foo")
-//        val p = g.addProperty(n.id, "name", "GB", PropType.STRING)
-//        val m = g.addNode("bar")
-//        val r = g.addEdge("foo", n.id, m.id)
-//        assertEquals(n, g.getNode(n.id), g.getNode(n.id).toString())
-//        assertEquals(r, g.getEdge(r.id), g.getEdge(r.id).toString())
-//        assertEquals(p, g.getProp(p.id), g.getProp(p.id).toString())
-//    }
 
     @Test
     fun testRel() {
