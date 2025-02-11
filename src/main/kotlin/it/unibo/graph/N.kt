@@ -6,7 +6,7 @@ import java.io.Serializable
 val HAS_TS = "hasTS"
 
 open class N (
-    val id: Int, // node id
+    val id: Long, // node id
     val type: String, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
     var nextProp: Int? = null, // if graph node, link to the next property
@@ -30,12 +30,12 @@ open class N (
     }
 
     fun getTS(): List<N> {
-        return App.tsm.getTS(value!!.toInt()).getValues()
+        return App.tsm.getTS(value!!).getValues()
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
         return if (label == HAS_TS) { // Jump to the time series
-            listOf(R(DUMMY_ID, HAS_TS, id, value!!.toInt()))
+            listOf(R(DUMMY_ID, HAS_TS, id, value!!))
         } else { // Iterate within the graph
             if (timestamp != null) { // If TS snapshot
                 when (direction) {

@@ -5,7 +5,7 @@ import it.unibo.graph.R
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
-class CustomEdge(id: Int, type: String, prevNode: Int, nextNode: Int): Edge, R(id, type, prevNode, nextNode) {
+class CustomEdge(id: Int, type: String, prevNode: Long, nextNode: Long): Edge, R(id, type, prevNode, nextNode) {
     override fun id(): Any {
         return id
     }

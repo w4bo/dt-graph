@@ -4,7 +4,7 @@ import java.io.Serializable
 
 enum class Direction { IN, OUT }
 
-open class R(val id: Int, val type: String, val fromN: Int, val toN: Int, var fromNextRel: Int? = null, var toNextRel: Int? = null):
+open class R(val id: Int, val type: String, val fromN: Long, val toN: Long, var fromNextRel: Int? = null, var toNextRel: Int? = null):
     Serializable {
     init {
         if (id != DUMMY_ID) {

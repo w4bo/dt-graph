@@ -4,7 +4,6 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
-import kotlin.reflect.KClass
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -23,23 +22,23 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
 
 interface Graph {
     fun clear()
-    fun createNode(label: String, value: Long? = null, id: Int = nextNodeId()): N = N(id, label, value = value)
-    fun nextNodeId(): Int
+    fun createNode(label: String, value: Long? = null, nodeId: Long = nextNodeId()): N = N(nodeId, label, value = value)
+    fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
     fun addNode(n: N): N
-    fun createProperty(nodeId: Int, key: String, value: Any, type: PropType, id: Int = nextPropertyId()): P = P(id, nodeId, key, value, type)
+    fun createProperty(nodeId: Long, key: String, value: Any, type: PropType, id: Int = nextPropertyId()): P = P(id, nodeId, key, value, type)
     fun nextPropertyId(): Int
-    fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
+    fun addProperty(nodeId: Long, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
     fun addProperty(p: P): P
-    fun createEdge(label: String, fromNode: Int, toNode: Int, id: Int = nextEdgeId()): R = R(id, label, fromNode, toNode)
+    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId()): R = R(id, label, fromNode, toNode)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R
-    fun addEdge(label: String, fromNode: Int, toNode: Int, id: Int = nextEdgeId()): R = addEdge(createEdge(label, fromNode, toNode, id=id))
+    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId()): R = addEdge(createEdge(label, fromNode, toNode, id=id))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
     fun getProp(id: Int): P
-    fun getNode(id: Int): N
+    fun getNode(id: Long): N
     fun getEdge(id: Int): R
 }
 
@@ -54,13 +53,13 @@ open class GraphMemory: Graph { // private val tsType: KClass<T>
         props.clear()
     }
 
-    override fun nextNodeId(): Int = nodes.size
+    override fun nextNodeId(): Long = nodes.size.toLong()
 
     override fun addNode(n: N): N {
         if (n.id >= nodes.size) {
             nodes += n
         } else {
-            nodes[n.id] = n
+            nodes[(n.id as Number).toInt()] = n
         }
         return n
     }
@@ -76,7 +75,7 @@ open class GraphMemory: Graph { // private val tsType: KClass<T>
 
     override fun addEdge(r: R): R {
         if (r.id == DUMMY_ID) {
-            throw NotImplementedException()
+            // throw NotImplementedException()
             // App.tsm.getTS(r.fromN).???
         } else {
             rels += r
@@ -100,8 +99,8 @@ open class GraphMemory: Graph { // private val tsType: KClass<T>
         return props[id]
     }
 
-    override fun getNode(id: Int): N {
-        return nodes[id]
+    override fun getNode(id: Long): N {
+        return nodes[(id as Number).toInt()]
     }
 
     override fun getEdge(id: Int): R {
@@ -114,7 +113,7 @@ class GraphRocksDB : Graph {
     val edges: ColumnFamilyHandle
     val properties: ColumnFamilyHandle
     val db: RocksDB
-    var nodeId = 0
+    var nodeId = 0L
     var edgeId = 0
     var propId = 0
     val DB_NAME = "db_graph"
@@ -150,7 +149,7 @@ class GraphRocksDB : Graph {
         propId = 0
     }
 
-    override fun nextNodeId(): Int = nodeId++
+    override fun nextNodeId(): Long = nodeId++
 
     override fun nextPropertyId(): Int = propId++
 
@@ -195,7 +194,7 @@ class GraphRocksDB : Graph {
         return deserialize<P>(b)
     }
 
-    override fun getNode(id: Int): N {
+    override fun getNode(id: Long): N {
         val b = db.get(nodes, "$id".toByteArray())
         return deserialize<N>(b)
     }

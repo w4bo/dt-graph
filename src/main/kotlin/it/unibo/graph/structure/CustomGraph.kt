@@ -62,11 +62,11 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
         return addNode(CustomVertex(nextNodeId(), label, value = value))
     }
 
-    override fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P {
+    override fun addProperty(nodeId: Long, key: String, value: Any, type: PropType): P {
         return addProperty(CustomProperty<String>(nextPropertyId(), nodeId, key, value, type))
     }
 
-    override fun addEdge(label: String, fromNode: Int, toNode: Int, id: Int): R {
+    override fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int): R {
         return addEdge(CustomEdge(id, label, fromNode, toNode))
     }
 }

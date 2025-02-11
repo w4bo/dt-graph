@@ -4,16 +4,16 @@ import org.rocksdb.*
 
 interface TSManager {
     fun addTS(): TS
-    fun nextTSId(): Int
-    fun getTS(id: Int): TS
+    fun nextTSId(): Long
+    fun getTS(id: Long): TS
     fun clear()
 }
 
 class MemoryTSManager : TSManager {
     private val tss: MutableList<TS> = ArrayList()
 
-    override fun getTS(id: Int): TS {
-        return tss[id]
+    override fun getTS(id: Long): TS {
+        return tss[(id as Number).toInt()]
     }
 
     override fun addTS(): TS {
@@ -22,7 +22,7 @@ class MemoryTSManager : TSManager {
         return ts
     }
 
-    override fun nextTSId(): Int = tss.size
+    override fun nextTSId(): Long = tss.size.toLong()
 
     override fun clear() {
         tss.clear()
@@ -41,7 +41,7 @@ class RocksDBTSM : TSManager {
         db = RocksDB.open(options, DB_NAME)
     }
 
-    override fun getTS(id: Int): TS {
+    override fun getTS(id: Long): TS {
         return CustomTS(RocksDBTS(id, db))
     }
 
@@ -49,7 +49,7 @@ class RocksDBTSM : TSManager {
         return CustomTS(RocksDBTS(nextTSId(), db))
     }
 
-    override fun nextTSId(): Int = id++
+    override fun nextTSId(): Long = id++.toLong()
 
     override fun clear() {
         val iterator = db.newIterator()

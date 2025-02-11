@@ -6,10 +6,10 @@ val DUMMY_ID = -1
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
-open class P(val id: Int, val node: Int, val key: String, val value: Any, val type: PropType, var next: Int? = null): Serializable {
+open class P(val id: Int, val nodeId: Long, val key: String, val value: Any, val type: PropType, var next: Int? = null): Serializable {
     init {
         if (DUMMY_ID != id) {
-            val n = App.g.getNode(node)
+            val n = App.g.getNode(nodeId)
             if (n.nextProp == null) n.nextProp = id
             else {
                 next = n.nextProp
@@ -20,7 +20,7 @@ open class P(val id: Int, val node: Int, val key: String, val value: Any, val ty
     }
 
     override fun toString(): String {
-        return "{id: $id, node: $node, key: $key, value: $value, type: $type}"
+        return "{id: $id, node: $nodeId, key: $key, value: $value, type: $type}"
     }
 
     override fun equals(other: Any?): Boolean {

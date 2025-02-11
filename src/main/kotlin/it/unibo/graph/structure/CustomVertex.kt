@@ -8,7 +8,7 @@ import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
 class CustomVertex(
-    id: Int,
+    id: Long,
     type: String,
     value: Long? = null,
     timestamp: Long? = null,
@@ -47,14 +47,14 @@ class CustomVertex(
                 if (it is CustomProperty<*>) {
                     it as CustomProperty<V>
                 } else {
-                    CustomProperty(it.id, it.node, it.key, it.value, it.type)
+                    CustomProperty(it.id, it.nodeId, it.key, it.value, it.type)
                 }
             }
             .iterator()
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
-        return App.g.addEdge(label, id, inVertex.id() as Int) as CustomEdge
+        return App.g.addEdge(label, id, inVertex.id() as Long) as CustomEdge
     }
 
     fun dir2dir(direction: Direction): it.unibo.graph.Direction {
