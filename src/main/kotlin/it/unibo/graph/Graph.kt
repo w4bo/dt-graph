@@ -23,18 +23,18 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
 
 interface Graph {
     fun clear()
-    fun createNode(label: String, value: Long? = null): N = N(nextNodeId(), label, value = value)
+    fun createNode(label: String, value: Long? = null, id: Int = nextNodeId()): N = N(id, label, value = value)
     fun nextNodeId(): Int
     fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
     fun addNode(n: N): N
-    fun createProperty(nodeId: Int, key: String, value: Any, type: PropType): P = P(nextPropertyId(), nodeId, key, value, type)
+    fun createProperty(nodeId: Int, key: String, value: Any, type: PropType, id: Int = nextPropertyId()): P = P(id, nodeId, key, value, type)
     fun nextPropertyId(): Int
     fun addProperty(nodeId: Int, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
     fun addProperty(p: P): P
-    fun createEdge(label: String, fromNode: Int, toNode: Int): R = R(nextEdgeId(), label, fromNode, toNode)
+    fun createEdge(label: String, fromNode: Int, toNode: Int, id: Int = nextEdgeId()): R = R(id, label, fromNode, toNode)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R
-    fun addEdge(label: String, fromNode: Int, toNode: Int): R = addEdge(createEdge(label, fromNode, toNode))
+    fun addEdge(label: String, fromNode: Int, toNode: Int, id: Int = nextEdgeId()): R = addEdge(createEdge(label, fromNode, toNode, id=id))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
@@ -75,7 +75,12 @@ open class GraphMemory: Graph { // private val tsType: KClass<T>
     override fun nextEdgeId(): Int = rels.size
 
     override fun addEdge(r: R): R {
-        rels += r
+        if (r.id == DUMMY_ID) {
+            throw NotImplementedException()
+            // App.tsm.getTS(r.fromN).???
+        } else {
+            rels += r
+        }
         return r
     }
 
@@ -172,12 +177,9 @@ class GraphRocksDB : Graph {
 
     override fun getNodes(): MutableList<N> {
         val acc: MutableList<N> = mutableListOf()
-        val iterator = db.newIterator(nodes) // Iterate and filter entries for "users"
-        // iterator.seek("users:".toByteArray()) // Start at "users:"
+        val iterator = db.newIterator(nodes)
         iterator.seekToFirst()
         while (iterator.isValid) {
-            // val key = String(iterator.key())
-            // if (!key.startsWith("users:")) break // Stop if outside "users" prefix
             acc += deserialize<N>(iterator.value())
             iterator.next()
         }
@@ -205,8 +207,8 @@ class GraphRocksDB : Graph {
 }
 
 object App {
-//    val tsm = MemoryTSManager()
-//    val g: CustomGraph = CustomGraph(GraphMemory())
-    val tsm = RocksDBTSM()
-    val g: CustomGraph = CustomGraph(GraphRocksDB())
+    val tsm = MemoryTSManager()
+    val g: CustomGraph = CustomGraph(GraphMemory())
+//    val tsm = RocksDBTSM()
+//    val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

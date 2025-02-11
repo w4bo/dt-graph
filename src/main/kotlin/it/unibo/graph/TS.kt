@@ -36,9 +36,10 @@ class Statistic(
 
 interface TS: Serializable {
     fun getTSId(): Long
-    fun add(label:String, timestamp: Long, value: Long) = add(N((timestamp as Number).toInt(), label, timestamp=timestamp, value=value))
+    fun add(label:String, timestamp: Long, value: Long) = add(N((getTSId() as Number).toInt(), label, timestamp=timestamp, value=value))
     fun add(n: N): N
     fun getValues(): List<N>
+    fun get(id: Long): N
 }
 
 class MemoryTS(val id: Int) : TS {
@@ -52,26 +53,32 @@ class MemoryTS(val id: Int) : TS {
     }
 
     override fun getValues(): List<N> = values
+
+    override fun get(id: Long): N = values[id.toInt()]
 }
 
 class RocksDBTS(val id: Int, val db: RocksDB) : TS {
     override fun getTSId(): Long = id.toLong()
 
     override fun add(n: N): N {
-        db.put("TS$id|${n.id}".toByteArray(), serialize(n))
+        db.put("$id|${n.timestamp}".toByteArray(), serialize(n))
         return n
     }
 
     override fun getValues(): List<N> {
         val acc: MutableList<N> = mutableListOf()
         val iterator = db.newIterator()
-        iterator.seekToFirst()
+        iterator.seek("$id|".toByteArray())
         while (iterator.isValid) {
+            val key = String(iterator.key())
+            if (!key.startsWith("$id|")) break
             acc += deserialize<N>(iterator.value())
             iterator.next()
         }
         return acc
     }
+
+    override fun get(timestamp: Long): N = deserialize(db.get("$id|${timestamp}".toByteArray()))
 }
 
 class CustomTS(ts: TS): TS by ts {

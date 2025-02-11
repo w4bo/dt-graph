@@ -2,13 +2,13 @@ package it.unibo.graph
 
 import java.io.Serializable
 
-val DUMMY_PROPERTY = -1
+val DUMMY_ID = -1
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
 open class P(val id: Int, val node: Int, val key: String, val value: Any, val type: PropType, var next: Int? = null): Serializable {
     init {
-        if (DUMMY_PROPERTY != id) {
+        if (DUMMY_ID != id) {
             val n = App.g.getNode(node)
             if (n.nextProp == null) n.nextProp = id
             else {

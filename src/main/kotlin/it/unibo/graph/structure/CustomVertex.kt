@@ -1,6 +1,7 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.App
+import it.unibo.graph.HAS_TS
 import it.unibo.graph.N
 import it.unibo.graph.PropType
 import org.apache.commons.lang3.NotImplementedException
@@ -81,7 +82,7 @@ class CustomVertex(
     override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
         return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
             .flatMap { r ->
-                if (r.type == "hasTS") {
+                if (r.type == HAS_TS) {
                     App.tsm.getTS(r.toN).getValues().map { it as CustomVertex }
                 } else {
                     listOf(App.g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)

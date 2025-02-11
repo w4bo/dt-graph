@@ -3,6 +3,8 @@ package it.unibo.graph
 import org.apache.commons.lang3.NotImplementedException
 import java.io.Serializable
 
+val HAS_TS = "hasTS"
+
 open class N (
     val id: Int, // node id
     val type: String, // node label
@@ -11,10 +13,10 @@ open class N (
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     val location: Pair<Double, Double>? = null, // location
-    var relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
+    val relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
 ): Serializable {
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
-        if (value != null && name == "value") return listOf(P(DUMMY_PROPERTY, id, "value", value, PropType.DOUBLE))
+        if (value != null && name == "value") return listOf(P(DUMMY_ID, id, "value", value, PropType.DOUBLE))
         return if (next == null) {
             emptyList()
         } else {
@@ -32,8 +34,8 @@ open class N (
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null): List<R> {
-        return if (label == "hasTS") { // Jump to the time series
-            listOf(R(-1, "hasTS", id, value!!.toInt()))
+        return if (label == HAS_TS) { // Jump to the time series
+            listOf(R(DUMMY_ID, HAS_TS, id, value!!.toInt()))
         } else { // Iterate within the graph
             if (timestamp != null) { // If TS snapshot
                 when (direction) {

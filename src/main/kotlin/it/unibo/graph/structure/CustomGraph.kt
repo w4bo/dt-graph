@@ -66,7 +66,7 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
         return addProperty(CustomProperty<String>(nextPropertyId(), nodeId, key, value, type))
     }
 
-    override fun addEdge(label: String, fromNode: Int, toNode: Int): R {
-        return addEdge(CustomEdge(nextEdgeId(), label, fromNode, toNode))
+    override fun addEdge(label: String, fromNode: Int, toNode: Int, id: Int): R {
+        return addEdge(CustomEdge(id, label, fromNode, toNode))
     }
 }

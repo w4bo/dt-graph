@@ -7,7 +7,7 @@ enum class Direction { IN, OUT }
 open class R(val id: Int, val type: String, val fromN: Int, val toN: Int, var fromNextRel: Int? = null, var toNextRel: Int? = null):
     Serializable {
     init {
-        if (id != -1) {
+        if (id != DUMMY_ID) {
             val from = App.g.getNode(fromN)
             val to = App.g.getNode(toN)
 

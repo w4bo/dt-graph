@@ -1,8 +1,5 @@
-import it.unibo.graph.App
+import it.unibo.graph.*
 import it.unibo.graph.App.tsm
-import it.unibo.graph.N
-import it.unibo.graph.PropType
-import it.unibo.graph.TS
 import it.unibo.graph.structure.CustomEdge
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -55,28 +52,36 @@ class TestKotlin {
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
         val ts1: TS = tsm.addTS()
-        val m1 = ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
+        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
+        Thread.sleep(1)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
+        Thread.sleep(1)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
         n7 = g.addNode("Humidity", value = ts1.getTSId())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
-        m1.relationships += CustomEdge(-1, "hasOwner", n7!!.id, n5!!.id)
-        m1.relationships += CustomEdge(-1, "hasManutentor", n7!!.id, n5!!.id)
+        g.addEdge("hasOwner", n7!!.id, n5!!.id, id=DUMMY_ID)
+        g.addEdge("hasManutentor", n7!!.id, n5!!.id, id=DUMMY_ID)
 
         val ts2 = tsm.addTS()
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 10)
+        Thread.sleep(1)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 11)
+        Thread.sleep(1)
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
         n8 = g.addNode("Temperature", value = ts2.getTSId())
         g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 13)
+        Thread.sleep(1)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 14)
+        Thread.sleep(1)
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 15)
 
         val ts3 = tsm.addTS()
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
+        Thread.sleep(1)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
+        Thread.sleep(1)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
         n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
         g.addEdge("hasSolarRadiation", n5!!.id, n9!!.id)
@@ -135,7 +140,7 @@ class TestKotlin {
                 .hasLabel("Device")
                 .out("hasHumidity")
                 .hasLabel("Humidity")
-                .out("hasTS").toList().size
+                .out(HAS_TS).toList().size
         )
     }
 
@@ -147,7 +152,7 @@ class TestKotlin {
                 .hasLabel("Device")
                 .out("hasHumidity")
                 .hasLabel("Humidity")
-                .out("hasTS")
+                .out(HAS_TS)
                 .values<Number>("value")
                 .mean<Number>()
                 .toList()
@@ -162,7 +167,7 @@ class TestKotlin {
                 .hasLabel("Device")
                 .out("hasHumidity")
                 .hasLabel("Humidity")
-                .out("hasTS")
+                .out(HAS_TS)
                 .out("hasManutentor").toList().size
         )
     }
@@ -175,7 +180,7 @@ class TestKotlin {
                 .hasLabel("Device")
                 .out("hasHumidity")
                 .hasLabel("Humidity")
-                .out("hasTS")
+                .out(HAS_TS)
                 .out("hasManutentor")
                 .out("hasFriend").toList().size
         )
