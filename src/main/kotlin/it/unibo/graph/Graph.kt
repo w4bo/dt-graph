@@ -4,6 +4,7 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
+import kotlin.math.pow
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -22,7 +23,8 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
 
 interface Graph {
     fun clear()
-    fun createNode(label: String, value: Long? = null, nodeId: Long = nextNodeId()): N = N(nodeId, label, value = value)
+    fun createNode(label: String, value: Long? = null, nodeId: Long = nextNodeIdOffset()): N = N(nodeId, label, value = value)
+    fun nextNodeIdOffset(): Long = encodeBitwise(0, nextNodeId())
     fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
     fun addNode(n: N): N
@@ -40,6 +42,16 @@ interface Graph {
     fun getProp(id: Int): P
     fun getNode(id: Long): N
     fun getEdge(id: Int): R
+}
+
+fun encodeBitwise(x: Long, y: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Long {
+    return (x.toLong() shl offset) or (y and mask)
+}
+
+fun decodeBitwise(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Pair<Long, Long> {
+    val x = (z shr offset)
+    val y = (z and mask)
+    return Pair(x, y)
 }
 
 open class GraphMemory: Graph { // private val tsType: KClass<T>
@@ -75,8 +87,11 @@ open class GraphMemory: Graph { // private val tsType: KClass<T>
 
     override fun addEdge(r: R): R {
         if (r.id == DUMMY_ID) {
-            // throw NotImplementedException()
-            // App.tsm.getTS(r.fromN).???
+            val (tsId, timestamp) = decodeBitwise(r.fromN)
+            val ts = App.tsm.getTS(tsId)
+            val n = ts.get(timestamp)
+            n.relationships += r
+            ts.add(n)
         } else {
             rels += r
         }

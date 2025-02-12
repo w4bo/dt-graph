@@ -15,6 +15,7 @@ open class N (
     val location: Pair<Double, Double>? = null, // location
     val relationships: MutableList<R> = mutableListOf() // if TS snapshot, lists of relationships towards the graph
 ): Serializable {
+
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
         if (value != null && name == "value") return listOf(P(DUMMY_ID, id, "value", value, PropType.DOUBLE))
         return if (next == null) {

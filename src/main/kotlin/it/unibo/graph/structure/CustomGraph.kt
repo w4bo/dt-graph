@@ -14,8 +14,7 @@ import org.apache.tinkerpop.gremlin.structure.Vertex
 
 class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        val n = CustomVertex(nextNodeId(), keyValues[1].toString(), value = null)
-        addNode(n)
+        val n = this.addNode(keyValues[1].toString()) as CustomVertex
         keyValues
             .toList()
             .forEachIndexed { idx, v ->
@@ -59,7 +58,7 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
     }
 
     override fun addNode(label: String, value: Long?): N {
-        return addNode(CustomVertex(nextNodeId(), label, value = value))
+        return addNode(CustomVertex(nextNodeIdOffset(), label, value = value))
     }
 
     override fun addProperty(nodeId: Long, key: String, value: Any, type: PropType): P {

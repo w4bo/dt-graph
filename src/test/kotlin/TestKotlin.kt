@@ -59,10 +59,10 @@ class TestKotlin {
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
         n7 = g.addNode("Humidity", value = ts1.getTSId())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
-        m1.relationships += CustomEdge(DUMMY_ID, "hasOwner", DUMMY_ID.toLong(), n5!!.id)
-        m1.relationships += CustomEdge(DUMMY_ID, "hasManutentor", DUMMY_ID.toLong(), n5!!.id)
-        // g.addEdge("hasOwner", n7!!.id, n5!!.id, id=DUMMY_ID)
-        // g.addEdge("hasManutentor", n7!!.id, n5!!.id, id=DUMMY_ID)
+        // m1.relationships += CustomEdge(DUMMY_ID, "hasOwner", DUMMY_ID.toLong(), n5!!.id)
+        // m1.relationships += CustomEdge(DUMMY_ID, "hasManutentor", DUMMY_ID.toLong(), n5!!.id)
+        g.addEdge("hasOwner", m1.id, n5!!.id, id=DUMMY_ID)
+        g.addEdge("hasManutentor", m1.id, n5!!.id, id=DUMMY_ID)
 
         val ts2 = tsm.addTS()
         ts2.add( "Measurement", timestamp = System.currentTimeMillis(), value = 10)
@@ -92,6 +92,14 @@ class TestKotlin {
     @Test
     fun testSum() {
         assertEquals(42, 40 + 2)
+    }
+
+    @Test
+    fun testID() {
+        val n = 100L
+        assertEquals(Pair(n, n), decodeBitwise(encodeBitwise(n, n)))
+        val ts = System.currentTimeMillis()
+        assertEquals(Pair(n, ts), decodeBitwise(encodeBitwise(n, ts)))
     }
 
     @Test

@@ -6,25 +6,25 @@ import java.io.Serializable
 
 interface TS: Serializable {
     fun getTSId(): Long
-    fun add(label:String, timestamp: Long, value: Long) = add(N(getTSId(), label, timestamp=timestamp, value=value))
+    fun add(label:String, timestamp: Long, value: Long) = add(N(encodeBitwise(getTSId(), timestamp), label, timestamp=timestamp, value=value))
     fun add(n: N): N
     fun getValues(): List<N>
     fun get(id: Long): N
 }
 
 class MemoryTS(val id: Long) : TS {
-    private val values: MutableList<N> = mutableListOf()
+    private val values: MutableMap<Long, N> = mutableMapOf()
 
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
-        values += n
+        values[n.timestamp!!] = n
         return n
     }
 
-    override fun getValues(): List<N> = values
+    override fun getValues(): List<N> = values.values.toList()
 
-    override fun get(id: Long): N = values[id.toInt()]
+    override fun get(id: Long): N = values[decodeBitwise(id).second]!!
 }
 
 class RocksDBTS(val id: Long, val db: RocksDB) : TS {
