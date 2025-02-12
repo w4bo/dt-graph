@@ -181,7 +181,15 @@ class GraphRocksDB : Graph {
     }
 
     override fun addEdge(r: R): R {
-        db.put(edges, "${r.id}".toByteArray(), serialize(r))
+        if (r.id == DUMMY_ID) {
+            val (tsId, timestamp) = decodeBitwise(r.fromN)
+            val ts = App.tsm.getTS(tsId)
+            val n = ts.get(timestamp)
+            n.relationships += r
+            ts.add(n)
+        } else {
+            db.put(edges, "${r.id}".toByteArray(), serialize(r))
+        }
         return r
     }
 
@@ -221,8 +229,8 @@ class GraphRocksDB : Graph {
 }
 
 object App {
-    val tsm = MemoryTSManager()
-    val g: CustomGraph = CustomGraph(GraphMemory())
-//    val tsm = RocksDBTSM()
-//    val g: CustomGraph = CustomGraph(GraphRocksDB())
+    //    val tsm = MemoryTSManager()
+    //    val g: CustomGraph = CustomGraph(GraphMemory())
+    val tsm = RocksDBTSM()
+    val g: CustomGraph = CustomGraph(GraphRocksDB())
 }
