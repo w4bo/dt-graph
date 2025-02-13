@@ -53,6 +53,10 @@ fun decodeBitwise(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Pair<L
     return Pair(x, y)
 }
 
+fun decodeBitwiseSource(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Long {
+    return z shr offset
+}
+
 open class GraphMemory: Graph { // private val tsType: KClass<T>
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
