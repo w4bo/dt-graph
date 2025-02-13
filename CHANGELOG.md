@@ -1,3 +1,14 @@
+## 1.0.0 (2025-02-13)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.123 ([#14](https://github.com/w4bo/dt-graph/issues/14)) ([ec3c80f](https://github.com/w4bo/dt-graph/commit/ec3c80fde5b5a2c5c3348da4ee3939efd901652e))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v1.7.22 ([#9](https://github.com/w4bo/dt-graph/issues/9)) ([2ba2d44](https://github.com/w4bo/dt-graph/commit/2ba2d4482fd562610c1446af4348e7aadfe05587))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-core to v3.6.8 ([#15](https://github.com/w4bo/dt-graph/issues/15)) ([e26ad0b](https://github.com/w4bo/dt-graph/commit/e26ad0b8d6204572c6a63af5bf217efed679b21e))
+
 ## [1.0.46](https://github.com/big-unibo/project-template/compare/1.0.45...1.0.46) (2024-12-17)
 
 ### Bug Fixes
