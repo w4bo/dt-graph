@@ -23,7 +23,7 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
 interface Graph {
     fun clear()
     fun createNode(label: String, value: Long? = null, nodeId: Long = nextNodeIdOffset()): N = N(nodeId, label, value = value)
-    fun nextNodeIdOffset(): Long = encodeBitwise(0, nextNodeId())
+    fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
     fun addNode(n: N): N
@@ -44,7 +44,7 @@ interface Graph {
 }
 
 fun encodeBitwise(x: Long, y: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Long {
-    return (x.toLong() shl offset) or (y and mask)
+    return (x shl offset) or (y and mask)
 }
 
 fun decodeBitwise(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Pair<Long, Long> {
@@ -57,7 +57,7 @@ fun decodeBitwiseSource(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): 
     return z shr offset
 }
 
-open class GraphMemory: Graph { // private val tsType: KClass<T>
+open class GraphMemory: Graph {
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
     private val props: MutableList<P> = ArrayList()

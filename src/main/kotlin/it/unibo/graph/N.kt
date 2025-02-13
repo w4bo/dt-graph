@@ -5,6 +5,7 @@ import java.io.Serializable
 
 val HAS_TS = "hasTS"
 val VALUE = "value"
+val GRAPH_SOURCE = 0L
 
 open class N (
     val id: Long, // node id
