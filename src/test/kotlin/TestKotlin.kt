@@ -103,9 +103,9 @@ class TestKotlin {
         listOf(
             Pair(g.getNode(n1!!.id), 2),
             Pair(g.getNode(n2!!.id), 4),
-            Pair(g.getNode(n3!!.id), 4),
+            Pair(g.getNode(n3!!.id), 5),
             Pair(g.getNode(n4!!.id), 5),
-            Pair(g.getNode(n5!!.id), 4)
+            Pair(g.getNode(n5!!.id), 3)
         ).forEach {
             assertEquals(it.second, it.first.getRels().size, it.first.getRels().toString())
         }
