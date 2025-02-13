@@ -1,6 +1,5 @@
 import it.unibo.graph.*
 import it.unibo.graph.App.tsm
-import it.unibo.graph.structure.CustomEdge
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
@@ -22,7 +21,6 @@ class TestKotlin {
 
     @BeforeTest
     fun setup() {
-//    init {
         g.clear()
         tsm.clear()
 
@@ -59,8 +57,6 @@ class TestKotlin {
         ts1.add( "Measurement", timestamp = System.currentTimeMillis(), value = 12)
         n7 = g.addNode("Humidity", value = ts1.getTSId())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
-        // m1.relationships += CustomEdge(DUMMY_ID, "hasOwner", DUMMY_ID.toLong(), n5!!.id)
-        // m1.relationships += CustomEdge(DUMMY_ID, "hasManutentor", DUMMY_ID.toLong(), n5!!.id)
         g.addEdge("hasOwner", m1.id, n5!!.id, id=DUMMY_ID)
         g.addEdge("hasManutentor", m1.id, n5!!.id, id=DUMMY_ID)
 
@@ -163,7 +159,7 @@ class TestKotlin {
                 .out("hasHumidity")
                 .hasLabel("Humidity")
                 .out(HAS_TS)
-                .values<Number>("value")
+                .values<Number>(VALUE)
                 .mean<Number>()
                 .toList()
         )

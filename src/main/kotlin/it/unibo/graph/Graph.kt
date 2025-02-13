@@ -4,7 +4,6 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
-import kotlin.math.pow
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {

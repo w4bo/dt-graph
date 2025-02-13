@@ -4,6 +4,7 @@ import org.apache.commons.lang3.NotImplementedException
 import java.io.Serializable
 
 val HAS_TS = "hasTS"
+val VALUE = "value"
 
 open class N (
     val id: Long, // node id
@@ -17,7 +18,7 @@ open class N (
 ): Serializable {
 
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
-        if (value != null && name == "value") return listOf(P(DUMMY_ID, id, "value", value, PropType.DOUBLE))
+        if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, VALUE, value, PropType.DOUBLE))
         return if (next == null) {
             emptyList()
         } else {
