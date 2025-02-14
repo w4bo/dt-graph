@@ -1,3 +1,13 @@
+## [1.0.2](https://github.com/w4bo/dt-graph/compare/1.0.1...1.0.2) (2025-02-14)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.124 ([#25](https://github.com/w4bo/dt-graph/issues/25)) ([5d2e05e](https://github.com/w4bo/dt-graph/commit/5d2e05efd9fb0c382afcb7fce58ddb0890fdddfc))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-server to v3.6.8 ([#17](https://github.com/w4bo/dt-graph/issues/17)) ([87f7ab8](https://github.com/w4bo/dt-graph/commit/87f7ab857f541a893af96acecf3f8ae305322e46))
+
 ## [1.0.1](https://github.com/w4bo/dt-graph/compare/1.0.0...1.0.1) (2025-02-13)
 
 ### Bug Fixes
