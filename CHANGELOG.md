@@ -1,3 +1,19 @@
+## [1.0.4](https://github.com/w4bo/dt-graph/compare/1.0.3...1.0.4) (2025-02-15)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v7.6.4 ([#2](https://github.com/w4bo/dt-graph/issues/2)) ([b04f418](https://github.com/w4bo/dt-graph/commit/b04f418595cc650dc053bb0aff75cb5c7b46dedf))
+* **deps:** update node.js to 22.14 ([#19](https://github.com/w4bo/dt-graph/issues/19)) ([c9a765b](https://github.com/w4bo/dt-graph/commit/c9a765bcc4b327c93d6966cdad743a22f58a1d77))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v1.9.25 ([#10](https://github.com/w4bo/dt-graph/issues/10)) ([521d163](https://github.com/w4bo/dt-graph/commit/521d1639900342dca3ca5dee733ecd6c634b16e1))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-core to v3.7.3 ([#20](https://github.com/w4bo/dt-graph/issues/20)) ([4c288da](https://github.com/w4bo/dt-graph/commit/4c288dadcfc970c281d97bbd208c77bca1d2ddb8))
+
+### Build and continuous integration
+
+* **deps:** update actions/setup-java action to v4.7.0 ([#13](https://github.com/w4bo/dt-graph/issues/13)) ([55b5c3f](https://github.com/w4bo/dt-graph/commit/55b5c3ffab256d3a2b9f00e32268408b3ef0886e))
+
 ## [1.0.3](https://github.com/w4bo/dt-graph/compare/1.0.2...1.0.3) (2025-02-14)
 
 ### Bug Fixes
