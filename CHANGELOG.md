@@ -1,3 +1,9 @@
+## [1.0.6](https://github.com/w4bo/dt-graph/compare/1.0.5...1.0.6) (2025-02-16)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-server to v3.7.3 ([#22](https://github.com/w4bo/dt-graph/issues/22)) ([a10ad01](https://github.com/w4bo/dt-graph/commit/a10ad016fe7b6cd8c58529097b536961be3b17a4))
+
 ## [1.0.5](https://github.com/w4bo/dt-graph/compare/1.0.4...1.0.5) (2025-02-16)
 
 ### Bug Fixes
