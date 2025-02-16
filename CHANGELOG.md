@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/w4bo/dt-graph/compare/1.0.4...1.0.5) (2025-02-16)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-driver to v3.7.3 ([#21](https://github.com/w4bo/dt-graph/issues/21)) ([9baf74e](https://github.com/w4bo/dt-graph/commit/9baf74e3e10d8be873b49cd70213b5a204e85cf2))
+
 ## [1.0.4](https://github.com/w4bo/dt-graph/compare/1.0.3...1.0.4) (2025-02-15)
 
 ### Dependency updates
