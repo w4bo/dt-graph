@@ -1,3 +1,9 @@
+## [1.0.8](https://github.com/w4bo/dt-graph/compare/1.0.7...1.0.8) (2025-02-17)
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v9.10.0 ([#24](https://github.com/w4bo/dt-graph/issues/24)) ([bc4892e](https://github.com/w4bo/dt-graph/commit/bc4892ef2d34381bbddfbf00f7fcffa58d123bdc))
+
 ## [1.0.7](https://github.com/w4bo/dt-graph/compare/1.0.6...1.0.7) (2025-02-16)
 
 ### Bug Fixes
