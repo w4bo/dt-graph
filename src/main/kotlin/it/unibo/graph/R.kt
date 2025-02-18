@@ -1,7 +1,5 @@
 package it.unibo.graph
 
-import java.io.Serializable
-
 enum class Direction { IN, OUT }
 
 open class R(

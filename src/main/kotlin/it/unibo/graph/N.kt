@@ -1,7 +1,6 @@
 package it.unibo.graph
 
 import org.apache.commons.lang3.NotImplementedException
-import java.io.Serializable
 
 val HAS_TS = "hasTS"
 val VALUE = "value"

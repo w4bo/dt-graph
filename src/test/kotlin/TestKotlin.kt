@@ -1,9 +1,6 @@
 import it.unibo.graph.*
 import it.unibo.graph.App.tsm
-import it.unibo.graph.strategy.TrackEdgeWeightStrategy
-import org.apache.tinkerpop.gremlin.process.traversal.Path
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
 import kotlin.test.Test

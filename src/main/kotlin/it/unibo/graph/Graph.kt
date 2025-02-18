@@ -1,12 +1,9 @@
 package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
-import it.unibo.graph.structure.CustomVertex
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
-import java.util.*
-import kotlin.collections.ArrayList
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
