@@ -1,6 +1,9 @@
 import it.unibo.graph.*
 import it.unibo.graph.App.tsm
+import it.unibo.graph.strategy.TrackEdgeWeightStrategy
+import org.apache.tinkerpop.gremlin.process.traversal.Path
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -127,7 +130,7 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode0() {
+    fun testTSAsNode0() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             1, g.V()
@@ -139,7 +142,12 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode1() {
+    fun testSearch0() {
+        kotlin.test.assertEquals(1, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"))).size)
+    }
+
+    @Test
+    fun testTSAsNode1() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             6, g.V()
@@ -151,7 +159,17 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode4() {
+    fun testSearch1() {
+        kotlin.test.assertEquals(1, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS))).size)
+    }
+
+    @Test
+    fun testSearch1bis() {
+        kotlin.test.assertEquals(6, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).size)
+    }
+
+    @Test
+    fun testTSAsNode4() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             listOf(12.5), g.V()
@@ -166,7 +184,12 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode5() {
+    fun testSearch4() {
+        kotlin.test.assertEquals(75, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).map { (it.last() as N).value }.sumOf { it!! })
+    }
+
+    @Test
+    fun testTSAsNode5() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             listOf(24.0), g.V()
@@ -181,7 +204,7 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode2() {
+    fun testTSAsNode2() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             1, g.V()
@@ -194,7 +217,7 @@ class TestKotlin {
     }
 
     @Test
-    fun tstTSAsNode3() {
+    fun testTSAsNode3() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
             1, g.V()

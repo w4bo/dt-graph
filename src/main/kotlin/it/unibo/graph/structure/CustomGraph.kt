@@ -57,7 +57,7 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
         clear()
     }
 
-    override fun addNode(label: String, value: Long?): N {
+    override fun addNode(label: String, value: Long?, from: Long, to: Long): N {
         return addNode(CustomVertex(nextNodeIdOffset(), label, value = value))
     }
 
@@ -65,7 +65,7 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
         return addProperty(CustomProperty<String>(nextPropertyId(), nodeId, key, value, type))
     }
 
-    override fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int): R {
+    override fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int, from: Long, to: Long): R {
         return addEdge(CustomEdge(id, label, fromNode, toNode))
     }
 }
