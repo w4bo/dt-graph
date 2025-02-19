@@ -9,8 +9,8 @@ open class R(
     val toN: Long, // to node
     var fromNextRel: Int? = null, // pointer to the next relationship of the `from node`
     var toNextRel: Int? = null, // pointer to the next relationship of the `to node`
-    val fromTimestamp: Long = Long.MIN_VALUE,
-    var toTimestamp: Long = Long.MAX_VALUE,
+    override val fromTimestamp: Long = Long.MIN_VALUE,
+    override var toTimestamp: Long = Long.MAX_VALUE,
 ): Elem {
     init {
         if (id != DUMMY_ID) {

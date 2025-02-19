@@ -4,6 +4,8 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
+import kotlin.math.max
+import kotlin.math.min
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -25,6 +27,8 @@ val LABEL = "label"
 interface Elem: Serializable {
     val id: Number
     val type: String
+    val fromTimestamp: Long
+    var toTimestamp: Long
 }
 
 interface IStep {
@@ -34,38 +38,47 @@ interface IStep {
 
 class Step(override val type: String? = null, override val properties: Pair<String, Any>? = null) : IStep
 
-fun search(pattern: List<Step?>, timeaware: Boolean = false): MutableList<List<Elem>> {
+fun search(pattern: List<Step?>, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<Elem>> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<List<Elem>> = mutableListOf()
-    fun dfs(node: Elem, index: Int, path: List<Elem>, timeaware: Boolean) {
-        if (pattern[index] == null || (pattern[index]!!.type == null || pattern[index]!!.type == node.type)) {
-            val curPath = path + listOf(node)
+
+    fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
+
+    fun dfs(e: Elem, index: Int, path: List<Elem>, from: Long, to: Long) {
+        if ((pattern[index] == null || (pattern[index]!!.type == null || pattern[index]!!.type == e.type)) && timeOverlap(e, from, to)) {
+            val curPath = path + listOf(e)
             if (curPath.size == pattern.size) {
                 acc.add(curPath)
                 return
             }
-            if (visited.contains(node.id)) { return }
-            visited += node.id
+            if (visited.contains(e.id)) { return }
+            val from = max(e.fromTimestamp, from)
+            val to = min(e.toTimestamp, to)
             if (index % 2 == 0) { // is node
-                (node as N).getRels(direction = Direction.OUT, includeHasTs = true).forEach {
-                    dfs(it, index + 1, curPath, timeaware)
-                }
-            } else { // is edge
-                val r = (node as R)
-                if (node.type == HAS_TS) {
-                    App.tsm.getTS(r.toN).getValues().forEach {
-                        dfs(it, index + 1, curPath, timeaware)
+                visited += e.id
+                (e as N)
+                    .getRels(direction = Direction.OUT, includeHasTs = true)
+                    .forEach {
+                        dfs(it, index + 1, curPath, from, to)
                     }
-                } else {
-                    dfs(App.g.getNode(r.toN), index + 1, curPath, timeaware)
+            } else { // is edge...
+                val r = (e as R)
+                if (e.type == HAS_TS) { // ... to time series
+                    App.tsm
+                        .getTS(r.toN)
+                        .getValues()
+                        .forEach {
+                            dfs(it, index + 1, curPath, from, to)
+                        }
+                } else { // ... or to graph node
+                    val n = App.g.getNode(r.toN)
+                    dfs(n, index + 1, curPath, from, to)
                 }
             }
         }
     }
     for (node in App.g.getNodes()) {
-        if (!visited.contains(node.id)) {
-            dfs(node, 0, emptyList(), timeaware)
-        }
+        dfs(node, 0, emptyList(), from, to)
     }
     return acc
 }

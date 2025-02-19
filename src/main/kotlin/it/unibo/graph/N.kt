@@ -15,8 +15,8 @@ open class N (
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     val location: Pair<Double, Double>? = null, // location
     val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
-    val fromTimestamp: Long = Long.MIN_VALUE,
-    val toTimestamp: Long = Long.MAX_VALUE
+    override val fromTimestamp: Long = Long.MIN_VALUE,
+    override var toTimestamp: Long = Long.MAX_VALUE
 ): Elem {
 
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
