@@ -34,10 +34,10 @@ interface IStep {
 
 class Step(override val type: String? = null, override val properties: Pair<String, Any>? = null) : IStep
 
-fun search(pattern: List<Step?>): MutableList<List<Elem>> {
+fun search(pattern: List<Step?>, timeaware: Boolean = false): MutableList<List<Elem>> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<List<Elem>> = mutableListOf()
-    fun dfs(node: Elem, index: Int, path: List<Elem>) {
+    fun dfs(node: Elem, index: Int, path: List<Elem>, timeaware: Boolean) {
         if (pattern[index] == null || (pattern[index]!!.type == null || pattern[index]!!.type == node.type)) {
             val curPath = path + listOf(node)
             if (curPath.size == pattern.size) {
@@ -45,30 +45,26 @@ fun search(pattern: List<Step?>): MutableList<List<Elem>> {
                 return
             }
             if (visited.contains(node.id)) { return }
+            visited += node.id
             if (index % 2 == 0) { // is node
-                visited += node.id
                 (node as N).getRels(direction = Direction.OUT, includeHasTs = true).forEach {
-                    dfs(it, index + 1, curPath)
+                    dfs(it, index + 1, curPath, timeaware)
                 }
             } else { // is edge
                 val r = (node as R)
                 if (node.type == HAS_TS) {
                     App.tsm.getTS(r.toN).getValues().forEach {
-                        dfs(it, index + 1, curPath)
+                        dfs(it, index + 1, curPath, timeaware)
                     }
                 } else {
-                    dfs(App.g.getNode(r.toN), index + 1, curPath)
+                    dfs(App.g.getNode(r.toN), index + 1, curPath, timeaware)
                 }
-
             }
-            /* node.getRels(direction = Direction.OUT, label = null).forEach {
-                dfs(nodes[it.toN], index + 1, curPath)
-            } */
         }
     }
     for (node in App.g.getNodes()) {
         if (!visited.contains(node.id)) {
-            dfs(node, 0, emptyList())
+            dfs(node, 0, emptyList(), timeaware)
         }
     }
     return acc
