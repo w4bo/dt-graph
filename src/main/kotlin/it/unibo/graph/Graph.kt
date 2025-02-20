@@ -24,28 +24,44 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
 
 interface Elem: Serializable {
     val id: Number
-    val type: String
     val fromTimestamp: Long
     var toTimestamp: Long
 }
 
-interface IStep {
-    val type: String?
-    val properties: Pair<String, Any>?
+interface ElemP: Elem {
+    val type: String
+    var nextProp: Int?
+    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P>
 }
 
-class Step(override val type: String? = null, override val properties: Pair<String, Any>? = null) : IStep
+interface IStep {
+    val type: String?
+    val properties: List<Triple<String, Operators, Any>>
+}
 
-fun search(pattern: List<Step?>, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<Elem>> {
+class Step(override val type: String? = null, override val properties: List<Triple<String, Operators, Any>> = listOf()) : IStep
+enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
+class Compare(val a: ElemP, val b: ElemP, val property: String, val operator: String) {
+    fun isOk(): Boolean = a.getProps(name = property) == b.getProps(name = property) // TODO change this depending on the operator
+}
+
+fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
     val visited: MutableSet<Number> = mutableSetOf()
-    val acc: MutableList<List<Elem>> = mutableListOf()
+    val acc: MutableList<List<ElemP>> = mutableListOf()
+    val remainingWhere = where.toMutableList()
 
     fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
 
-    fun dfs(e: Elem, index: Int, path: List<Elem>, from: Long, to: Long) {
-        if ((pattern[index] == null || (pattern[index]!!.type == null || pattern[index]!!.type == e.type)) && timeOverlap(e, from, to)) {
+    fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
+        if ((match[index] == null // no filter
+                || ((match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
+                && (match[index]!!.properties.all { f ->
+                    e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third}}
+                )) // filter on properties, TODO should implement different operators
+            ) && timeOverlap(e, from, to)
+        ) {
             val curPath = path + listOf(e)
-            if (curPath.size == pattern.size) {
+            if (curPath.size == match.size) {
                 acc.add(curPath)
                 return
             }
@@ -88,9 +104,9 @@ interface Graph {
     fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
-    fun createProperty(nodeId: Long, key: String, value: Any, type: PropType, id: Int = nextPropertyId()): P = P(id, nodeId, key, value, type)
+    fun createProperty(nodeId: Long, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, nodeId, key, value, type)
     fun nextPropertyId(): Int
-    fun addProperty(nodeId: Long, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
+    fun addProperty(nodeId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): P = addProperty(createProperty(nodeId, key, value, type, from = from, to = to))
     fun addProperty(p: P): P
     fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
     fun nextEdgeId(): Int

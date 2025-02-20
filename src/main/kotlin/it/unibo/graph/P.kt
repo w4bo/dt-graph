@@ -1,12 +1,19 @@
 package it.unibo.graph
 
-import java.io.Serializable
-
 val DUMMY_ID = -1
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
-open class P(val id: Int, val nodeId: Long, val key: String, val value: Any, val type: PropType, var next: Int? = null): Serializable {
+open class P(
+    final override val id: Int,
+    val nodeId: Long,
+    val key: String,
+    val value: Any,
+    val type: PropType,
+    var next: Int? = null,
+    override val fromTimestamp: Long = Long.MIN_VALUE,
+    override var toTimestamp: Long = Long.MAX_VALUE
+) : Elem {
     init {
         if (DUMMY_ID != id) {
             val n = App.g.getNode(nodeId)

@@ -11,7 +11,8 @@ open class R(
     var toNextRel: Int? = null, // pointer to the next relationship of the `to node`
     override val fromTimestamp: Long = Long.MIN_VALUE,
     override var toTimestamp: Long = Long.MAX_VALUE,
-): Elem {
+    override var nextProp: Int? = null
+): ElemP {
     init {
         if (id != DUMMY_ID) {
             val from = App.g.getNode(fromN)
@@ -51,6 +52,10 @@ open class R(
 
     override fun toString(): String {
         return "($fromN)-[id: $id, type: $type, from: $fromTimestamp, to: $toTimestamp}->($toN)"
+    }
+
+    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
+        TODO("Not yet implemented")
     }
 
     override fun equals(other: Any?): Boolean {

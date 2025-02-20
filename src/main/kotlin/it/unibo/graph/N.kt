@@ -10,26 +10,22 @@ open class N (
     override val id: Long, // node id
     override val type: String, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
-    var nextProp: Int? = null, // if graph node, link to the next property
+    override var nextProp: Int? = null, // if graph node, link to the next property
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     val location: Pair<Double, Double>? = null, // location
     val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
     override val fromTimestamp: Long = Long.MIN_VALUE,
     override var toTimestamp: Long = Long.MAX_VALUE
-): Elem {
+): ElemP {
 
-    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null): List<P> {
+    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
         if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, VALUE, value, PropType.DOUBLE))
         return if (next == null) {
             emptyList()
         } else {
             val p = App.g.getProp(next)
-            (if ((filter == null || p.type == filter) && (name == null || p.key == name)) listOf(p) else emptyList()) + getProps(
-                p.next,
-                filter,
-                name
-            )
+            (if ((filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
         }
     }
 

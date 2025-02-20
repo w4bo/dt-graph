@@ -7,8 +7,8 @@ import org.apache.tinkerpop.gremlin.structure.Property
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 
-class CustomProperty<V>(id: Int, nodeId: Long, key: String, value: Any, type: PropType) : VertexProperty<V>,
-    P(id, nodeId, key, value, type) {
+class CustomProperty<V>(id: Int, nodeId: Long, key: String, value: Any, type: PropType, fromTimestamp: Long, toTimestamp: Long) : VertexProperty<V>,
+    P(id, nodeId, key, value, type, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
 
     override fun key(): String {
         return key

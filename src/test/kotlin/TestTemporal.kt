@@ -29,6 +29,9 @@ class TestTemporal {
         g.addEdge("hasDevice", p2.id, d1.id, from = 2, to = 4)
         g.addEdge("hasManutentor", d1.id, h1.id, from = 0, to = 2)
         g.addEdge("hasManutentor", d1.id, h2.id, from = 2, to = 4)
+        g.addProperty(h1.id, "name", "Alice", PropType.STRING)
+        g.addProperty(h1.id, "address", "Foo", PropType.STRING, from = 0, to = 1)
+        g.addProperty(h1.id, "address", "Bar", PropType.STRING, from = 2)
 
         val ts1: TS = tsm.addTS()
         val m1 = ts1.add("Measurement", timestamp = 0, value = 0)
@@ -125,5 +128,31 @@ class TestTemporal {
         kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 1, to = 1).size)
         kotlin.test.assertEquals(2, search(steps, timeaware = false).size)
+    }
+
+    @Test
+    fun testSearch5() {
+        val steps = listOf(
+            Step("Device"),
+            Step("hasTemperature"),
+            Step("Temperature"),
+            Step(HAS_TS),
+            Step("Measurement"),
+            Step("hasOwner"),
+            Step("Person", listOf(Triple("name", Operators.EQ, "Alice")))
+        )
+        kotlin.test.assertEquals(1, search(steps, timeaware = true).size)
+        kotlin.test.assertEquals(1, search(steps, timeaware = false).size)
+    }
+
+    @Test
+    fun testSearch6() {
+        val steps = listOf(
+            Step("Person", listOf(Triple("name", Operators.EQ, "Alice"), Triple("address", Operators.EQ, "Foo")))
+        )
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
+        kotlin.test.assertEquals(1, search(steps, timeaware = false).size)
+        kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 2).size)
+        kotlin.test.assertEquals(0, search(steps, timeaware = true, to = -1).size)
     }
 }
