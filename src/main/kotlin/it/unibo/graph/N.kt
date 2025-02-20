@@ -20,7 +20,7 @@ open class N (
 ): ElemP {
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
-        if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, VALUE, value, PropType.DOUBLE))
+        if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE))
         return super.getProps(next, filter, name, fromTimestamp, toTimestamp)
     }
 

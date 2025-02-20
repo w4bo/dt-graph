@@ -111,9 +111,9 @@ interface Graph {
     fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
-    fun createProperty(nodeId: Long, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, nodeId, key, value, type)
+    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, sourceId, sourceType, key, value, type)
     fun nextPropertyId(): Int
-    fun addProperty(nodeId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): P = addProperty(createProperty(nodeId, key, value, type, from = from, to = to))
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to))
     fun addProperty(p: P): P
     fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
     fun nextEdgeId(): Int

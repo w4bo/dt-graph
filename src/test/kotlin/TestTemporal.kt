@@ -21,7 +21,9 @@ class TestTemporal {
         val h1 = g.addNode("Person", from = 0)
         val h2 = g.addNode("Person", from = 2)
 
-        g.addEdge("hasParcel", f1.id, p1.id)
+        val r1 = g.addEdge("hasParcel", f1.id, p1.id)
+        g.addProperty(r1.id.toLong(),"dateChanged", "today", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(r1.id.toLong(),"dateChanged", "yesterday", PropType.STRING, from = 2, sourceType = EDGE)
         g.addEdge("hasParcel", f1.id, p2.id)
         g.addEdge("hasDevice", p1.id, d1.id, from = 0, to = 2)
         g.addEdge("hasDevice", p1.id, d2.id, from = 2, to = 4)
@@ -154,5 +156,16 @@ class TestTemporal {
         kotlin.test.assertEquals(1, search(steps, timeaware = false).size)
         kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 2).size)
         kotlin.test.assertEquals(0, search(steps, timeaware = true, to = -1).size)
+    }
+
+    @Test
+    fun testSearch7() {
+        var steps = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"))
+        kotlin.test.assertEquals(2, search(steps, timeaware = false).size)
+
+        steps = listOf(Step("AgriFarm"), Step("hasParcel", listOf(Triple("dateChanged", Operators.EQ, "today"))), Step("AgriParcel"))
+        kotlin.test.assertEquals(1, search(steps, timeaware = false).size)
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
+        kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 2).size)
     }
 }
