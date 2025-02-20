@@ -111,34 +111,17 @@ class TestTemporal {
 
     @Test
     fun testSearch4() {
-        kotlin.test.assertEquals(
-            1,
-            search(
-                listOf(
-                    Step("Device"),
-                    Step("hasTemperature"),
-                    Step("Temperature"),
-                    Step(HAS_TS),
-                    Step("Measurement"),
-                    Step("hasOwner"),
-                    Step("Person")
-                ), timeaware = true, from = 0, to = 4
-            ).size
+        val steps = listOf(
+            Step("Device"),
+            Step("hasTemperature"),
+            Step("Temperature"),
+            Step(HAS_TS),
+            Step("Measurement"),
+            Step("hasOwner"),
+            Step("Person")
         )
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 4).size)
 
-        kotlin.test.assertEquals(
-            2,
-            search(
-                listOf(
-                    Step("Device"),
-                    Step("hasTemperature"),
-                    Step("Temperature"),
-                    Step(HAS_TS),
-                    Step("Measurement"),
-                    Step("hasOwner"),
-                    Step("Person")
-                ), timeaware = false
-            ).size
-        )
+        kotlin.test.assertEquals(2, search(steps, timeaware = false).size)
     }
 }
