@@ -54,10 +54,6 @@ open class R(
         return "($fromN)-[id: $id, type: $type, from: $fromTimestamp, to: $toTimestamp}->($toN)"
     }
 
-    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
-        TODO("Not yet implemented")
-    }
-
     override fun equals(other: Any?): Boolean {
         if (other !is R) return false
         return id == other.id

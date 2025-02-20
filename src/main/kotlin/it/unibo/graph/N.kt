@@ -21,12 +21,7 @@ open class N (
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
         if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, VALUE, value, PropType.DOUBLE))
-        return if (next == null) {
-            emptyList()
-        } else {
-            val p = App.g.getProp(next)
-            (if ((filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
-        }
+        return super.getProps(next, filter, name, fromTimestamp, toTimestamp)
     }
 
     fun getTS(): List<N> {

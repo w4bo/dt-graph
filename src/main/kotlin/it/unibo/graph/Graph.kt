@@ -31,7 +31,14 @@ interface Elem: Serializable {
 interface ElemP: Elem {
     val type: String
     var nextProp: Int?
-    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P>
+    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P> {
+        return if (next == null) {
+            emptyList()
+        } else {
+            val p = App.g.getProp(next)
+            (if ((filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
+        }
+    }
 }
 
 interface IStep {
@@ -56,7 +63,7 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
         if ((match[index] == null // no filter
                 || ((match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
                 && (match[index]!!.properties.all { f ->
-                    e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third}}
+                    e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }}
                 )) // filter on properties, TODO should implement different operators
             ) && timeOverlap(e, from, to)
         ) {
