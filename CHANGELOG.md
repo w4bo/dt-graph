@@ -1,3 +1,16 @@
+## [1.0.9](https://github.com/w4bo/dt-graph/compare/1.0.8...1.0.9) (2025-02-20)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v8 ([#6](https://github.com/w4bo/dt-graph/issues/6)) ([198ec41](https://github.com/w4bo/dt-graph/commit/198ec419c1a281d444e0aab283194e700cb056f3))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.125 ([#26](https://github.com/w4bo/dt-graph/issues/26)) ([be19a62](https://github.com/w4bo/dt-graph/commit/be19a62fa49b0e7b16c320813216456466509598))
+* **deps:** update plugin com.github.johnrengelman.shadow to v8 ([#7](https://github.com/w4bo/dt-graph/issues/7)) ([d77cf37](https://github.com/w4bo/dt-graph/commit/d77cf3719c89a764748be44d249beb89717a4fac))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2 ([#11](https://github.com/w4bo/dt-graph/issues/11)) ([7751063](https://github.com/w4bo/dt-graph/commit/7751063f7e7feae0be60830e4c874d907b9e03f3))
+
+### Bug Fixes
+
+* adding temporal properties ([#27](https://github.com/w4bo/dt-graph/issues/27)) ([16cab0a](https://github.com/w4bo/dt-graph/commit/16cab0a371f49fe1ec3ab34a34b67ea245593345))
+
 ## [1.0.8](https://github.com/w4bo/dt-graph/compare/1.0.7...1.0.8) (2025-02-17)
 
 ### Bug Fixes
