@@ -91,9 +91,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
-        if (n.id == -1.toLong()){
-            print("HELLO")
-        }
         val insertQuery = """
         USE $dataverse;
         UPSERT INTO $dataset ([
@@ -103,10 +100,15 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 "property": "${n.type}",
                 "location": point("${n.location?.toString()?.replace("(", "")?.replace(")", "") ?: "12.23593,44.147788"}"),
                 "relationships": ${n.getRels().map(::relToJson)},
+                "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
+                "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
             }
         ]);
         """.trimIndent()
+        println("HELLOO")
+        println("${n.fromTimestamp}")
+        println("${n.toTimestamp}")
         val result = queryAsterixDB(insertQuery)
         //TODO: Handle negative results
         return n
@@ -141,14 +143,15 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 if (result.entities.size > 0){
                     return result.entities[0]
                 }else{
-                    return CustomVertex(id=-1,type="Error")
+                    //TODO: Fix this random return
+                    return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
                 }
 
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
                 //TODO fix this empty node
-                return CustomVertex(id=-1,type="Error")
+                return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
             }
         }
     }
@@ -197,19 +200,14 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                         for (i in 0 until resultArray.length()) {
                             val jsonEntity = resultArray.getJSONObject(i).getJSONObject(dataset)
 
-                            val measurement_timestamp = jsonEntity.getString("timestamp")
-                            val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
-                            val localDateTime = LocalDateTime.parse(measurement_timestamp, formatterWithMillis)
-
-                            val instant = localDateTime.toInstant(ZoneOffset.UTC)
-
-                            val timestampMilliseconds = instant.toEpochMilli()
 
                             val entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
-                                timestamp = timestampMilliseconds,
+                                timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = jsonEntity.getString("property"),
                                 location = parseLocation(jsonEntity.getJSONArray("location")),
+                                fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
+                                toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
                                 value = jsonEntity.getDouble("value").toLong()
                             )
                             entity.relationships.addAll(
@@ -262,6 +260,14 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
         val instant = Instant.ofEpochMilli(timestamp)
         val formatter = DateTimeFormatter.ISO_INSTANT
         return formatter.format(instant)
+    }
+    private fun dateToTimestamp(date: String): Long{
+        val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+        val localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+
+        val instant = localDateTime.toInstant(ZoneOffset.UTC)
+
+        return instant.toEpochMilli()
     }
 
 }

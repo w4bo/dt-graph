@@ -157,7 +157,7 @@ class AsterixDBTSM private constructor(
     companion object {
         fun createDefault(): AsterixDBTSM {
             return AsterixDBTSM(
-                "137.204.74.52",
+                "localhost",
                 "19002",
                 "Measurements_Dataverse",
                 "Measurement",
