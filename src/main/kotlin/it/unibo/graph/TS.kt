@@ -14,9 +14,19 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
 
-interface TS: Serializable {
+interface TS : Serializable {
     fun getTSId(): Long
-    fun add(label:String, timestamp: Long, value: Long) = add(N(encodeBitwise(getTSId(), timestamp), label, timestamp=timestamp, value=value))
+    fun add(label: String, timestamp: Long, value: Long) = add(
+        N(
+            encodeBitwise(getTSId(), timestamp),
+            label,
+            timestamp = timestamp,
+            value = value,
+            fromTimestamp = timestamp,
+            toTimestamp = timestamp
+        )
+    )
+
     fun add(n: N): N
     fun getValues(): List<N>
     fun get(id: Long): N
@@ -61,9 +71,18 @@ class RocksDBTS(val id: Long, val db: RocksDB) : TS {
     override fun get(timestamp: Long): N = deserialize(db.get("$id|${timestamp}".toByteArray()))
 }
 
-class CustomTS(ts: TS): TS by ts {
+class CustomTS(ts: TS) : TS by ts {
     override fun add(label: String, timestamp: Long, value: Long): N {
-        return add(CustomVertex(timestamp, label, timestamp = timestamp, value = value))
+        return add(
+            CustomVertex(
+                encodeBitwise(getTSId(), timestamp),
+                label,
+                timestamp = timestamp,
+                value = value,
+                fromTimestamp = timestamp,
+                toTimestamp = timestamp
+            )
+        )
     }
 }
 

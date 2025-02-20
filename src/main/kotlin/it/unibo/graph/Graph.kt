@@ -4,6 +4,8 @@ import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 import java.io.*
+import kotlin.math.max
+import kotlin.math.min
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -20,21 +22,103 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
     }
 }
 
+interface Elem: Serializable {
+    val id: Number
+    val fromTimestamp: Long
+    var toTimestamp: Long
+}
+
+interface ElemP: Elem {
+    val type: String
+    var nextProp: Int?
+    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P> {
+        return if (next == null) {
+            emptyList()
+        } else {
+            val p = App.g.getProp(next)
+            (if ((filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
+        }
+    }
+}
+
+interface IStep {
+    val type: String?
+    val properties: List<Triple<String, Operators, Any>>
+}
+
+class Step(override val type: String? = null, override val properties: List<Triple<String, Operators, Any>> = listOf()) : IStep
+enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
+class Compare(val a: ElemP, val b: ElemP, val property: String, val operator: String) {
+    fun isOk(): Boolean = a.getProps(name = property) == b.getProps(name = property) // TODO change this depending on the operator
+}
+
+fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
+    val visited: MutableSet<Number> = mutableSetOf()
+    val acc: MutableList<List<ElemP>> = mutableListOf()
+    val remainingWhere = where.toMutableList()
+
+    fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
+
+    fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
+        if ((match[index] == null // no filter
+                || ((match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
+                && (match[index]!!.properties.all { f ->
+                    e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }}
+                )) // filter on properties, TODO should implement different operators
+            ) && timeOverlap(e, from, to)
+        ) {
+            val curPath = path + listOf(e)
+            if (curPath.size == match.size) {
+                acc.add(curPath)
+                return
+            }
+            if (visited.contains(e.id)) { return }
+            val from = max(e.fromTimestamp, from)
+            val to = min(e.toTimestamp, to)
+            if (index % 2 == 0) { // is node
+                visited += e.id
+                (e as N)
+                    .getRels(direction = Direction.OUT, includeHasTs = true)
+                    .forEach {
+                        dfs(it, index + 1, curPath, from, to)
+                    }
+            } else { // is edge...
+                val r = (e as R)
+                if (e.type == HAS_TS) { // ... to time series
+                    App.tsm
+                        .getTS(r.toN)
+                        .getValues()
+                        .forEach {
+                            dfs(it, index + 1, curPath, from, to)
+                        }
+                } else { // ... or to graph node
+                    val n = App.g.getNode(r.toN)
+                    dfs(n, index + 1, curPath, from, to)
+                }
+            }
+        }
+    }
+    for (node in App.g.getNodes()) {
+        dfs(node, 0, emptyList(), from, to)
+    }
+    return acc
+}
+
 interface Graph {
     fun clear()
-    fun createNode(label: String, value: Long? = null, nodeId: Long = nextNodeIdOffset()): N = N(nodeId, label, value = value)
+    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
-    fun addNode(label: String, value: Long? = null): N = addNode(createNode(label, value))
+    fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
-    fun createProperty(nodeId: Long, key: String, value: Any, type: PropType, id: Int = nextPropertyId()): P = P(id, nodeId, key, value, type)
+    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, sourceId, sourceType, key, value, type)
     fun nextPropertyId(): Int
-    fun addProperty(nodeId: Long, key: String, value: Any, type: PropType): P = addProperty(createProperty(nodeId, key, value, type))
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to))
     fun addProperty(p: P): P
-    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId()): R = R(id, label, fromNode, toNode)
+    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R
-    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId()): R = addEdge(createEdge(label, fromNode, toNode, id=id))
+    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
@@ -53,7 +137,7 @@ fun decodeBitwise(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Pair<L
     return Pair(x, y)
 }
 
-fun decodeBitwiseSource(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Long {
+fun decodeBitwiseSource(z: Long, offset: Int = 44): Long {
     return z shr offset
 }
 

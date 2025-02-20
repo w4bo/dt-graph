@@ -12,8 +12,10 @@ class CustomVertex(
     type: String,
     value: Long? = null,
     timestamp: Long? = null,
-    location: Pair<Double, Double>? = null
-) : Vertex, N(id, type, value = value, timestamp = timestamp, location = location) {
+    location: Pair<Double, Double>? = null,
+    override val fromTimestamp: Long,
+    override var toTimestamp: Long
+) : Vertex, N(id, type, value = value, timestamp = timestamp, location = location, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
 
     override fun id(): Any {
         return id
@@ -47,7 +49,16 @@ class CustomVertex(
                 if (it is CustomProperty<*>) {
                     it as CustomProperty<V>
                 } else {
-                    CustomProperty(it.id, it.nodeId, it.key, it.value, it.type)
+                    CustomProperty(
+                        it.id,
+                        it.sourceId,
+                        it.sourceType,
+                        it.key,
+                        it.value,
+                        it.type,
+                        fromTimestamp = it.fromTimestamp,
+                        toTimestamp = it.toTimestamp,
+                    )
                 }
             }
             .iterator()
