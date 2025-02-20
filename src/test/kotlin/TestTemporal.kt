@@ -120,8 +120,10 @@ class TestTemporal {
             Step("hasOwner"),
             Step("Person")
         )
+        kotlin.test.assertEquals(1, search(steps, timeaware = true).size)
         kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 4).size)
-
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
+        kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 1, to = 1).size)
         kotlin.test.assertEquals(2, search(steps, timeaware = false).size)
     }
 }
