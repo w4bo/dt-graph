@@ -5,7 +5,10 @@ import it.unibo.graph.R
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
-class CustomEdge(id: Int, type: String, prevNode: Long, nextNode: Long): Edge, R(id, type, prevNode, nextNode) {
+class CustomEdge(
+    id: Int, type: String, prevNode: Long, nextNode: Long, override val fromTimestamp: Long,
+    override var toTimestamp: Long
+) : Edge, R(id, type, prevNode, nextNode, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
     override fun id(): Any {
         return id
     }
