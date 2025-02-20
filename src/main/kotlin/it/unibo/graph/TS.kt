@@ -65,7 +65,7 @@ class CustomTS(ts: TS) : TS by ts {
     override fun add(label: String, timestamp: Long, value: Long): N {
         return add(
             CustomVertex(
-                timestamp,
+                encodeBitwise(getTSId(), timestamp),
                 label,
                 timestamp = timestamp,
                 value = value,

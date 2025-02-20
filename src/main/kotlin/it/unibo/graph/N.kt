@@ -2,9 +2,9 @@ package it.unibo.graph
 
 import org.apache.commons.lang3.NotImplementedException
 
-val HAS_TS = "hasTS"
-val VALUE = "value"
-val GRAPH_SOURCE = 0L
+const val HAS_TS = "hasTS"
+const val VALUE = "value"
+const val GRAPH_SOURCE = 0L
 
 open class N (
     override val id: Long, // node id

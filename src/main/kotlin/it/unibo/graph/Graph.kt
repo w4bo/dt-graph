@@ -22,8 +22,6 @@ inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
     }
 }
 
-val LABEL = "label"
-
 interface Elem: Serializable {
     val id: Number
     val type: String

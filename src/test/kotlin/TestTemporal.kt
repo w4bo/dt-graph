@@ -18,8 +18,8 @@ class TestTemporal {
         val p2 = g.addNode("AgriParcel")
         val d1 = g.addNode("Device")
         val d2 = g.addNode("Device")
-        val h1 = g.addNode("Person")
-        val h2 = g.addNode("Person")
+        val h1 = g.addNode("Person", from = 0)
+        val h2 = g.addNode("Person", from = 2)
 
         g.addEdge("hasParcel", f1.id, p1.id)
         g.addEdge("hasParcel", f1.id, p2.id)
@@ -38,6 +38,8 @@ class TestTemporal {
         ts1.add("Measurement", timestamp = 2, value = 2)
         val t1 = g.addNode("Temperature", value = ts1.getTSId())
         g.addEdge("hasTemperature", d1.id, t1.id)
+        g.addEdge("hasOwner", m1.id, h1.id, from = 0, to = 2, id = DUMMY_ID)
+        g.addEdge("hasOwner", m1.id, h2.id, from = 2, to = 4, id = DUMMY_ID)
 
         val ts2 = tsm.addTS()
         ts2.add("Measurement", timestamp = 0, value = 10)
@@ -61,7 +63,8 @@ class TestTemporal {
                     Step(HAS_TS),
                     Step("Measurement")
                 ), timeaware = true
-            ).size)
+            ).size
+        )
     }
 
     @Test
@@ -90,6 +93,51 @@ class TestTemporal {
                     Step("hasManutentor"),
                     Step("Person"),
                 ), timeaware = true, from = 0, to = 1
+            ).size
+        )
+    }
+
+    @Test
+    fun testSearch3() {
+        kotlin.test.assertEquals(
+            1,
+            search(
+                listOf(
+                    Step("Person"),
+                ), timeaware = true, from = 0, to = 1
+            ).size
+        )
+    }
+
+    @Test
+    fun testSearch4() {
+        kotlin.test.assertEquals(
+            1,
+            search(
+                listOf(
+                    Step("Device"),
+                    Step("hasTemperature"),
+                    Step("Temperature"),
+                    Step(HAS_TS),
+                    Step("Measurement"),
+                    Step("hasOwner"),
+                    Step("Person")
+                ), timeaware = true, from = 0, to = 4
+            ).size
+        )
+
+        kotlin.test.assertEquals(
+            2,
+            search(
+                listOf(
+                    Step("Device"),
+                    Step("hasTemperature"),
+                    Step("Temperature"),
+                    Step(HAS_TS),
+                    Step("Measurement"),
+                    Step("hasOwner"),
+                    Step("Person")
+                ), timeaware = false
             ).size
         )
     }
