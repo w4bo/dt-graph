@@ -38,7 +38,7 @@ dependencies {
     implementation 'org.apache.tinkerpop:gremlin-driver:3.6.2' // Gremlin client for remote queries
     implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.6.2' // In-memory graph (for testing)
     implementation 'org.rocksdb:rocksdbjni:9.9.3'
-
+    implementation 'org.json:json:20210307'
     testImplementation 'org.jetbrains.kotlin:kotlin-test' // :2.1.10
     // implementation 'org.jetbrains.kotlin:kotlin-reflect:2.1.10'
 
