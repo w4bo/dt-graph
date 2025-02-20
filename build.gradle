@@ -1,8 +1,8 @@
 plugins {
     id 'java-library'
     id 'idea'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'org.jetbrains.kotlin.jvm' version '1.7.10'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'org.jetbrains.kotlin.jvm' version '2.1.10'
 }
 
 test {
@@ -33,11 +33,11 @@ idea {
 }
 
 dependencies {
-    implementation 'org.apache.tinkerpop:gremlin-core:3.6.2'
-    implementation 'org.apache.tinkerpop:gremlin-server:3.6.2' // Optional for Gremlin Server
-    implementation 'org.apache.tinkerpop:gremlin-driver:3.6.2' // Gremlin client for remote queries
-    implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.6.2' // In-memory graph (for testing)
-    implementation 'org.rocksdb:rocksdbjni:9.9.3'
+    implementation 'org.apache.tinkerpop:gremlin-core:3.7.3'
+    implementation 'org.apache.tinkerpop:gremlin-server:3.7.3' // Optional for Gremlin Server
+    implementation 'org.apache.tinkerpop:gremlin-driver:3.7.3' // Gremlin client for remote queries
+    implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.7.3' // In-memory graph (for testing)
+    implementation 'org.rocksdb:rocksdbjni:9.10.0'
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test' // :2.1.10
     // implementation 'org.jetbrains.kotlin:kotlin-reflect:2.1.10'
