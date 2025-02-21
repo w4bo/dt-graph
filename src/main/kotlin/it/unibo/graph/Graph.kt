@@ -31,12 +31,14 @@ interface Elem: Serializable {
 interface ElemP: Elem {
     val type: String
     var nextProp: Int?
+    val properties: MutableList<P>
     fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P> {
+        fun filter(p: P): Boolean = (filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)
         return if (next == null) {
-            emptyList()
+            properties.filter { filter(it) }
         } else {
             val p = App.g.getProp(next)
-            (if ((filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
+            (if (filter(p)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp)
         }
     }
 }
@@ -113,11 +115,45 @@ interface Graph {
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, sourceId, sourceType, key, value, type)
     fun nextPropertyId(): Int
-    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to))
-    fun addProperty(p: P): P
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id=id))
+    fun addProperty(p: P): P {
+        val (source, key) = decodeBitwise(p.sourceId)
+        return if (source == GRAPH_SOURCE) {
+            addPropertyLocal(key, p)
+        } else {
+            addPropertyTS(source, key, p)
+        }
+    }
+    fun addPropertyLocal(key: Long, p: P): P
+    fun addPropertyTS(tsId: Long, key: Long, p: P): P {
+        if (p.sourceType == NODE) {
+            val ts = App.tsm.getTS(tsId)
+            val n = ts.get(key)
+            n.properties += p
+            ts.add(n)
+            return p
+        } else {
+            throw IllegalArgumentException("Cannot add property to edge in TS")
+        }
+    }
     fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
     fun nextEdgeId(): Int
-    fun addEdge(r: R): R
+    fun addEdge(r: R): R {
+        val (source, key) = decodeBitwise(r.fromN)
+        return if (source == GRAPH_SOURCE) {
+            addEdgeLocal(key, r)
+        } else {
+            addEdgeTS(source, key, r)
+        }
+    }
+    fun addEdgeLocal(key: Long, r: R): R
+    fun addEdgeTS(tsId: Long, key: Long, r: R): R {
+        val ts = App.tsm.getTS(tsId)
+        val n = ts.get(key)
+        n.relationships += r
+        ts.add(n)
+        return r
+    }
     fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
@@ -165,23 +201,15 @@ open class GraphMemory: Graph {
 
     override fun nextPropertyId(): Int = props.size
 
-    override fun addProperty(p: P): P {
+    override fun addPropertyLocal(key: Long, p: P): P {
         props += p
         return p
     }
 
     override fun nextEdgeId(): Int = rels.size
 
-    override fun addEdge(r: R): R {
-        if (r.id == DUMMY_ID) {
-            val (tsId, timestamp) = decodeBitwise(r.fromN)
-            val ts = App.tsm.getTS(tsId)
-            val n = ts.get(timestamp)
-            n.relationships += r
-            ts.add(n)
-        } else {
-            rels += r
-        }
+    override fun addEdgeLocal(key: Long, r: R): R {
+        rels += r
         return r
     }
 
@@ -262,21 +290,13 @@ class GraphRocksDB : Graph {
         return n
     }
 
-    override fun addProperty(p: P): P {
+    override fun addPropertyLocal(key: Long, p: P): P {
         db.put(properties, "${p.id}".toByteArray(), serialize(p))
         return p
     }
 
-    override fun addEdge(r: R): R {
-        if (r.id == DUMMY_ID) {
-            val (tsId, timestamp) = decodeBitwise(r.fromN)
-            val ts = App.tsm.getTS(tsId)
-            val n = ts.get(timestamp)
-            n.relationships += r
-            ts.add(n)
-        } else {
-            db.put(edges, "${r.id}".toByteArray(), serialize(r))
-        }
+    override fun addEdgeLocal(key: Long, r: R): R {
+        db.put(edges, "${r.id}".toByteArray(), serialize(r))
         return r
     }
 
@@ -316,9 +336,9 @@ class GraphRocksDB : Graph {
 }
 
 object App {
-    //    val tsm = MemoryTSManager()
-    //    val g: CustomGraph = CustomGraph(GraphMemory())
-    //    val tsm = RocksDBTSM()
-    val tsm = AsterixDBTSM.createDefault()
-    val g: CustomGraph = CustomGraph(GraphRocksDB())
+    val tsm = MemoryTSManager()
+    val g: CustomGraph = CustomGraph(GraphMemory())
+    // val tsm = AsterixDBTSM.createDefault()
+    // val tsm = RocksDBTSM()
+    // val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

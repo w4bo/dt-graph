@@ -49,38 +49,32 @@ class TestKotlin {
         g.addEdge("hasManutentor", n4!!.id, n6.id)
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
+        var timestamp = 0L
         val ts1: TS = tsm.addTS()
-        val m1 = ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
-        Thread.sleep(1)
-        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 11)
-        Thread.sleep(1)
-        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 12)
+        val m1 = ts1.add("Measurement", timestamp = timestamp++, value = 10)
+        ts1.add("Measurement", timestamp = timestamp++, value = 11)
+        ts1.add("Measurement", timestamp = timestamp++, value = 12)
         n7 = g.addNode("Humidity", value = ts1.getTSId())
         g.addEdge("hasHumidity", n4!!.id, n7!!.id)
         g.addEdge("hasOwner", m1.id, n5!!.id, id = DUMMY_ID)
         g.addEdge("hasManutentor", m1.id, n5!!.id, id = DUMMY_ID)
+        g.addProperty(m1.id, "unit", "Celsius", PropType.STRING, id = DUMMY_ID)
 
         val ts2 = tsm.addTS()
-        ts2.add("Measurement", timestamp = System.currentTimeMillis(), value = 10)
-        Thread.sleep(1)
-        ts2.add("Measurement", timestamp = System.currentTimeMillis(), value = 11)
-        Thread.sleep(1)
-        ts2.add("Measurement", timestamp = System.currentTimeMillis(), value = 12)
+        ts2.add("Measurement", timestamp = timestamp++, value = 10)
+        ts2.add("Measurement", timestamp = timestamp++, value = 11)
+        ts2.add("Measurement", timestamp = timestamp++, value = 12)
         n8 = g.addNode("Temperature", value = ts2.getTSId())
         g.addEdge("hasTemperature", n4!!.id, n8!!.id)
 
-        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 13)
-        Thread.sleep(1)
-        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 14)
-        Thread.sleep(1)
-        ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 15)
+        ts1.add("Measurement", timestamp = timestamp++, value = 13)
+        ts1.add("Measurement", timestamp = timestamp++, value = 14)
+        ts1.add("Measurement", timestamp = timestamp++, value = 15)
 
         val ts3 = tsm.addTS()
-        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
-        Thread.sleep(1)
-        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
-        Thread.sleep(1)
-        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
+        ts3.add("Measurement", timestamp = timestamp++, value = 23)
+        ts3.add("Measurement", timestamp = timestamp++, value = 24)
+        ts3.add("Measurement", timestamp = timestamp, value = 25)
         n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
         g.addEdge("hasSolarRadiation", n3!!.id, n9!!.id)
     }
@@ -113,7 +107,8 @@ class TestKotlin {
 
     @Test
     fun testProps() {
-        listOf(Pair(g.getNode(n1!!.id), 2), Pair(g.getNode(n2!!.id), 2), Pair(g.getNode(n3!!.id), 2)).forEach {
+        val m1 = tsm.getTS(1).get(0)
+        listOf(Pair(g.getNode(n1!!.id), 2), Pair(g.getNode(n2!!.id), 2), Pair(g.getNode(n3!!.id), 2), Pair(m1, 1)).forEach {
             assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
         }
     }
@@ -163,6 +158,7 @@ class TestKotlin {
     @Test
     fun testSearch1bis() {
         kotlin.test.assertEquals(6, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).size)
+        kotlin.test.assertEquals(1, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement", listOf(Triple("unit", Operators.EQ, "Celsius"))))).size)
     }
 
     @Test

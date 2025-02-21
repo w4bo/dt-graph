@@ -18,7 +18,7 @@ class MemoryTSManager : TSManager {
     private val tss: MutableList<TS> = ArrayList()
 
     override fun getTS(id: Long): TS {
-        return tss[(id as Number).toInt()]
+        return tss[(id as Number).toInt() - 1]
     }
 
     override fun addTS(): TS {
@@ -27,7 +27,7 @@ class MemoryTSManager : TSManager {
         return ts
     }
 
-    override fun nextTSId(): Long = tss.size.toLong()
+    override fun nextTSId(): Long = tss.size.toLong() + 1
 
     override fun clear() {
         tss.clear()
@@ -37,7 +37,7 @@ class MemoryTSManager : TSManager {
 class RocksDBTSM : TSManager {
     val db: RocksDB
     val DB_NAME = "db_ts"
-    var id = 0
+    var id = 1
 
     init {
         val options = Options()
@@ -63,7 +63,7 @@ class RocksDBTSM : TSManager {
             db.delete(iterator.key())
             iterator.next()
         }
-        id = 0
+        id = 1
     }
 }
 
@@ -74,7 +74,6 @@ class AsterixDBTSM private constructor(
     val datatype: String,
     val dataset:String
 ) : TSManager {
-
     val dbHost: String = "http://$host:$port/query/service"
     var id = 0
 
@@ -92,15 +91,12 @@ class AsterixDBTSM private constructor(
         return CustomTS(AsterixDBTS(id, dbHost, dataverse, dataset))
     }
 
-
-
     override fun clear() {
         id = 0
         deleteDataset(dataset)
     }
 
     // Private utility functions
-
     fun queryAsterixDB(host: String, query: String): Boolean {
         val url = URL(host)
         val connection = url.openConnection() as HttpURLConnection
@@ -182,7 +178,5 @@ class AsterixDBTSM private constructor(
                 "OpenMeasurements"
             )
         }
-
     }
-
 }
