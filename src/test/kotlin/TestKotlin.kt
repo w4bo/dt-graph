@@ -76,13 +76,14 @@ class TestKotlin {
         ts1.add("Measurement", timestamp = System.currentTimeMillis(), value = 15)
 
         val ts3 = tsm.addTS()
-        ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
+        val m2 = ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 23)
         Thread.sleep(1)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 24)
         Thread.sleep(1)
         ts3.add("Measurement", timestamp = System.currentTimeMillis(), value = 25)
         n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
         g.addEdge("hasSolarRadiation", n3!!.id, n9!!.id)
+        g.addEdge("hasManutentor", m2.id, n5!!.id, id = DUMMY_ID)
     }
 
     @Test

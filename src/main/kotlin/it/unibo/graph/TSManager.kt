@@ -76,7 +76,7 @@ class AsterixDBTSM private constructor(
 ) : TSManager {
 
     val dbHost: String = "http://$host:$port/query/service"
-    var id = 0
+    var id = 1
 
     init {
         createDataset(dataset)
@@ -95,7 +95,7 @@ class AsterixDBTSM private constructor(
 
 
     override fun clear() {
-        id = 0
+        id = 1
         deleteDataset(dataset)
     }
 

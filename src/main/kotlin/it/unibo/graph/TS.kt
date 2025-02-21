@@ -96,7 +96,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
         UPSERT INTO $dataset ([
             {
                 "id": "$id|${n.timestamp}",
-                "timestamp": datetime("${convertTimestampToISO8601(n.id)}"),
+                "timestamp": datetime("${convertTimestampToISO8601(n.timestamp!!)}"),
                 "property": "${n.type}",
                 "location": point("${n.location?.toString()?.replace("(", "")?.replace(")", "") ?: "12.23593,44.147788"}"),
                 "relationships": ${n.getRels().map(::relToJson)},
