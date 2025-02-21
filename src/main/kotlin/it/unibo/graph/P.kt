@@ -18,7 +18,7 @@ open class P(
     override var toTimestamp: Long = Long.MAX_VALUE
 ) : Elem {
     init {
-        if (DUMMY_ID != id) {
+        if (decodeBitwiseSource(sourceId) == GRAPH_SOURCE) {
             val n: ElemP = if (sourceType == NODE) App.g.getNode(sourceId) else App.g.getEdge(sourceId.toInt())
             if (n.nextProp == null) n.nextProp = id
             else {
