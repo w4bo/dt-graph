@@ -1,3 +1,15 @@
+## [1.0.11](https://github.com/w4bo/dt-graph/compare/1.0.10...1.0.11) (2025-02-21)
+
+### Bug Fixes
+
+* add asterix db ([#29](https://github.com/w4bo/dt-graph/issues/29)) ([c178819](https://github.com/w4bo/dt-graph/commit/c178819f0d1786ae8038fb0fce473f5c7bdd6203))
+
+## [1.0.10](https://github.com/w4bo/dt-graph/compare/1.0.9...1.0.10) (2025-02-20)
+
+### Bug Fixes
+
+* add temporal properties to edges ([#28](https://github.com/w4bo/dt-graph/issues/28)) ([f5e60bd](https://github.com/w4bo/dt-graph/commit/f5e60bd7277d4941294f5d951c8220574e5cef4e))
+
 ## [1.0.9](https://github.com/w4bo/dt-graph/compare/1.0.8...1.0.9) (2025-02-20)
 
 ### Dependency updates

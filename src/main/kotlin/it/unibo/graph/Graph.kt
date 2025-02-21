@@ -318,6 +318,7 @@ class GraphRocksDB : Graph {
 object App {
     //    val tsm = MemoryTSManager()
     //    val g: CustomGraph = CustomGraph(GraphMemory())
-    val tsm = RocksDBTSM()
+    //    val tsm = RocksDBTSM()
+    val tsm = AsterixDBTSM.createDefault()
     val g: CustomGraph = CustomGraph(GraphRocksDB())
 }
