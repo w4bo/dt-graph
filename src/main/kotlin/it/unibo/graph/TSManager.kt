@@ -133,11 +133,29 @@ class AsterixDBTSM private constructor(
 
     private fun createDataset(dataset: String) {
         val creationQuery = """
-            USE $dataverse;
-            CREATE DATASET $dataset (
-               $datatype 
-            ) IF NOT EXISTS primary key id;
-            create index measurement_rtree on $dataset(location) type rtree;
+          DROP dataverse $dataverse IF EXISTS;
+          CREATE DATAVERSE $dataverse;
+          USE $dataverse;
+          CREATE TYPE NodeRelationship AS CLOSED {
+              id: int,
+              `type`: string,
+              toN: bigint,
+              fromNextRel: int?,
+              toNextRel: int?
+          };
+          CREATE TYPE $datatype AS OPEN {
+              id: STRING,
+              timestamp: DATETIME,
+              property: STRING,
+              location: POINT,
+              relationships: [NodeRelationship],
+              fromTimestamp: DATETIME,
+              toTimestamp: DATETIME,
+              `value`: FLOAT
+          };
+
+          CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key id;
+          create index measurement_location on $dataset(location) type rtree;
             """.trimIndent()
         if (! queryAsterixDB(dbHost, creationQuery)){
             println("Something went wrong while creating dataset $dataset")

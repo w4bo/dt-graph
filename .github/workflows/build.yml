@@ -19,8 +19,9 @@ jobs:
           java-version: '8'
       - name: Test Gradle
         run: |
+          docker compose up -d
           chmod +x ./gradlew
-          ./gradlew --stacktrace --scan
+          ./wait-for-it.sh localhost:19006 -t 30 -- ./gradlew --stacktrace --scan
 
   release:
     needs:

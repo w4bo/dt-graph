@@ -106,9 +106,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             }
         ]);
         """.trimIndent()
-        println("HELLOO")
-        println("${n.fromTimestamp}")
-        println("${n.toTimestamp}")
         val result = queryAsterixDB(insertQuery)
         //TODO: Handle negative results
         return n
