@@ -11,10 +11,11 @@ open class N (
     override val type: String, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
     override var nextProp: Int? = null, // if graph node, link to the next property
-    val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: id of the TS
+    val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     val location: Pair<Double, Double>? = null, // location
     val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
+    override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     override val fromTimestamp: Long = Long.MIN_VALUE,
     override var toTimestamp: Long = Long.MAX_VALUE
 ): ElemP {
