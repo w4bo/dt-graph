@@ -72,7 +72,7 @@ class TestKotlin {
         ts1.add("Measurement", timestamp = timestamp++, value = 15)
 
         val ts3 = tsm.addTS()
-        ts3.add("Measurement", timestamp = timestamp++, value = 23)
+        val m2 = ts3.add("Measurement", timestamp = timestamp++, value = 23)
         ts3.add("Measurement", timestamp = timestamp++, value = 24)
         ts3.add("Measurement", timestamp = timestamp, value = 25)
         n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
