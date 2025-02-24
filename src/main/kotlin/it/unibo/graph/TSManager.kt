@@ -75,7 +75,7 @@ class AsterixDBTSM private constructor(
     val dataset:String
 ) : TSManager {
     val dbHost: String = "http://$host:$port/query/service"
-    var id = 0
+    var id = 1
 
     init {
         createDataset(dataset)
@@ -92,7 +92,7 @@ class AsterixDBTSM private constructor(
     }
 
     override fun clear() {
-        id = 0
+        id = 1
         deleteDataset(dataset)
     }
 
@@ -132,19 +132,46 @@ class AsterixDBTSM private constructor(
           DROP dataverse $dataverse IF EXISTS;
           CREATE DATAVERSE $dataverse;
           USE $dataverse;
+          
+           CREATE TYPE PropertyValue AS OPEN {
+              stringValue: string?,
+              doubleValue: double?,
+              intValue: int?
+          };
+    
+          CREATE TYPE Property AS CLOSED {
+              id: int,
+              sourceId: bigint,
+              sourceType: Boolean,
+              `key`: string,
+              `value`: PropertyValue,
+              `type`: int,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?
+          };
+
           CREATE TYPE NodeRelationship AS CLOSED {
               id: int,
               `type`: string,
+              fromN: bigint,
               toN: bigint,
               fromNextRel: int?,
-              toNextRel: int?
+              toNextRel: int?,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?,
+              nextProp: int?,
+              properties: [Property]?
           };
-          CREATE TYPE $datatype AS OPEN {
+       
+          CREATE TYPE Measurement AS OPEN {
               id: STRING,
               timestamp: DATETIME,
+              nextRel: int?,
+              nextProp: int?,
               property: STRING,
               location: POINT,
               relationships: [NodeRelationship],
+              properties: [Property],
               fromTimestamp: DATETIME,
               toTimestamp: DATETIME,
               `value`: FLOAT

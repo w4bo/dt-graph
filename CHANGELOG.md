@@ -1,3 +1,9 @@
+## [1.0.12](https://github.com/w4bo/dt-graph/compare/1.0.11...1.0.12) (2025-02-21)
+
+### Bug Fixes
+
+* **deps:** update dependency org.json:json to v20250107 ([#39](https://github.com/w4bo/dt-graph/issues/39)) ([bc667e0](https://github.com/w4bo/dt-graph/commit/bc667e06a4d04f27b8dd60b81b9fa2d04fa54cdf))
+
 ## [1.0.11](https://github.com/w4bo/dt-graph/compare/1.0.10...1.0.11) (2025-02-21)
 
 ### Bug Fixes
