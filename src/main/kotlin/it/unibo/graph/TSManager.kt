@@ -18,7 +18,7 @@ class MemoryTSManager : TSManager {
     private val tss: MutableList<TS> = ArrayList()
 
     override fun getTS(id: Long): TS {
-        return tss[(id as Number).toInt()]
+        return tss[(id as Number).toInt() - 1]
     }
 
     override fun addTS(): TS {
@@ -27,7 +27,7 @@ class MemoryTSManager : TSManager {
         return ts
     }
 
-    override fun nextTSId(): Long = tss.size.toLong()
+    override fun nextTSId(): Long = tss.size.toLong() + 1
 
     override fun clear() {
         tss.clear()
@@ -37,7 +37,7 @@ class MemoryTSManager : TSManager {
 class RocksDBTSM : TSManager {
     val db: RocksDB
     val DB_NAME = "db_ts"
-    var id = 0
+    var id = 1
 
     init {
         val options = Options()
@@ -63,7 +63,7 @@ class RocksDBTSM : TSManager {
             db.delete(iterator.key())
             iterator.next()
         }
-        id = 0
+        id = 1
     }
 }
 
@@ -76,7 +76,7 @@ class AsterixDBTSM private constructor(
 ) : TSManager {
 
     val dbHost: String = "http://$host:$port/query/service"
-    var id = 0
+    var id = 1
 
     init {
         createDataset(dataset)
@@ -95,12 +95,11 @@ class AsterixDBTSM private constructor(
 
 
     override fun clear() {
-        id = 0
+        id = 1
         deleteDataset(dataset)
     }
 
     // Private utility functions
-
     fun queryAsterixDB(host: String, query: String): Boolean {
         val url = URL(host)
         val connection = url.openConnection() as HttpURLConnection
@@ -133,11 +132,56 @@ class AsterixDBTSM private constructor(
 
     private fun createDataset(dataset: String) {
         val creationQuery = """
-            USE $dataverse;
-            CREATE DATASET $dataset (
-               $datatype 
-            ) IF NOT EXISTS primary key id;
-            create index measurement_rtree on $dataset(location) type rtree;
+          DROP dataverse $dataverse IF EXISTS;
+          CREATE DATAVERSE $dataverse;
+          USE $dataverse;
+          
+           CREATE TYPE PropertyValue AS OPEN {
+              stringValue: string?,
+              doubleValue: double?,
+              intValue: int?
+          };
+    
+          CREATE TYPE Property AS CLOSED {
+              id: int,
+              sourceId: bigint,
+              sourceType: Boolean,
+              `key`: string,
+              `value`: PropertyValue,
+              `type`: int,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?
+          };
+
+          CREATE TYPE NodeRelationship AS CLOSED {
+              id: int,
+              `type`: string,
+              fromN: bigint,
+              toN: bigint,
+              fromNextRel: int?,
+              toNextRel: int?,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?,
+              nextProp: int?,
+              properties: [Property]?
+          };
+       
+          CREATE TYPE Measurement AS OPEN {
+              id: STRING,
+              timestamp: DATETIME,
+              nextRel: int?,
+              nextProp: int?,
+              property: STRING,
+              location: POINT,
+              relationships: [NodeRelationship],
+              properties: [Property],
+              fromTimestamp: DATETIME,
+              toTimestamp: DATETIME,
+              `value`: FLOAT
+          };
+
+          CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key id;
+          create index measurement_location on $dataset(location) type rtree;
             """.trimIndent()
         if (! queryAsterixDB(dbHost, creationQuery)){
             println("Something went wrong while creating dataset $dataset")
@@ -157,14 +201,12 @@ class AsterixDBTSM private constructor(
     companion object {
         fun createDefault(): AsterixDBTSM {
             return AsterixDBTSM(
-                "137.204.74.52",
+                "localhost",
                 "19002",
                 "Measurements_Dataverse",
                 "Measurement",
                 "OpenMeasurements"
             )
         }
-
     }
-
 }

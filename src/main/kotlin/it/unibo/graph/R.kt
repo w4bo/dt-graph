@@ -11,7 +11,8 @@ open class R(
     var toNextRel: Int? = null, // pointer to the next relationship of the `to node`
     override val fromTimestamp: Long = Long.MIN_VALUE,
     override var toTimestamp: Long = Long.MAX_VALUE,
-    override var nextProp: Int? = null
+    override var nextProp: Int? = null,
+    override val properties: MutableList<P> = mutableListOf()
 ): ElemP {
     init {
         if (id != DUMMY_ID) {

@@ -1,18 +1,18 @@
 package it.unibo.graph
 
 import it.unibo.graph.structure.CustomVertex
-import org.rocksdb.RocksDB
-import java.net.HttpURLConnection
-import java.net.URL
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.*
+import org.rocksdb.RocksDB
+import java.io.Serializable
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 interface TS : Serializable {
     fun getTSId(): Long
@@ -91,22 +91,23 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
-        if (n.id == -1.toLong()){
-            print("HELLO")
-        }
         val insertQuery = """
-        USE $dataverse;
-        UPSERT INTO $dataset ([
-            {
+            USE $dataverse;
+            UPSERT INTO $dataset ([{
                 "id": "$id|${n.timestamp}",
-                "timestamp": datetime("${convertTimestampToISO8601(n.id)}"),
+                "timestamp": datetime("${convertTimestampToISO8601(n.timestamp!!)}"),
+                ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
+                ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
                 "property": "${n.type}",
                 "location": point("${n.location?.toString()?.replace("(", "")?.replace(")", "") ?: "12.23593,44.147788"}"),
                 "relationships": ${n.getRels().map(::relToJson)},
+                "properties": ${n.getProps().map(::propToJson)},
+                "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
+                "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
-            }
-        ]);
+            }]);
         """.trimIndent()
+
         val result = queryAsterixDB(insertQuery)
         //TODO: Handle negative results
         return n
@@ -141,14 +142,15 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 if (result.entities.size > 0){
                     return result.entities[0]
                 }else{
-                    return CustomVertex(id=-1,type="Error")
+                    //TODO: Fix this random return
+                    return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
                 }
 
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
                 //TODO fix this empty node
-                return CustomVertex(id=-1,type="Error")
+                return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
             }
         }
     }
@@ -197,19 +199,14 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                         for (i in 0 until resultArray.length()) {
                             val jsonEntity = resultArray.getJSONObject(i).getJSONObject(dataset)
 
-                            val measurement_timestamp = jsonEntity.getString("timestamp")
-                            val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
-                            val localDateTime = LocalDateTime.parse(measurement_timestamp, formatterWithMillis)
 
-                            val instant = localDateTime.toInstant(ZoneOffset.UTC)
-
-                            val timestampMilliseconds = instant.toEpochMilli()
-
-                            val entity = CustomVertex(
+                            var entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
-                                timestamp = timestampMilliseconds,
+                                timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = jsonEntity.getString("property"),
                                 location = parseLocation(jsonEntity.getJSONArray("location")),
+                                fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
+                                toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
                                 value = jsonEntity.getDouble("value").toLong()
                             )
                             entity.relationships.addAll(
@@ -218,7 +215,13 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                                     .map(::jsonToRel)
                             )
                             entities.add(entity)
+                            entity.properties.addAll(
+                                jsonEntity.getJSONArray("properties")
+                                    .let { array -> List(array.length()) { array.getJSONObject(it) } }
+                                    .map(::jsonToProp)
+                            )
                         }
+                        print(entities[0])
                         AsterixDBResult.SelectResult(entities)
                     } catch (e: Exception) {
                         println(e)
@@ -235,25 +238,107 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             }
         }
     }
+
     private fun relToJson(relationship: R): String {
-        return JSONObject().apply {
-            put("id", relationship.id)
-            put("type", relationship.type)
-            put("toN", relationship.toN)
-            put("fromNextRel", relationship.fromNextRel)
-            put("toNextRel", relationship.toNextRel)
-        }.toString()
+        val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", relationship.fromTimestamp)
+        val toTimestampStr = checkAndparseTimestampToString("toTimestamp", relationship.toTimestamp)
+        return """
+        {
+            "id": ${relationship.id},
+            "type": "${relationship.type}",
+            "fromN": ${relationship.fromN},
+            "toN": ${relationship.toN},
+            "fromNextRel": ${relationship.fromNextRel},
+            "toNextRel": ${relationship.toNextRel},
+            $fromTimestampStr
+            $toTimestampStr
+            "nextProp": ${relationship.nextProp},
+            "properties": ${relationship.getProps().map(::propToJson)}
+        }
+    """.trimIndent()
     }
 
     private fun jsonToRel(json: JSONObject): R{
-        return R(
+        val newRelationship = R(
             id = json.getInt("id"),
             type = json.getString("type"),
             fromN = 0L, // Valore placeholder, se non è nel JSON
             toN = json.getLong("toN"),
             fromNextRel = if (json.has("fromNextRel")) json.optInt("fromNextRel", -1).takeIf { it != -1 } else null,
-            toNextRel = if (json.has("toNextRel")) json.optInt("toNextRel", -1).takeIf { it != -1 } else null
+            toNextRel = if (json.has("toNextRel")) json.optInt("toNextRel", -1).takeIf { it != -1 } else null,
+            fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
+            toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+            nextProp = if (json.has("nextProp")) json.optInt("nextProp", -1).takeIf { it != -1 } else null,
         )
+        newRelationship.properties.addAll(
+            json.getJSONArray("properties")
+                .let { array -> List(array.length()) { array.getJSONObject(it) } }
+                .map(::jsonToProp)
+        )
+        return newRelationship
+    }
+
+    private fun jsonToProp(json: JSONObject): P {
+        return P(
+            id = json.getInt("id"),
+            sourceId = json.getLong("sourceId"),
+            sourceType = json.getBoolean(("sourceType")),
+            key = json.getString("key"),
+            value = parsePropertyValue(json.getJSONObject("value"),PropType.entries[json.getInt("type")]),
+            type = PropType.entries[json.getInt("type")],
+            fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
+            toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+        )
+    }
+    private fun parsePropertyValue(value:JSONObject, type:PropType): Any {
+     return when (type){
+         PropType.INT -> value.getInt("intValue")
+         PropType.DOUBLE -> value.getDouble("doubleValue")
+         PropType.STRING -> value.getString("stringValue")
+         else -> ""
+     }
+    }
+    private fun propToJson(property: P): String {
+        val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", property.fromTimestamp)
+        val toTimestampStr = checkAndparseTimestampToString("toTimestamp", property.toTimestamp)
+
+        return """
+        {
+            "id": ${property.id},
+            "sourceId": ${property.sourceId},
+            "sourceType": ${property.sourceType},
+            "key": "${property.key}",
+            "value": ${getPropertyValue(property.value, property.type)},
+            $fromTimestampStr
+            $toTimestampStr
+            "type": ${property.type.ordinal}
+        }
+    """.trimIndent()
+    }
+
+
+    private fun getPropertyValue(value: Any, valueType: PropType) : JSONObject {
+        return when (valueType) {
+            PropType.DOUBLE -> return JSONObject().apply{
+                put("doubleValue", value)
+            }
+            PropType.STRING -> return JSONObject().apply{
+                put("stringValue",value)
+            }
+            PropType.INT -> return JSONObject().apply{
+                put("intValue",value)
+            }
+            else -> JSONObject().apply{
+                put("stringValue", value)
+            }
+        }
+    }
+    private fun checkAndparseTimestampToString(label: String, timestamp: Long): String{
+        if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
+            return """"$label": datetime("${convertTimestampToISO8601(timestamp)}"),"""
+        } else {
+            return ""
+        }
     }
     private fun parseLocation(location: JSONArray): Pair<Double, Double> {
         return Pair(location.getDouble(0), location.getDouble(0))
@@ -262,6 +347,14 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
         val instant = Instant.ofEpochMilli(timestamp)
         val formatter = DateTimeFormatter.ISO_INSTANT
         return formatter.format(instant)
+    }
+    private fun dateToTimestamp(date: String): Long{
+        val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+        val localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+
+        val instant = localDateTime.toInstant(ZoneOffset.UTC)
+
+        return instant.toEpochMilli()
     }
 
 }
