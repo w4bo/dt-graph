@@ -183,6 +183,11 @@ class TestKotlin {
     }
 
     @Test
+    fun testSearch5() {
+        kotlin.test.assertEquals(12, search(listOf(null, Step(HAS_TS), Step("Measurement"))).size)
+    }
+
+    @Test
     fun testTSAsNode5() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(

@@ -62,11 +62,9 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
     fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
-        if ((match[index] == null // no filter
-                || ((match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
-                && (match[index]!!.properties.all { f ->
-                    e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }}
-                )) // filter on properties, TODO should implement different operators
+        if ((match[index] == null || ( // no filter
+                (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
+                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }}) // filter on properties, TODO should implement different operators
             ) && timeOverlap(e, from, to)
         ) {
             val curPath = path + listOf(e)
