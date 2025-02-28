@@ -70,8 +70,8 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
                 && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
-            && timeOverlap(e, from, to)
-            && (c == null || c.isOk(path[c.a], e))
+            && timeOverlap(e, from, to) // check time overlap
+            && (c == null || c.isOk(path[c.a], e)) // apply the where clause
         ) {
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
