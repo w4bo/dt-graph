@@ -50,22 +50,28 @@ interface IStep {
 
 class Step(override val type: String? = null, override val properties: List<Triple<String, Operators, Any>> = listOf()) : IStep
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
-class Compare(val a: ElemP, val b: ElemP, val property: String, val operator: String) {
-    fun isOk(): Boolean = a.getProps(name = property) == b.getProps(name = property) // TODO change this depending on the operator
+class Compare(val a: Int, val b: Int, val property: String, val operator: Operators) {
+    fun isOk(a: ElemP, b: ElemP): Boolean {
+        val p1 = a.getProps(name = property)
+        val p2 = b.getProps(name = property)
+        return p1.isNotEmpty() && p2.isNotEmpty() && p1[0].value == p2[0].value
+    } // TODO change this depending on the operator
 }
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<List<ElemP>> = mutableListOf()
-    val remainingWhere = where.toMutableList()
+    val mapWhere = where.associateBy { it.b }
 
     fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
+        val c = mapWhere[index]
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
-                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }}) // filter on properties, TODO should implement different operators
-            ) && timeOverlap(e, from, to)
+                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
+            && timeOverlap(e, from, to)
+            && (c == null || c.isOk(path[c.a], e))
         ) {
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
