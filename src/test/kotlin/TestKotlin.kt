@@ -36,7 +36,8 @@ class TestKotlin {
         g.addProperty(n2!!.id, "name", "T0", PropType.STRING)
         g.addProperty(n2!!.id, "location", "GeoJSON", PropType.GEOMETRY)
         g.addProperty(n3!!.id, "name", "GB", PropType.STRING)
-        g.addProperty(n3!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n3!!.id, "location", "foobar", PropType.GEOMETRY)
+        g.addProperty(n4!!.id, "location", "GeoJSON", PropType.GEOMETRY)
 
         g.addEdge("hasParcel", n1!!.id, n2!!.id)
         g.addEdge("hasDevice", n1!!.id, n3!!.id)
@@ -157,6 +158,13 @@ class TestKotlin {
     }
 
     @Test
+    fun testSearch2() {
+        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"), Step("hasDevice"), Step("Device"))
+        kotlin.test.assertEquals(2, search(pattern).size)
+        kotlin.test.assertEquals(1, search(pattern, listOf(Compare(2, 4, "location", Operators.EQ))).size)
+    }
+
+    @Test
     fun testSearch1bis() {
         kotlin.test.assertEquals(6, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).size)
         kotlin.test.assertEquals(1, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement", listOf(Triple("unit", Operators.EQ, "Celsius"))))).size)
@@ -180,6 +188,11 @@ class TestKotlin {
     @Test
     fun testSearch4() {
         kotlin.test.assertEquals(75, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).map { (it.last() as N).value }.sumOf { it!! })
+    }
+
+    @Test
+    fun testSearch5() {
+        kotlin.test.assertEquals(12, search(listOf(null, Step(HAS_TS), Step("Measurement"))).size)
     }
 
     @Test

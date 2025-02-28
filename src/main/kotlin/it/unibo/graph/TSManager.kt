@@ -74,7 +74,6 @@ class AsterixDBTSM private constructor(
     val datatype: String,
     val dataset:String
 ) : TSManager {
-
     val dbHost: String = "http://$host:$port/query/service"
     var id = 1
 
@@ -91,8 +90,6 @@ class AsterixDBTSM private constructor(
     override fun getTS(id: Long): TS {
         return CustomTS(AsterixDBTS(id, dbHost, dataverse, dataset))
     }
-
-
 
     override fun clear() {
         id = 1
