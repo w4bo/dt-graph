@@ -1,3 +1,13 @@
+## [1.0.13](https://github.com/w4bo/dt-graph/compare/1.0.12...1.0.13) (2025-02-28)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v8.13 ([#42](https://github.com/w4bo/dt-graph/issues/42)) ([35ab56a](https://github.com/w4bo/dt-graph/commit/35ab56a250d41b7adf2ddd7e45e4ebab0307177e))
+
+### Bug Fixes
+
+* Develop ([#41](https://github.com/w4bo/dt-graph/issues/41)) ([4d99ff3](https://github.com/w4bo/dt-graph/commit/4d99ff361411c38fbf05a9bf102c82da2d4283fb))
+
 ## [1.0.12](https://github.com/w4bo/dt-graph/compare/1.0.11...1.0.12) (2025-02-21)
 
 ### Bug Fixes
