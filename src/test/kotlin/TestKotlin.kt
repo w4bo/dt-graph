@@ -19,6 +19,8 @@ class TestKotlin {
     var n8: N? = null
     var n9: N? = null
 
+    val initialTimestamp = System.currentTimeMillis()
+
     @BeforeTest
     fun setup() {
         g.clear()
@@ -32,12 +34,12 @@ class TestKotlin {
         val n6 = g.addNode("Person")
 
         g.addProperty(n1!!.id, "name", "Errano", PropType.STRING)
-        g.addProperty(n1!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n1!!.id, "location", "{\"coordinates\":[[[11.798105,44.234354],[11.801217,44.237683],[11.805286,44.235809],[11.803987,44.234851],[11.804789,44.233683],[11.80268,44.231419],[11.798105,44.234354]]],\"type\":\"Polygon\"}\n", PropType.GEOMETRY)
         g.addProperty(n2!!.id, "name", "T0", PropType.STRING)
-        g.addProperty(n2!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n2!!.id, "location", "{\"coordinates\":[[[11.79915,44.235384],[11.799412,44.23567],[11.801042,44.234555],[11.800681,44.234343],[11.79915,44.235384]]],\"type\":\"Polygon\"}", PropType.GEOMETRY)
         g.addProperty(n3!!.id, "name", "GB", PropType.STRING)
-        g.addProperty(n3!!.id, "location", "foobar", PropType.GEOMETRY)
-        g.addProperty(n4!!.id, "location", "GeoJSON", PropType.GEOMETRY)
+        g.addProperty(n3!!.id, "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY)
+        g.addProperty(n4!!.id, "location", "{\"coordinates\":[14.800711,44.234904],\"type\":\"Point\"}", PropType.GEOMETRY)
 
         g.addEdge("hasParcel", n1!!.id, n2!!.id)
         g.addEdge("hasDevice", n1!!.id, n3!!.id)
@@ -51,6 +53,7 @@ class TestKotlin {
         g.addEdge("hasFriend", n5!!.id, n6.id)
 
         var timestamp = 0L
+
         val ts1: TS = tsm.addTS()
         val m1 = ts1.add("Measurement", timestamp = timestamp++, value = 10)
         ts1.add("Measurement", timestamp = timestamp++, value = 11)
@@ -161,7 +164,14 @@ class TestKotlin {
     fun testSearch2() {
         val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"), Step("hasDevice"), Step("Device"))
         kotlin.test.assertEquals(2, search(pattern).size)
-        kotlin.test.assertEquals(1, search(pattern, listOf(Compare(2, 4, "location", Operators.EQ))).size)
+        kotlin.test.assertEquals(1, search(pattern, listOf(Compare(2, 4, "location", Operators.ST_CONTAINS))).size)
+    }
+
+    @Test
+    fun testSearchTS() {
+        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"), Step("hasDevice"), Step("Device"), Step("hasSolarRadiation"), Step("SolarRadiation"), Step(HAS_TS), Step("Measurement"))
+        //kotlin.test.assertEquals(3, search(pattern).size)
+        kotlin.test.assertEquals(3, search(pattern, listOf(Compare(2, 8, "location", Operators.ST_CONTAINS))).size)
     }
 
     @Test

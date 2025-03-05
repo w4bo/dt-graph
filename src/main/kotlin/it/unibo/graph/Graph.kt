@@ -2,6 +2,12 @@ package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
+import org.json.JSONObject
+import org.locationtech.jts.geom.Coordinate
+import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.geom.GeometryFactory
+import org.locationtech.jts.geom.LinearRing
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 import java.io.*
 import kotlin.math.max
@@ -55,12 +61,52 @@ enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
 enum class AggOperator { SUM, COUNT, AVG, MIN, MAX }
 
+
 class Compare(val a: Int, val b: Int, val property: String, val operator: Operators) {
+    private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
+        //if ( a::class != b::class) return false
+
+        if (operator == Operators.EQ) return a == b
+
+        if (a is Comparable<*> && b is Comparable<*>) {
+            @Suppress("UNCHECKED_CAST")
+            val compA = a as Comparable<Any>
+            val compB = b as Any
+
+            return when (operator) {
+                Operators.LT -> compA < compB
+                Operators.GT -> compA > compB
+                Operators.LTE -> compA <= compB
+                Operators.GTE -> compA >= compB
+                Operators.ST_CONTAINS -> geometryContains(a, b)
+                else -> false
+            }
+        }
+        return false
+    }
+
+    private fun geometryContains(a: Any, b: Any): Boolean {
+        val parser = GeoJsonReader()
+        val geomA = when (a) {
+            is Geometry -> a
+            is String -> parser.read(a)
+            else -> throw IllegalArgumentException("Invalid type for 'a': ${a::class.simpleName}")
+        }
+        val geomB = when (b) {
+            is Geometry -> b
+            is String -> parser.read(b)
+            else -> throw IllegalArgumentException("Invalid type for 'b': ${b::class.simpleName}")
+        }
+        return geomA.contains(geomB)
+    }
+
     fun isOk(a: ElemP, b: ElemP): Boolean {
         val p1 = a.getProps(name = property)
         val p2 = b.getProps(name = property)
-        return p1.isNotEmpty() && p2.isNotEmpty() && p1[0].value == p2[0].value
-    } // TODO change this depending on the operator
+
+        return p1.isNotEmpty() && p2.isNotEmpty() && compareIfSameType(p1[0].value, p2[0].value, operator)
+
+    }
 }
 
 class Aggregate(val n: Int, val property: String, val operator: AggOperator) {}
@@ -80,6 +126,9 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
     fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
+        if(index == 4){
+            print("DEBUG")
+        }
         val c = mapWhere[index]
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
@@ -136,14 +185,23 @@ interface Graph {
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, sourceId, sourceType, key, value, type)
     fun nextPropertyId(): Int
     fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id=id))
+    fun upsertFirstCitizenProperty(prop: P): P?
+
     fun addProperty(p: P): P {
         val (source, key) = decodeBitwise(p.sourceId)
         return if (source == GRAPH_SOURCE) {
-            addPropertyLocal(key, p)
+            when (p.key){
+                LOCATION -> {
+                    upsertFirstCitizenProperty(p)
+                    addPropertyLocal(key, p)
+                }
+                else -> addPropertyLocal(key, p)
+            }
         } else {
             addPropertyTS(source, key, p)
         }
     }
+
     fun addPropertyLocal(key: Long, p: P): P
     fun addPropertyTS(tsId: Long, key: Long, p: P): P {
         if (p.sourceType == NODE) {
@@ -156,6 +214,7 @@ interface Graph {
             throw IllegalArgumentException("Cannot add property to edge in TS")
         }
     }
+
     fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R {
@@ -166,6 +225,7 @@ interface Graph {
             addEdgeTS(source, key, r)
         }
     }
+
     fun addEdgeLocal(key: Long, r: R): R
     fun addEdgeTS(tsId: Long, key: Long, r: R): R {
         val ts = App.tsm.getTS(tsId)
@@ -174,6 +234,7 @@ interface Graph {
         ts.add(n)
         return r
     }
+
     fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
@@ -221,7 +282,17 @@ open class GraphMemory: Graph {
 
     override fun nextPropertyId(): Int = props.size
 
+    override fun upsertFirstCitizenProperty(prop: P): P? {
+        val nodeId = prop.sourceId
+        nodes[nodeId.toInt()].location = GeoJsonReader().read(prop.value.toString())
+        nodes[nodeId.toInt()].locationTimestamp = prop.fromTimestamp
+        return prop
+    }
+
     override fun addPropertyLocal(key: Long, p: P): P {
+        props.find{ it.key == p.key}?.let{
+            it.toTimestamp = p.fromTimestamp-1//System.currentTimeMillis()
+        }
         props += p
         return p
     }
@@ -302,6 +373,9 @@ class GraphRocksDB : Graph {
     override fun nextNodeId(): Long = nodeId++
 
     override fun nextPropertyId(): Int = propId++
+    override fun upsertFirstCitizenProperty(prop: P): P? {
+        TODO("Not yet implemented")
+    }
 
     override fun nextEdgeId(): Int = edgeId++
 
@@ -356,9 +430,9 @@ class GraphRocksDB : Graph {
 }
 
 object App {
-    val tsm = MemoryTSManager()
+    //val tsm = MemoryTSManager()
     val g: CustomGraph = CustomGraph(GraphMemory())
-    // val tsm = AsterixDBTSM.createDefault()
+    val tsm = AsterixDBTSM.createDefault()
     // val tsm = RocksDBTSM()
     // val g: CustomGraph = CustomGraph(GraphRocksDB())
 }

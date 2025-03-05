@@ -6,13 +6,14 @@ import it.unibo.graph.N
 import it.unibo.graph.PropType
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
+import org.json.JSONObject
 
 class CustomVertex(
     id: Long,
     type: String,
     value: Long? = null,
     timestamp: Long? = null,
-    location: Pair<Double, Double>? = null,
+    location: String? = null,
     override val fromTimestamp: Long,
     override var toTimestamp: Long
 ) : Vertex, N(id, type, value = value, timestamp = timestamp, location = location, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
