@@ -6,6 +6,7 @@ import org.rocksdb.*
 import java.io.*
 import kotlin.math.max
 import kotlin.math.min
+import org.jetbrains.kotlinx.dataframe.math.mean
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -49,13 +50,26 @@ interface IStep {
 }
 
 class Step(override val type: String? = null, override val properties: List<Triple<String, Operators, Any>> = listOf()) : IStep
+
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
+
+enum class AggOperator { SUM, COUNT, AVG, MIN, MAX }
+
 class Compare(val a: Int, val b: Int, val property: String, val operator: Operators) {
     fun isOk(a: ElemP, b: ElemP): Boolean {
         val p1 = a.getProps(name = property)
         val p2 = b.getProps(name = property)
         return p1.isNotEmpty() && p2.isNotEmpty() && p1[0].value == p2[0].value
     } // TODO change this depending on the operator
+}
+
+class Aggregate(val n: Int, val property: String, val operator: AggOperator) {}
+
+fun search(match: List<Step?>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<Any>> {
+    return search(match, where, from, to, timeaware)
+        .groupBy { row -> by.map { row[it] } }
+        .mapValues { it -> it.value.map{ (it[agg.n] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggreation operators
+        .map { it.key + listOf(it.value as Any) }
 }
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
@@ -76,30 +90,32 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
                 acc.add(curPath)
-                return
-            }
-            if (visited.contains(e.id)) { return }
-            val from = max(e.fromTimestamp, from)
-            val to = min(e.toTimestamp, to)
-            if (index % 2 == 0) { // is node
-                visited += e.id
-                (e as N)
-                    .getRels(direction = Direction.OUT, includeHasTs = true)
-                    .forEach {
-                        dfs(it, index + 1, curPath, from, to)
-                    }
-            } else { // is edge...
-                val r = (e as R)
-                if (e.type == HAS_TS) { // ... to time series
-                    App.tsm
-                        .getTS(r.toN)
-                        .getValues()
+            } else {
+                if (visited.contains(e.id)) {
+                    return
+                }
+                val from = max(e.fromTimestamp, from)
+                val to = min(e.toTimestamp, to)
+                if (index % 2 == 0) { // is node
+                    visited += e.id
+                    (e as N)
+                        .getRels(direction = Direction.OUT, includeHasTs = true)
                         .forEach {
                             dfs(it, index + 1, curPath, from, to)
                         }
-                } else { // ... or to graph node
-                    val n = App.g.getNode(r.toN)
-                    dfs(n, index + 1, curPath, from, to)
+                } else { // is edge...
+                    val r = (e as R)
+                    if (e.type == HAS_TS) { // ... to time series
+                        App.tsm
+                            .getTS(r.toN)
+                            .getValues()
+                            .forEach {
+                                dfs(it, index + 1, curPath, from, to)
+                            }
+                    } else { // ... or to graph node
+                        val n = App.g.getNode(r.toN)
+                        dfs(n, index + 1, curPath, from, to)
+                    }
                 }
             }
         }

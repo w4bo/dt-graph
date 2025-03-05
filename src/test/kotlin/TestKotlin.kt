@@ -183,6 +183,16 @@ class TestKotlin {
                 .mean<Number>()
                 .toList()
         )
+
+        kotlin.test.assertEquals(
+            listOf(listOf(12.5 as Any)),
+            search(
+                listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement")),
+                where = listOf(),
+                by = listOf(),
+                Aggregate(4, "value", AggOperator.AVG)
+            )
+        )
     }
 
     @Test
