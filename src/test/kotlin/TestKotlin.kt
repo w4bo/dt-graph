@@ -159,9 +159,9 @@ class TestKotlin {
 
     @Test
     fun testSearch2() {
-        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"), Step("hasDevice"), Step("Device"))
+        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel", alias = "p"), Step("hasDevice"), Step("Device", alias = "d"))
         kotlin.test.assertEquals(2, search(pattern).size)
-        kotlin.test.assertEquals(1, search(pattern, listOf(Compare(2, 4, "location", Operators.EQ))).size)
+        kotlin.test.assertEquals(1, search(pattern, listOf(Compare("p", "d", "location", Operators.EQ))).size)
     }
 
     @Test
@@ -187,20 +187,20 @@ class TestKotlin {
         kotlin.test.assertEquals(
             listOf(listOf(12.5 as Any)),
             search(
-                listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement")),
+                listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement", alias = "m")),
                 where = listOf(),
                 by = listOf(),
-                Aggregate(4, "value", AggOperator.AVG)
+                Aggregate("m", "value", AggOperator.AVG)
             )
         )
 
         kotlin.test.assertEquals(
             listOf(listOf(15.0 as Any)),
             search(
-                listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement")),
+                listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement", alias = "m")),
                 where = listOf(),
                 by = listOf(),
-                Aggregate(6, "value", AggOperator.AVG)
+                Aggregate("m", "value", AggOperator.AVG)
             )
         )
     }
