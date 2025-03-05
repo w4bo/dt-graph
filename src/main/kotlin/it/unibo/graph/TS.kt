@@ -1,7 +1,6 @@
 package it.unibo.graph
 
 import it.unibo.graph.structure.CustomVertex
-import org.json.JSONArray
 import org.json.JSONObject
 import org.rocksdb.RocksDB
 import java.io.Serializable
@@ -13,6 +12,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import org.locationtech.jts.io.geojson.GeoJsonWriter
 
 interface TS : Serializable {
     fun getTSId(): Long
@@ -99,9 +99,9 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
                 ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
                 "property": "${n.type}",
-                "location": point("${n.location?.toString()?.replace("(", "")?.replace(")", "") ?: "12.23593,44.147788"}"),
-                "relationships": ${n.getRels().map(::relToJson)},
-                "properties": ${n.getProps().map(::propToJson)},
+                "location": st_geom_from_geojson(${n.location?.let { GeoJsonWriter().write(it) } ?: "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}"}),
+                "relationships": [${n.getRels().map(::relToJson).joinToString(", ")}],
+                "properties": [${n.getProps().map(::propToJson).joinToString(", ")}],
                 "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
                 "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
@@ -143,14 +143,14 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                     return result.entities[0]
                 }else{
                     //TODO: Fix this random return
-                    return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
+                    return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type ="Error")
                 }
 
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
                 //TODO fix this empty node
-                return CustomVertex(id=-1, timestamp=timestamp, fromTimestamp = -1, toTimestamp = -1, type="Error")
+                return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type ="Error")
             }
         }
     }
@@ -200,11 +200,11 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                             val jsonEntity = resultArray.getJSONObject(i).getJSONObject(dataset)
 
 
-                            var entity = CustomVertex(
+                            val entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
                                 timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = jsonEntity.getString("property"),
-                                location = parseLocation(jsonEntity.getJSONArray("location")),
+                                location = jsonEntity.getJSONObject("location").toString(),
                                 fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
                                 toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
                                 value = jsonEntity.getDouble("value").toLong()
@@ -221,7 +221,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                                     .map(::jsonToProp)
                             )
                         }
-                        print(entities[0])
                         AsterixDBResult.SelectResult(entities)
                     } catch (e: Exception) {
                         println(e)
@@ -248,11 +247,8 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             "type": "${relationship.type}",
             "fromN": ${relationship.fromN},
             "toN": ${relationship.toN},
-            "fromNextRel": ${relationship.fromNextRel},
-            "toNextRel": ${relationship.toNextRel},
             $fromTimestampStr
             $toTimestampStr
-            "nextProp": ${relationship.nextProp},
             "properties": ${relationship.getProps().map(::propToJson)}
         }
     """.trimIndent()
@@ -264,11 +260,8 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             type = json.getString("type"),
             fromN = 0L, // Valore placeholder, se non è nel JSON
             toN = json.getLong("toN"),
-            fromNextRel = if (json.has("fromNextRel")) json.optInt("fromNextRel", -1).takeIf { it != -1 } else null,
-            toNextRel = if (json.has("toNextRel")) json.optInt("toNextRel", -1).takeIf { it != -1 } else null,
             fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
             toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
-            nextProp = if (json.has("nextProp")) json.optInt("nextProp", -1).takeIf { it != -1 } else null,
         )
         newRelationship.properties.addAll(
             json.getJSONArray("properties")
@@ -339,9 +332,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
         } else {
             return ""
         }
-    }
-    private fun parseLocation(location: JSONArray): Pair<Double, Double> {
-        return Pair(location.getDouble(0), location.getDouble(0))
     }
     private fun convertTimestampToISO8601(timestamp: Long): String {
         val instant = Instant.ofEpochMilli(timestamp)

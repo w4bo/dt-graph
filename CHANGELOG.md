@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/w4bo/dt-graph/compare/1.0.13...1.1.0) (2025-03-05)
+
+### Features
+
+* add basic graph spatial capabilities ([e67371e](https://github.com/w4bo/dt-graph/commit/e67371e33eb443a34656ae006baca4747f08b15d))
+
 ## [1.0.13](https://github.com/w4bo/dt-graph/compare/1.0.12...1.0.13) (2025-02-28)
 
 ### Dependency updates

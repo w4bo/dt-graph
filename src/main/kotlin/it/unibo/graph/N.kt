@@ -1,28 +1,47 @@
 package it.unibo.graph
 
 import org.apache.commons.lang3.NotImplementedException
+import org.json.JSONObject
+import org.locationtech.jts.geom.*
+import org.locationtech.jts.io.geojson.GeoJsonReader
 
 const val HAS_TS = "hasTS"
 const val VALUE = "value"
 const val GRAPH_SOURCE = 0L
+const val LOCATION = "location"
 
-open class N (
+open class N(
     override val id: Long, // node id
     override val type: String, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
     override var nextProp: Int? = null, // if graph node, link to the next property
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
-    val location: Pair<Double, Double>? = null, // location
+    location: String? = null, // location of a measurement
     val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
     override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     override val fromTimestamp: Long = Long.MIN_VALUE,
-    override var toTimestamp: Long = Long.MAX_VALUE
-): ElemP {
+    override var toTimestamp: Long = Long.MAX_VALUE,
+    var locationTimestamp: Long = fromTimestamp,
+) : ElemP {
+
+    var location: Geometry? = location?.let{ GeoJsonReader().read(it) }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
-        if (value != null && name == VALUE) return listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE))
-        return super.getProps(next, filter, name, fromTimestamp, toTimestamp)
+        return when (name) {
+            VALUE -> if(value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE)) else emptyList()
+            LOCATION -> {
+                //If searching for last location
+                if(location != null && locationTimestamp >= fromTimestamp){
+                    listOf(P(DUMMY_ID, id, NODE, LOCATION, location!!, PropType.GEOMETRY))
+                } else {
+                    super.getProps(next, filter, name, fromTimestamp, toTimestamp)
+                }
+            }
+            else -> {
+                super.getProps(next, filter, name, fromTimestamp, toTimestamp)
+            }
+        }
     }
 
     fun getTS(): List<N> {

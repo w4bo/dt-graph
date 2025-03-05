@@ -155,21 +155,16 @@ class AsterixDBTSM private constructor(
               `type`: string,
               fromN: bigint,
               toN: bigint,
-              fromNextRel: int?,
-              toNextRel: int?,
               fromTimestamp: DATETIME?,
               toTimestamp: DATETIME?,
-              nextProp: int?,
               properties: [Property]?
           };
        
           CREATE TYPE Measurement AS OPEN {
               id: STRING,
               timestamp: DATETIME,
-              nextRel: int?,
-              nextProp: int?,
               property: STRING,
-              location: POINT,
+              location: geometry,
               relationships: [NodeRelationship],
               properties: [Property],
               fromTimestamp: DATETIME,
