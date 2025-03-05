@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/w4bo/dt-graph/compare/1.1.0...1.1.1) (2025-03-05)
+
+### Bug Fixes
+
+* **deps:** update dependency org.locationtech.jts:jts-core to v1.20.0 ([#45](https://github.com/w4bo/dt-graph/issues/45)) ([6133bf3](https://github.com/w4bo/dt-graph/commit/6133bf3a77ca274af582e2c9dcd711ed90bb914d))
+
 ## [1.1.0](https://github.com/w4bo/dt-graph/compare/1.0.13...1.1.0) (2025-03-05)
 
 ### Features
