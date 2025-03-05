@@ -53,16 +53,20 @@ interface ElemP: Elem {
 interface IStep {
     val type: String?
     val properties: List<Triple<String, Operators, Any>>
+    val alias: String?
 }
 
-class Step(override val type: String? = null, override val properties: List<Triple<String, Operators, Any>> = listOf()) : IStep
+class Step(
+    override val type: String? = null,
+    override val properties: List<Triple<String, Operators, Any>> = listOf(),
+    override val alias: String? = null
+) : IStep
 
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
 enum class AggOperator { SUM, COUNT, AVG, MIN, MAX }
 
-
-class Compare(val a: Int, val b: Int, val property: String, val operator: Operators) {
+class Compare(val a: String, val b: String, val property: String, val operator: Operators) {
     private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
         //if ( a::class != b::class) return false
 
@@ -109,32 +113,39 @@ class Compare(val a: Int, val b: Int, val property: String, val operator: Operat
     }
 }
 
-class Aggregate(val n: Int, val property: String, val operator: AggOperator) {}
+class Aggregate(val n: String, val property: String, val operator: AggOperator)
+
+//fun search(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<Any>> {
+//    return search(match, where, from, to, timeaware)
+//        .groupBy { row -> by.map { row[it] } }
+//        .mapValues { it -> it.value.map{ (it[agg.n] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggregation operators
+//        .map { it.key + listOf(it.value as Any) }
+//}
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<Any>> {
+    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
     return search(match, where, from, to, timeaware)
         .groupBy { row -> by.map { row[it] } }
-        .mapValues { it -> it.value.map{ (it[agg.n] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggreation operators
+        .mapValues { it -> it.value.map{ (it[mapAlias[agg.n]!!] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggregation operators
         .map { it.key + listOf(it.value as Any) }
 }
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<List<ElemP>> = mutableListOf()
-    val mapWhere = where.associateBy { it.b }
+    val mapWhere: Map<String, Compare> = where.associateBy { it.b }
+    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
 
     fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
-        if(index == 4){
-            print("DEBUG")
-        }
-        val c = mapWhere[index]
+        val alias: String? = match[index]?.alias
+        val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
                 && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
             && timeOverlap(e, from, to) // check time overlap
-            && (c == null || c.isOk(path[c.a], e)) // apply the where clause
+            && (c == null || c.isOk(path[mapAlias[c.a]!!], e)) // apply the where clause
         ) {
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
