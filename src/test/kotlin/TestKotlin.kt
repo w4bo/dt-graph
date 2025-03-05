@@ -193,6 +193,16 @@ class TestKotlin {
                 Aggregate(4, "value", AggOperator.AVG)
             )
         )
+
+        kotlin.test.assertEquals(
+            listOf(listOf(15.0 as Any)),
+            search(
+                listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement")),
+                where = listOf(),
+                by = listOf(),
+                Aggregate(6, "value", AggOperator.AVG)
+            )
+        )
     }
 
     @Test
