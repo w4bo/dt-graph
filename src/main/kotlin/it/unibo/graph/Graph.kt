@@ -66,7 +66,7 @@ enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
 enum class AggOperator { SUM, COUNT, AVG, MIN, MAX }
 
-class Compare(val a: Int, val b: Int, val property: String, val operator: Operators) {
+class Compare(val a: String, val b: String, val property: String, val operator: Operators) {
     private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
         //if ( a::class != b::class) return false
 

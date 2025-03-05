@@ -164,13 +164,13 @@ class TestKotlin {
     fun testSearch2() {
         val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel", alias = "p"), Step("hasDevice"), Step("Device", alias = "d"))
         kotlin.test.assertEquals(2, search(pattern).size)
-        kotlin.test.assertEquals(1, search(pattern, listOf(Compare("p", "d", "location", Operators.EQ))).size)
+        kotlin.test.assertEquals(1, search(pattern, listOf(Compare("p", "d", "location", Operators.ST_CONTAINS))).size)
     }
 
     @Test
     fun testSearchTS() {
-        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"), Step("hasDevice"), Step("Device"), Step("hasSolarRadiation"), Step("SolarRadiation"), Step(HAS_TS), Step("Measurement"))
-        kotlin.test.assertEquals(3, search(pattern, listOf(Compare(2, 8, "location", Operators.ST_CONTAINS))).size)
+        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel", alias = "p"), Step("hasDevice"), Step("Device"), Step("hasSolarRadiation"), Step("SolarRadiation"), Step(HAS_TS), Step("Measurement", alias = "m"))
+        kotlin.test.assertEquals(3, search(pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
     }
 
     @Test
@@ -210,16 +210,6 @@ class TestKotlin {
                 where = listOf(),
                 by = listOf(),
                 Aggregate("m", "value", AggOperator.AVG)
-            )
-        )
-
-        kotlin.test.assertEquals(
-            listOf(listOf(15.0 as Any)),
-            search(
-                listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement")),
-                where = listOf(),
-                by = listOf(),
-                Aggregate(6, "value", AggOperator.AVG)
             )
         )
     }
