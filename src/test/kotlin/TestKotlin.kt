@@ -98,12 +98,9 @@ class TestKotlin {
         val n25 = g.addNode("F")
 
         g.addProperty(n10.id, "name", "Errano", PropType.STRING)
-        g.addProperty(n11.id, "name", "TO", PropType.STRING)
-        g.addProperty(n12.id, "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY)
-
+        g.addProperty(n10.id, "lastname", "Errano", PropType.STRING)
         g.addProperty(n13.id, "name", "Errano", PropType.STRING)
-        g.addProperty(n14.id, "name", "TO", PropType.STRING)
-        g.addProperty(n15.id, "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY)
+        g.addProperty(n14.id, "lastname", "Errano", PropType.STRING)
 
         g.addEdge("foo", n10.id, n11.id)
         g.addEdge("foo", n11.id, n12.id)
@@ -176,20 +173,18 @@ class TestKotlin {
 
     @Test
     fun testJoin() {
-        val res =
-            join(
-                listOf(
-                    listOf(Step("A", alias="a"), null, Step("B"), null, Step("C")),
-                    listOf(Step("D", alias="d"), null, Step("E"), null, Step("F"))
-                ),
-                where = listOf(Compare("a", "d", "name", Operators.EQ)),
-                by = listOf(),
-                agg = null
-            )
-        kotlin.test.assertEquals(
-            1,
-            res.size
+        var patterns = listOf(
+            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
+            listOf(Step("D", alias = "d"), null, Step("E"), null, Step("F"))
         )
+        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("a", "d", "name", Operators.EQ)), by = listOf(), agg = null).size)
+        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("d", "a", "name", Operators.EQ)), by = listOf(), agg = null).size)
+        patterns = listOf(
+            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
+            listOf(Step("D"), null, Step("E", alias = "d"), null, Step("F"))
+        )
+        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ)), by = listOf(), agg = null).size)
+        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ)), by = listOf(), agg = null).size)
     }
 
     @Test
