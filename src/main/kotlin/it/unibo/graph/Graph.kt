@@ -122,12 +122,60 @@ class Aggregate(val n: String, val property: String, val operator: AggOperator)
 //        .map { it.key + listOf(it.value as Any) }
 //}
 
-fun search(match: List<Step?>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<Any>> {
+fun join(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate?, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
+    val mapAliases: Map<String, Pair<Int, Int>> =
+        match // get the aliases for each pattern
+            .mapIndexed { patternIndex, pattern ->
+                pattern
+                    .mapIndexed { a, b -> Pair(a, b) }
+                    .filter { it.second?.alias != null } // Consider only the steps with aliases
+                    .associate { it.second?.alias!! to Pair(patternIndex, it.first) } // Pair(patternIndex, stepIndex)
+            }
+            .reduce { acc, map -> acc + map }
+    val joinFilters = where.filter { mapAliases[it.a]!!.first != mapAliases[it.b]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
+    val pattern1 = search(match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val l = pattern1.map { path -> // for each result (i.e., path) of the first pattern
+        var discard = false  // whether this path should be discarded because it will not match
+        // MATCH (a), (b) WHERE a.name = b.name
+        // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
+        val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
+            step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
+                val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
+                    .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
+                    .map {
+                        val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
+                        val props = path[mapAliases[cAlias]!!.second].getProps(name=it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
+                        if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, oppure durante la ricerca dei path potrei già scartarlo tra i risultati possibili
+                            discard = discard || true
+                            Triple(it.property, it.operator, "foo")
+                        } else {
+                            Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+                        }
+                    }
+                Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+            }
+        }
+        if (discard) { // if the path is discarded, do not perform the search
+            emptyList()
+        } else { // else, search for valid paths for the second pattern
+            val pattern2 = search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { path + it }
+            pattern2
+        }
+    }
+    .flatten()
+    val l1: Map<List<ElemP>, List<List<ElemP>>> = l.groupBy { row -> by.map { row[it] } }
+    val l2: Map<List<ElemP>, List<Any>> = l1.mapValues { it -> if (agg == null) it.value else listOf(it.value.map{ (it[mapAliases[agg.n]!!.second] as N).value?.toDouble() ?: Double.NaN }.mean(true)) } // TODO apply different aggregation operators
+    val l3 = l2.map { it.key + it.value }
+    return l3.flatten()
+    }
+
+fun search(match: List<Step?>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
     return search(match, where, from, to, timeaware)
         .groupBy { row -> by.map { row[it] } }
         .mapValues { it -> it.value.map{ (it[mapAlias[agg.n]!!] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggregation operators
         .map { it.key + listOf(it.value as Any) }
+        .flatten()
 }
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {

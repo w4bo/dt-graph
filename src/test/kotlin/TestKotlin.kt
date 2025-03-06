@@ -82,6 +82,37 @@ class TestKotlin {
         n9 = g.addNode("SolarRadiation", value = ts3.getTSId())
         g.addEdge("hasSolarRadiation", n3!!.id, n9!!.id)
         g.addEdge("hasManutentor", m2.id, n5!!.id, id = DUMMY_ID)
+
+        val n10 = g.addNode("A")
+        val n11 = g.addNode("B")
+        val n12 = g.addNode("C")
+        val n20 = g.addNode("A")
+        val n21 = g.addNode("B")
+        val n22 = g.addNode("C")
+
+        val n13 = g.addNode("D")
+        val n14 = g.addNode("E")
+        val n15 = g.addNode("F")
+        val n23 = g.addNode("D")
+        val n24 = g.addNode("E")
+        val n25 = g.addNode("F")
+
+        g.addProperty(n10.id, "name", "Errano", PropType.STRING)
+        g.addProperty(n11.id, "name", "TO", PropType.STRING)
+        g.addProperty(n12.id, "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY)
+
+        g.addProperty(n13.id, "name", "Errano", PropType.STRING)
+        g.addProperty(n14.id, "name", "TO", PropType.STRING)
+        g.addProperty(n15.id, "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY)
+
+        g.addEdge("foo", n10.id, n11.id)
+        g.addEdge("foo", n11.id, n12.id)
+        g.addEdge("foo", n13.id, n14.id)
+        g.addEdge("foo", n14.id, n15.id)
+        g.addEdge("foo", n20.id, n21.id)
+        g.addEdge("foo", n21.id, n22.id)
+        g.addEdge("foo", n23.id, n24.id)
+        g.addEdge("foo", n24.id, n25.id)
     }
 
     @Test
@@ -144,6 +175,41 @@ class TestKotlin {
     }
 
     @Test
+    fun testJoin() {
+        val res =
+            join(
+                listOf(
+                    listOf(Step("A", alias="a"), null, Step("B"), null, Step("C")),
+                    listOf(Step("D", alias="d"), null, Step("E"), null, Step("F"))
+                ),
+                where = listOf(Compare("a", "d", "name", Operators.EQ)),
+                by = listOf(),
+                agg = null
+            )
+        kotlin.test.assertEquals(
+            1,
+            res.size
+        )
+    }
+
+    @Test
+    fun testJoin1() {
+        val res =
+            join(
+                listOf(
+                    listOf(Step("A", alias="a"), null, Step("B"), null, Step("C")),
+                    listOf(Step("D"), null, Step("E"), null, Step("F"))
+                ),
+                by = listOf(),
+                agg = null
+            )
+        kotlin.test.assertEquals(
+            4,
+            res.size
+        )
+    }
+
+    @Test
     fun testTSAsNode1() {
         val g = GraphTraversalSource(g)
         kotlin.test.assertEquals(
@@ -194,7 +260,7 @@ class TestKotlin {
         )
 
         kotlin.test.assertEquals(
-            listOf(listOf(12.5 as Any)),
+            listOf(12.5 as Any),
             search(
                 listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement", alias = "m")),
                 where = listOf(),
@@ -204,7 +270,7 @@ class TestKotlin {
         )
 
         kotlin.test.assertEquals(
-            listOf(listOf(15.0 as Any)),
+            listOf(15.0 as Any),
             search(
                 listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement", alias = "m")),
                 where = listOf(),
