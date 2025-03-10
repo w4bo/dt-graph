@@ -165,26 +165,57 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
             // Find the nodes that should be replaced by their properties
             // MATCH (n)-->(m) RETURN n.name, m => only n
             // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
-            val toReplace = by.filter { it.property != null }
-            // accumulator of rows
-            var acc: MutableList<List<Any>> = mutableListOf(row)
-            toReplace.forEach { by -> // for each element (e.g., node or edge) to replace
-                val alias = mapAliases[by.n]!!
-                val index = alias.second + (if (alias.first == 1) match[0].size else 0) // find its index in the path
-                    val acc2: MutableList<List<Any>> = mutableListOf() // current accumulator
-                    acc.forEach { row -> // for each row
-                    val props = (row[index] as ElemP).getProps(name = by.property) // find the property to replace
-                    if (props.isEmpty()) { // if the element does not contain the property...
-                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size)) // add a null value
-                    } else {
-                        props.forEach {  // else, for each matching property
-                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size)) // produce a new row with the replaced value
+            val toReplace = by.filter { it.property != null }.associateBy {
+                val alias = mapAliases[it.n]!!
+                alias.second + (if (alias.first == 1) match[0].size else 0)
+            } // find its index in the path
+
+            val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
+            if (toReplace.isNotEmpty()) {
+                fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) {
+                    if (index < row.size) {
+                        val replace = toReplace[index]
+                        if (replace == null) {
+                            val elem = row[index]
+                            rec(curRow + listOf(row[index]), index + 1, max(from, elem.fromTimestamp), min(to, elem.toTimestamp))
+                        } else {
+                            val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the property to replace
+                            if (props.isEmpty()) {
+                                rec(curRow + listOf("null"), index + 1, from, to)
+                            } else {
+                                props.forEach { p ->
+                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp))
+                                }
+                            }
                         }
+                    } else {
+                        acc.add(curRow)
                     }
                 }
-                acc = acc2 // iterate over the new rows
+                val firstToReplace = toReplace.keys.min()
+                rec(row.subList(0, firstToReplace), firstToReplace, from, to)
+                acc
+            } else {
+                listOf(row)
             }
-            acc
+            //            var acc: MutableList<List<Any>> = mutableListOf(row) // accumulator of rows
+            //            toReplace.forEach { by -> // for each element (e.g., node or edge) to replace
+            //                val alias = mapAliases[by.n]!!
+            //                val index = alias.second + (if (alias.first == 1) match[0].size else 0) // find its index in the path
+            //                val acc2: MutableList<List<Any>> = mutableListOf() // current accumulator
+            //                acc.forEach { row -> // for each row
+            //                    val props = (row[index] as ElemP).getProps(name = by.property) // find the property to replace
+            //                    if (props.isEmpty()) { // if the element does not contain the property...
+            //                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size)) // add a null value
+            //                    } else {
+            //                        props.forEach {  // else, for each matching property
+            //                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size)) // produce a new row with the replaced value
+            //                        }
+            //                    }
+            //                }
+            //                acc = acc2 // iterate over the new rows
+            //            }
+            //            acc
         }
         .groupBy { row ->
             // group by all elements that are not aggregation operator

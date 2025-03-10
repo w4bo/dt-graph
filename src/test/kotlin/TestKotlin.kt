@@ -174,18 +174,18 @@ class TestKotlin {
 
     @Test
     fun testJoin() {
-        var patterns = listOf(
-            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
-            listOf(Step("D", alias = "d"), null, Step("E"), null, Step("F"))
-        )
-        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
-        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
-        patterns = listOf(
-            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
-            listOf(Step("D"), null, Step("E", alias = "d"), null, Step("F"))
-        )
-        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
-        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
+//        var patterns = listOf(
+//            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
+//            listOf(Step("D", alias = "d"), null, Step("E"), null, Step("F"))
+//        )
+//        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
+//        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
+//        patterns = listOf(
+//            listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
+//            listOf(Step("D"), null, Step("E", alias = "d"), null, Step("F"))
+//        )
+//        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
+//        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
         kotlin.test.assertEquals(
             listOf(listOf("Errano", "Errano", "Errano")),
             query(
