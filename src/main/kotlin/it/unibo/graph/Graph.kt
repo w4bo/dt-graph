@@ -2,11 +2,7 @@ package it.unibo.graph
 
 import it.unibo.graph.structure.CustomGraph
 import org.apache.commons.lang3.NotImplementedException
-import org.json.JSONObject
-import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.Geometry
-import org.locationtech.jts.geom.GeometryFactory
-import org.locationtech.jts.geom.LinearRing
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 import java.io.*
@@ -107,22 +103,19 @@ class Compare(val a: String, val b: String, val property: String, val operator: 
     fun isOk(a: ElemP, b: ElemP): Boolean {
         val p1 = a.getProps(name = property)
         val p2 = b.getProps(name = property)
-
         return p1.isNotEmpty() && p2.isNotEmpty() && compareIfSameType(p1[0].value, p2[0].value, operator)
-
     }
 }
 
-class Aggregate(val n: String, val property: String, val operator: AggOperator)
+class Aggregate(val n: String, val property: String? = null, val operator: AggOperator? = null)
 
-//fun search(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<Any>> {
-//    return search(match, where, from, to, timeaware)
-//        .groupBy { row -> by.map { row[it] } }
-//        .mapValues { it -> it.value.map{ (it[agg.n] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggregation operators
-//        .map { it.key + listOf(it.value as Any) }
-//}
+@JvmName("query")
+fun query(match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
+    return query(listOf(match), where, by, from, to, timeaware)
+}
 
-fun join(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate?, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
+@JvmName("queryJoin")
+fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -134,51 +127,98 @@ fun join(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Int
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.a]!!.first != mapAliases[it.b]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
     val pattern1 = search(match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
-    val l = pattern1.map { path -> // for each result (i.e., path) of the first pattern
-        var discard = false  // whether this path should be discarded because it will not match
-        // MATCH (a), (b) WHERE a.name = b.name
-        // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
-        val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
-            step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
-                val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
-                    .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
-                    .map {
-                        val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
-                        val props = path[mapAliases[cAlias]!!.second].getProps(name=it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
-                        if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, oppure durante la ricerca dei path potrei già scartarlo tra i risultati possibili
-                            discard = discard || true
-                            Triple(it.property, it.operator, "foo")
-                        } else {
-                            Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+    return if (match.size == 1) {
+            pattern1
+        } else {
+            pattern1.map { path -> // for each result (i.e., path) of the first pattern
+                var discard = false  // whether this path should be discarded because it will not match
+                // MATCH (a), (b) WHERE a.name = b.name
+                // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
+                val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
+                    step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
+                        val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
+                            .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
+                            .map {
+                                val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
+                                val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
+                                if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, oppure durante la ricerca dei path potrei già scartarlo tra i risultati possibili
+                                    discard = true
+                                    Triple(it.property, it.operator, "foo")
+                                } else {
+                                    Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+                                }
+                            }
+                        Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+                    }
+                }
+                if (discard) { // if the path is discarded, do not perform the search
+                    emptyList()
+                } else { // else, search for valid paths for the second pattern
+                    val pattern2 = search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware)
+                        .map { path + it }
+                    pattern2
+                }
+            }
+            .flatten()
+        }
+        .flatMap { row ->
+            val nodesToReplace = by.filter { it.operator == null && it.property != null }
+            var acc: MutableList<List<Any>> = mutableListOf(row)
+            nodesToReplace.forEach { by ->
+                val index = mapAliases[by.n]!!.second
+                val acc2: MutableList<List<Any>> = mutableListOf()
+                acc.forEach { row ->
+                    val props = (row[index] as ElemP).getProps(name = by.property)
+                    if (props.isEmpty()) {
+                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size))
+                    } else {
+                        props.forEach {
+                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size))
                         }
                     }
-                Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+                }
+                acc = acc2
+            }
+            acc
+        }
+        .groupBy { row ->
+            // group by all elements that are not aggregation operator
+            // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
+            // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
+            by.filter { it.operator == null }.map { row[mapAliases[it.n]!!.second] }
+        }
+        .mapValues { it: Map.Entry<List<Any>, List<List<Any>>> ->
+            if (!by.any { it.operator != null }) {
+                // no aggregation operator has been specified
+                it.value
+            } else {
+                // some aggregation operator has been specified
+                // TODO apply different aggregation operators
+                val value: Double = it.value.map {
+                    (it[mapAliases[by.first { it.operator != null }.n]!!.second] as N).value?.toDouble() ?: Double.NaN
+                }.mean(true)
+                listOf(value) // E.g., [12.5]
             }
         }
-        if (discard) { // if the path is discarded, do not perform the search
-            emptyList()
-        } else { // else, search for valid paths for the second pattern
-            val pattern2 = search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { path + it }
-            pattern2
+        .map {
+            if (by.isNotEmpty()) {
+                if (by.any { it.operator != null }) {
+                    it.key + it.value // MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
+                } else {
+                    if (by.size == 1) {
+                        it.key // MATCH (n) RETURN n.name => [a, b, ...]
+                    } else {
+                        listOf(it.key)  // MATCH (n)-->(m) RETURN n.name, m.name => [[a, b], [a, c], ...]
+                    }
+                }
+            } else {
+                it.value
+            }
         }
-    }
-    .flatten()
-    val l1: Map<List<ElemP>, List<List<ElemP>>> = l.groupBy { row -> by.map { row[it] } }
-    val l2: Map<List<ElemP>, List<Any>> = l1.mapValues { it -> if (agg == null) it.value else listOf(it.value.map{ (it[mapAliases[agg.n]!!.second] as N).value?.toDouble() ?: Double.NaN }.mean(true)) } // TODO apply different aggregation operators
-    val l3 = l2.map { it.key + it.value }
-    return l3.flatten()
-    }
-
-fun search(match: List<Step?>, where: List<Compare> = listOf(), by: List<Int>, agg: Aggregate, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
-    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
-    return search(match, where, from, to, timeaware)
-        .groupBy { row -> by.map { row[it] } }
-        .mapValues { it -> it.value.map{ (it[mapAlias[agg.n]!!] as N).value?.toDouble() ?: Double.NaN }.mean(true) } // TODO apply different aggregation operators
-        .map { it.key + listOf(it.value as Any) }
         .flatten()
 }
 
-fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): MutableList<List<ElemP>> {
+fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<ElemP>> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<List<ElemP>> = mutableListOf()
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
@@ -349,8 +389,8 @@ open class GraphMemory: Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        props.find{ it.key == p.key}?.let{
-            it.toTimestamp = p.fromTimestamp-1//System.currentTimeMillis()
+        props.find { it.key == p.key }?.let {
+            it.toTimestamp = p.fromTimestamp - 1 // TODO no, il timestamp non piò essere con -1
         }
         props += p
         return p

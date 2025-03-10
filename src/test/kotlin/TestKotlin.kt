@@ -99,6 +99,7 @@ class TestKotlin {
 
         g.addProperty(n10.id, "name", "Errano", PropType.STRING)
         g.addProperty(n10.id, "lastname", "Errano", PropType.STRING)
+        g.addProperty(n11.id, "name", "Bar", PropType.STRING)
         g.addProperty(n13.id, "name", "Errano", PropType.STRING)
         g.addProperty(n14.id, "lastname", "Errano", PropType.STRING)
 
@@ -177,30 +178,29 @@ class TestKotlin {
             listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
             listOf(Step("D", alias = "d"), null, Step("E"), null, Step("F"))
         )
-        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("a", "d", "name", Operators.EQ)), by = listOf(), agg = null).size)
-        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("d", "a", "name", Operators.EQ)), by = listOf(), agg = null).size)
+        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
+        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
         patterns = listOf(
             listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
             listOf(Step("D"), null, Step("E", alias = "d"), null, Step("F"))
         )
-        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ)), by = listOf(), agg = null).size)
-        kotlin.test.assertEquals(1, join(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ)), by = listOf(), agg = null).size)
+        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
+        kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
     }
 
     @Test
     fun testJoin1() {
         val res =
-            join(
+            query(
                 listOf(
                     listOf(Step("A", alias="a"), null, Step("B"), null, Step("C")),
                     listOf(Step("D"), null, Step("E"), null, Step("F"))
-                ),
-                by = listOf(),
-                agg = null
+                )
             )
         kotlin.test.assertEquals(
             4,
-            res.size
+            res.size,
+            res.toString()
         )
     }
 
@@ -256,22 +256,31 @@ class TestKotlin {
 
         kotlin.test.assertEquals(
             listOf(12.5 as Any),
-            search(
+            query(
                 listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement", alias = "m")),
-                where = listOf(),
-                by = listOf(),
-                Aggregate("m", "value", AggOperator.AVG)
+                by = listOf(Aggregate("m", "value", AggOperator.AVG))
             )
         )
 
         kotlin.test.assertEquals(
             listOf(15.0 as Any),
-            search(
+            query(
                 listOf(Step("AgriParcel"), null, Step("Device"), null, null, Step(HAS_TS), Step("Measurement", alias = "m")),
-                where = listOf(),
-                by = listOf(),
-                Aggregate("m", "value", AggOperator.AVG)
+                by = listOf(Aggregate("m", "value", AggOperator.AVG))
             )
+        )
+    }
+
+    @Test
+    fun testReturn() {
+        kotlin.test.assertEquals(
+            listOf(listOf("Errano", "Bar"), listOf("null", "null")),
+            query(listOf(Step("A", alias = "n"), null, Step("B", alias = "m")), by = listOf(Aggregate("n", "name"), Aggregate("m", "name")))
+        )
+
+        kotlin.test.assertEquals(
+            listOf("Errano" as Any, "null" as Any),
+            query(listOf(Step("A", alias = "n")), by = listOf(Aggregate("n", "name")))
         )
     }
 
