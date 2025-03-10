@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/w4bo/dt-graph/compare/1.1.1...1.2.0) (2025-03-10)
+
+### Features
+
+* added property and edge timestamp closure upon updates ([808b566](https://github.com/w4bo/dt-graph/commit/808b566a1ad47623f3bab6fd319d727cd3fd8618))
+
 ## [1.1.1](https://github.com/w4bo/dt-graph/compare/1.1.0...1.1.1) (2025-03-05)
 
 ### Bug Fixes
