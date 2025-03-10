@@ -370,6 +370,15 @@ open class GraphMemory: Graph {
 
     override fun nextNodeId(): Long = nodes.size.toLong()
 
+    override fun addEdge(r: R): R {
+        if (r.id >= rels.size || r.id == DUMMY_ID) {
+            return super.addEdge(r)
+        } else {
+            rels[(r.id as Number).toInt()] = r
+            return r
+        }
+    }
+
     override fun addNode(n: N): N {
         if (n.id >= nodes.size) {
             nodes += n
@@ -389,9 +398,15 @@ open class GraphMemory: Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        props.find { it.key == p.key }?.let {
-            it.toTimestamp = p.fromTimestamp - 1 // TODO no, il timestamp non piò essere con -1
-        }
+        // Find the last properties and update its toTimestamp
+        // Update only if toTimestamp of old property is > than fromTimestamp of new property.
+        props.filter { it.key == p.key }
+            .maxByOrNull { it.toTimestamp }
+            ?.let {
+                if (it.toTimestamp > p.fromTimestamp) {
+                    it.toTimestamp = p.fromTimestamp
+                }
+            }
         props += p
         return p
     }
@@ -399,6 +414,15 @@ open class GraphMemory: Graph {
     override fun nextEdgeId(): Int = rels.size
 
     override fun addEdgeLocal(key: Long, r: R): R {
+        // Find the last edge version and update its toTimestamp
+        // Update only if toTimestamp of old edge is > than fromTimestamp of new property.
+        rels.filter { it.id == r.id }
+            .maxByOrNull { it.toTimestamp }
+            ?.let {
+                if (it.toTimestamp > r.fromTimestamp) {
+                    it.toTimestamp = r.fromTimestamp
+                }
+            }
         rels += r
         return r
     }
@@ -472,6 +496,7 @@ class GraphRocksDB : Graph {
     override fun nextNodeId(): Long = nodeId++
 
     override fun nextPropertyId(): Int = propId++
+
     override fun upsertFirstCitizenProperty(prop: P): P? {
         TODO("Not yet implemented")
     }
@@ -484,11 +509,13 @@ class GraphRocksDB : Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
+        //TODO: close toTimestamp of previous property version
         db.put(properties, "${p.id}".toByteArray(), serialize(p))
         return p
     }
 
     override fun addEdgeLocal(key: Long, r: R): R {
+        //TODO: close toTimestamp of previous edge version
         db.put(edges, "${r.id}".toByteArray(), serialize(r))
         return r
     }
