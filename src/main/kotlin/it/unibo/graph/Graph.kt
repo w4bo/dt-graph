@@ -141,7 +141,7 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
                             .map {
                                 val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
                                 val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
-                                if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, oppure durante la ricerca dei path potrei già scartarlo tra i risultati possibili
+                                if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
                                     discard = true
                                     Triple(it.property, it.operator, "foo")
                                 } else {
@@ -162,22 +162,27 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
             .flatten()
         }
         .flatMap { row ->
-            val nodesToReplace = by.filter { it.operator == null && it.property != null }
+            // Find the nodes that should be replaced by their properties
+            // MATCH (n)-->(m) RETURN n.name, m => only n
+            // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
+            val toReplace = by.filter { it.property != null }
+            // accumulator of rows
             var acc: MutableList<List<Any>> = mutableListOf(row)
-            nodesToReplace.forEach { by ->
-                val index = mapAliases[by.n]!!.second
-                val acc2: MutableList<List<Any>> = mutableListOf()
-                acc.forEach { row ->
-                    val props = (row[index] as ElemP).getProps(name = by.property)
-                    if (props.isEmpty()) {
-                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size))
+            toReplace.forEach { by -> // for each element (e.g., node or edge) to replace
+                val alias = mapAliases[by.n]!!
+                val index = alias.second + (if (alias.first == 1) match[0].size else 0) // find its index in the path
+                    val acc2: MutableList<List<Any>> = mutableListOf() // current accumulator
+                    acc.forEach { row -> // for each row
+                    val props = (row[index] as ElemP).getProps(name = by.property) // find the property to replace
+                    if (props.isEmpty()) { // if the element does not contain the property...
+                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size)) // add a null value
                     } else {
-                        props.forEach {
-                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size))
+                        props.forEach {  // else, for each matching property
+                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size)) // produce a new row with the replaced value
                         }
                     }
                 }
-                acc = acc2
+                acc = acc2 // iterate over the new rows
             }
             acc
         }
@@ -185,18 +190,19 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
             // group by all elements that are not aggregation operator
             // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
             // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
-            by.filter { it.operator == null }.map { row[mapAliases[it.n]!!.second] }
+            by.filter { it.operator == null }.map {
+                val alias = mapAliases[it.n]!!
+                row[alias.second + (if (alias.first == 1) match[0].size else 0)]
+            }
         }
-        .mapValues { it: Map.Entry<List<Any>, List<List<Any>>> ->
+        .mapValues { group: Map.Entry<List<Any>, List<List<Any>>> ->
             if (!by.any { it.operator != null }) {
                 // no aggregation operator has been specified
-                it.value
+                group.value
             } else {
                 // some aggregation operator has been specified
-                // TODO apply different aggregation operators
-                val value: Double = it.value.map {
-                    (it[mapAliases[by.first { it.operator != null }.n]!!.second] as N).value?.toDouble() ?: Double.NaN
-                }.mean(true)
+                // TODO apply different aggregation operators, and possibly multiple aggregation operators
+                val value: Double = group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble()}.mean(true)
                 listOf(value) // E.g., [12.5]
             }
         }

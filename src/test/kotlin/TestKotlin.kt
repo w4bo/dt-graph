@@ -186,6 +186,17 @@ class TestKotlin {
         )
         kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
         kotlin.test.assertEquals(1, query(patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
+        kotlin.test.assertEquals(
+            listOf(listOf("Errano", "Errano", "Errano")),
+            query(
+                listOf(
+                    listOf(Step("A", alias = "a"), null, Step("B"), null, Step("C")),
+                    listOf(Step("D", alias = "d"), null, Step("E", alias = "e"), null, Step("F"))
+                ),
+                where = listOf(Compare("e", "a", "lastname", Operators.EQ)),
+                by = listOf(Aggregate("a", property = "name"), Aggregate("d", property = "name"), Aggregate("e", property = "lastname"))
+            )
+        )
     }
 
     @Test
