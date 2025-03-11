@@ -169,22 +169,25 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
                 val alias = mapAliases[it.n]!!
                 alias.second + (if (alias.first == 1) match[0].size else 0)
             } // find its index in the path
-
             val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
-            if (toReplace.isNotEmpty()) {
-                fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) {
-                    if (index < row.size) {
-                        val replace = toReplace[index]
-                        if (replace == null) {
+            if (toReplace.isNotEmpty()) { // if I need to replace at least one element
+                fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) { // recursive function
+                    if (index < row.size) { // iterate until all elements have been checked
+                        val replace = toReplace[index] // find the next item to replace
+                        if (replace == null) {  // if I don't need to replace this item... continue the recursion but compute the reduced from/to timestamps
                             val elem = row[index]
-                            rec(curRow + listOf(row[index]), index + 1, max(from, elem.fromTimestamp), min(to, elem.toTimestamp))
-                        } else {
-                            val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the property to replace
-                            if (props.isEmpty()) {
-                                rec(curRow + listOf("null"), index + 1, from, to)
+                            val newFrom = max(from, elem.fromTimestamp)
+                            val newTo = min(to, elem.toTimestamp)
+                            if (!(newFrom >= to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
+                                rec(curRow + listOf(row[index]), index + 1, newFrom, newTo) // continue the recursion
+                            }
+                        } else { // else, I need to replace this items
+                            val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the properties to replace
+                            if (props.isEmpty()) { // if they are empty, add the null value as a return
+                                rec(curRow + listOf("null"), index + 1, from, to) // ... and continue the recursion
                             } else {
-                                props.forEach { p ->
-                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp))
+                                props.forEach { p ->  // if a property exists
+                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
                                 }
                             }
                         }
@@ -192,8 +195,9 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
                         acc.add(curRow)
                     }
                 }
-                val firstToReplace = toReplace.keys.min()
-                rec(row.subList(0, firstToReplace), firstToReplace, from, to)
+                // val firstToReplace = toReplace.keys.min() no, non posso farlo. Devo calcolare il from e il to incrementale
+                // rec(row.subList(0, firstToReplace), firstToReplace, from, to)
+                rec(listOf(), 0, from, to)
                 acc
             } else {
                 listOf(row)
