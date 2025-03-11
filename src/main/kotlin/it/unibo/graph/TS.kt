@@ -14,6 +14,9 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import org.locationtech.jts.io.geojson.GeoJsonWriter
 
+
+val EPSILON : Long = 1
+
 interface TS : Serializable {
     fun getTSId(): Long
     fun add(label: String, timestamp: Long, value: Long) = add(
@@ -91,6 +94,13 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
+        val toTimestamp = if (convertTimestampToISO8601(n.toTimestamp) ==
+            convertTimestampToISO8601(n.fromTimestamp)) {
+            convertTimestampToISO8601(n.toTimestamp + EPSILON)
+        } else {
+            convertTimestampToISO8601(n.toTimestamp)
+        }
+
         val insertQuery = """
             USE $dataverse;
             UPSERT INTO $dataset ([{
@@ -103,7 +113,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 "relationships": [${n.getRels().map(::relToJson).joinToString(", ")}],
                 "properties": [${n.getProps().map(::propToJson).joinToString(", ")}],
                 "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
-                "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
+                "toTimestamp": datetime("$toTimestamp"),
                 "value": ${n.value}
             }]);
         """.trimIndent()
@@ -145,7 +155,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                     //TODO: Fix this random return
                     return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type ="Error")
                 }
-
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
@@ -199,8 +208,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                         for (i in 0 until resultArray.length()) {
                             val jsonEntity = resultArray.getJSONObject(i).getJSONObject(dataset)
 
-
-                            val entity = CustomVertex(
+                                val entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
                                 timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = jsonEntity.getString("property"),
