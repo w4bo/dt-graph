@@ -1,4 +1,6 @@
-package it.unibo.graph
+package it.unibo.graph.interfaces
+
+import it.unibo.graph.App
 
 enum class Direction { IN, OUT }
 

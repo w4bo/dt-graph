@@ -1,14 +1,9 @@
-package it.unibo.graph
+package it.unibo.graph.interfaces
 
+import it.unibo.graph.App
 import org.apache.commons.lang3.NotImplementedException
-import org.json.JSONObject
-import org.locationtech.jts.geom.*
+import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.geojson.GeoJsonReader
-
-const val HAS_TS = "hasTS"
-const val VALUE = "value"
-const val GRAPH_SOURCE = 0L
-const val LOCATION = "location"
 
 open class N(
     override val id: Long, // node id

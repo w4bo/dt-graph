@@ -1,8 +1,7 @@
-package it.unibo.graph
+package it.unibo.graph.interfaces
 
-const val DUMMY_ID = -1
-const val NODE = true
-const val EDGE = false
+import it.unibo.graph.App
+import it.unibo.graph.utils.decodeBitwiseSource
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 

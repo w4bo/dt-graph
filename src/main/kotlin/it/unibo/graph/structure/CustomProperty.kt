@@ -1,7 +1,7 @@
 package it.unibo.graph.structure
 
-import it.unibo.graph.P
-import it.unibo.graph.PropType
+import it.unibo.graph.interfaces.P
+import it.unibo.graph.interfaces.PropType
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.Property
 import org.apache.tinkerpop.gremlin.structure.Vertex

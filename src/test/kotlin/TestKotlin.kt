@@ -1,11 +1,14 @@
-import it.unibo.graph.*
+import it.unibo.graph.App
 import it.unibo.graph.App.tsm
+import it.unibo.graph.interfaces.*
+import it.unibo.graph.query.*
+import it.unibo.graph.utils.decodeBitwise
+import it.unibo.graph.utils.encodeBitwise
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
-
 
 class TestKotlin {
 
@@ -241,7 +244,9 @@ class TestKotlin {
 
     @Test
     fun testSearchTS() {
-        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel", alias = "p"), Step("hasDevice"), Step("Device"), Step("hasSolarRadiation"), Step("SolarRadiation"), Step(HAS_TS), Step("Measurement", alias = "m"))
+        val pattern = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel", alias = "p"), Step("hasDevice"), Step("Device"), Step("hasSolarRadiation"), Step("SolarRadiation"), Step(
+            HAS_TS
+        ), Step("Measurement", alias = "m"))
         kotlin.test.assertEquals(3, search(pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
     }
 

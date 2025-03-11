@@ -1,5 +1,9 @@
-import it.unibo.graph.*
+import it.unibo.graph.App
 import it.unibo.graph.App.tsm
+import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.query.Aggregate
+import it.unibo.graph.query.Step
+import it.unibo.graph.query.query
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 

@@ -1,12 +1,11 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.App
-import it.unibo.graph.HAS_TS
-import it.unibo.graph.N
-import it.unibo.graph.PropType
+import it.unibo.graph.interfaces.HAS_TS
+import it.unibo.graph.interfaces.N
+import it.unibo.graph.interfaces.PropType
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
-import org.json.JSONObject
 
 class CustomVertex(
     id: Long,
@@ -69,11 +68,11 @@ class CustomVertex(
         return App.g.addEdge(label, id, inVertex.id() as Long) as CustomEdge
     }
 
-    fun dir2dir(direction: Direction): it.unibo.graph.Direction {
+    fun dir2dir(direction: Direction): it.unibo.graph.interfaces.Direction {
         return if (direction == Direction.IN) {
-            it.unibo.graph.Direction.IN
+            it.unibo.graph.interfaces.Direction.IN
         } else {
-            it.unibo.graph.Direction.OUT
+            it.unibo.graph.interfaces.Direction.OUT
         }
     }
 

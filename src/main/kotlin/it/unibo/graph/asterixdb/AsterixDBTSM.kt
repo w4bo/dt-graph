@@ -1,71 +1,12 @@
-package it.unibo.graph
+package it.unibo.graph.asterixdb
 
-import org.rocksdb.Options
-import org.rocksdb.RocksDB
+import it.unibo.graph.interfaces.TS
+import it.unibo.graph.interfaces.TSManager
+import it.unibo.graph.structure.CustomTS
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-
-interface TSManager {
-    fun addTS(): TS
-    fun nextTSId(): Long
-    fun getTS(id: Long): TS
-    fun clear()
-}
-
-class MemoryTSManager : TSManager {
-    private val tss: MutableList<TS> = ArrayList()
-
-    override fun getTS(id: Long): TS {
-        return tss[(id as Number).toInt() - 1]
-    }
-
-    override fun addTS(): TS {
-        val ts = CustomTS(MemoryTS(nextTSId()))
-        tss += ts
-        return ts
-    }
-
-    override fun nextTSId(): Long = tss.size.toLong() + 1
-
-    override fun clear() {
-        tss.clear()
-    }
-}
-
-class RocksDBTSM : TSManager {
-    val db: RocksDB
-    val DB_NAME = "db_ts"
-    var id = 1
-
-    init {
-        val options = Options()
-        options.setCreateIfMissing(true)
-        options.setCreateMissingColumnFamilies(true)
-        db = RocksDB.open(options, DB_NAME)
-    }
-
-    override fun getTS(id: Long): TS {
-        return CustomTS(RocksDBTS(id, db))
-    }
-
-    override fun addTS(): TS {
-        return CustomTS(RocksDBTS(nextTSId(), db))
-    }
-
-    override fun nextTSId(): Long = id++.toLong()
-
-    override fun clear() {
-        val iterator = db.newIterator()
-        iterator.seekToFirst()
-        while (iterator.isValid) {
-            db.delete(iterator.key())
-            iterator.next()
-        }
-        id = 1
-    }
-}
 
 class AsterixDBTSM private constructor(
     host: String,

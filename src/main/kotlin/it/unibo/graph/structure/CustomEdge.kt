@@ -1,7 +1,7 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.App
-import it.unibo.graph.R
+import it.unibo.graph.interfaces.R
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
