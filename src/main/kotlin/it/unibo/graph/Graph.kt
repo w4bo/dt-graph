@@ -441,7 +441,7 @@ open class GraphMemory: Graph {
     override fun addPropertyLocal(key: Long, p: P): P {
         // Find the last properties and update its toTimestamp
         // Update only if toTimestamp of old property is > than fromTimestamp of new property.
-        props.filter { it.key == p.key }
+        props.filter { it.key == p.key && it.sourceId == p.sourceId }
             .maxByOrNull { it.toTimestamp }
             ?.let {
                 if (it.toTimestamp > p.fromTimestamp) {
