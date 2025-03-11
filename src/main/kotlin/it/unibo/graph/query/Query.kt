@@ -6,7 +6,6 @@ import org.jetbrains.kotlinx.dataframe.math.mean
 import kotlin.math.max
 import kotlin.math.min
 
-
 @JvmName("query")
 fun query(match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
     return query(listOf(match), where, by, from, to, timeaware)
@@ -25,166 +24,178 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.a]!!.first != mapAliases[it.b]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
     val pattern1 = search(match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
-    return if (match.size == 1) {
+    val result =
+        if (match.size == 1) {
             pattern1
         } else {
-            pattern1.map { path -> // for each result (i.e., path) of the first pattern
-                var discard = false  // whether this path should be discarded because it will not match
-                // MATCH (a), (b) WHERE a.name = b.name
-                // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
-                val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
-                    step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
-                        val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
-                            .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
-                            .map {
-                                val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
-                                val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
-                                if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
-                                    discard = true
-                                    Triple(it.property, it.operator, "foo")
-                                } else {
-                                    Triple(it.property, it.operator, props[0].value) // else, add this as a filter
-                                }
-                            }
-                        Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
-                    }
-                }
-                if (discard) { // if the path is discarded, do not perform the search
-                    emptyList()
-                } else { // else, search for valid paths for the second pattern
-                    val pattern2 = search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware)
-                        .map { path + it }
-                    pattern2
-                }
-            }
-            .flatten()
+            join(pattern1, match, joinFilters, mapAliases, where, from, to, timeaware)
         }
-        .flatMap { row ->
-            // Find the nodes that should be replaced by their properties
-            // MATCH (n)-->(m) RETURN n.name, m => only n
-            // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
-            val toReplace = by.filter { it.property != null }.associateBy {
-                val alias = mapAliases[it.n]!!
-                alias.second + (if (alias.first == 1) match[0].size else 0)
-            } // find its index in the path
-            val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
-            if (toReplace.isNotEmpty()) { // if I need to replace at least one element
-                fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) { // recursive function
-                    if (index < row.size) { // iterate until all elements have been checked
-                        val replace = toReplace[index] // find the next item to replace
-                        if (replace == null) {  // if I don't need to replace this item... continue the recursion but compute the reduced from/to timestamps
-                            val elem = row[index]
-                            val newFrom = max(from, elem.fromTimestamp)
-                            val newTo = min(to, elem.toTimestamp)
-                            if (!(newFrom > to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
-                                rec(curRow + listOf(row[index]), index + 1, newFrom, newTo) // continue the recursion
-                            }
-                        } else { // else, I need to replace this items
-                            val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the properties to replace
-                            if (props.isEmpty()) { // if they are empty, add the null value as a return
-                                rec(curRow + listOf("null"), index + 1, from, to) // ... and continue the recursion
-                            } else { // I cannot simply iterate over the properties to start the recursion, for instance
-                                /*
-                                 * (a)---[0, 0)--->(b1)
-                                 *    ---[1, 1)--->(b2)
-                                 *    ---[2, 2)--->(b3)
-                                 *
-                                 * and (a) has two properties
-                                 * - a.name = "foo" in (0, 0)
-                                 * - a.name = "bar" in (1, 1)
-                                 *
-                                 * The query MATCH (a)-->(b) RETURN a.name, b
-                                 * must return
-                                 * foo, b1
-                                 * bar, b2
-                                 * null, b3
-                                 *
-                                 * So I need to check the time span of the next element to decide whether I should push a "null" value down the recursion
-                                 */
-                                if (index + 1 < row.size) { // if this element is not the last
-                                    val nextElem = row[index + 1] // look ahead the next element
-                                    val overlappingProperties = props.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
-                                    if (overlappingProperties.isEmpty()) { // if there is no overlapping, push null down to the recursion
-                                        rec(curRow + listOf("null"), index + 1, from, to)
-                                    } else {
-                                        overlappingProperties.forEach { p ->  // if an overlapping property exists
-                                            rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
-                                        }
-                                    }
-                                } else { // If this is the last element, simply iterate over the existing properties
-                                    props.forEach { p ->  // if a property exists
-                                        rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
-                                    }
+            .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to) }
+            .groupBy { row -> groupBy(by, mapAliases, row, match) }
+            .mapValues { aggregate(by, it, mapAliases) }
+            .map { wrapResult(by, it) }
+            .flatten()
+    return result
+}
+
+private fun join(
+    pattern1: List<List<ElemP>>,
+    match: List<List<Step?>>,
+    joinFilters: List<Compare>,
+    mapAliases: Map<String, Pair<Int, Int>>,
+    where: List<Compare>,
+    from: Long,
+    to: Long,
+    timeaware: Boolean
+) =
+    pattern1.map { path -> // for each result (i.e., path) of the first pattern
+        var discard = false  // whether this path should be discarded because it will not match
+        // MATCH (a), (b) WHERE a.name = b.name
+        // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
+        val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
+            step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
+                val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
+                    .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
+                    .map {
+                        val cAlias =
+                            if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
+                        val props =
+                            path[mapAliases[cAlias]!!.second].getProps(name = it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
+                        if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
+                            discard = true
+                            Triple(it.property, it.operator, "foo")
+                        } else {
+                            Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+                        }
+                    }
+                Step(
+                    step.type,
+                    it.properties + t,
+                    step.alias
+                ) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+            }
+        }
+        if (discard) { // if the path is discarded, do not perform the search
+            emptyList()
+        } else { // else, search for valid paths for the second pattern
+            search(
+                curMatch,
+                (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 },
+                from,
+                to,
+                timeaware
+            ).map { path + it }
+        }
+    }
+    .flatten()
+
+private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long): List<List<Any>> {
+    // Find the nodes that should be replaced by their properties
+    // MATCH (n)-->(m) RETURN n.name, m => only n
+    // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
+    val toReplace = by.filter { it.property != null }.associateBy {
+        val alias = mapAliases[it.n]!!
+        alias.second + (if (alias.first == 1) match[0].size else 0)
+    } // find its index in the path
+    val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
+    return if (toReplace.isNotEmpty()) { // if I need to replace at least one element
+        fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) { // recursive function
+            if (index < row.size) { // iterate until all elements have been checked
+                val replace = toReplace[index] // find the next item to replace
+                if (replace == null) {  // if I don't need to replace this item... continue the recursion but compute the reduced from/to timestamps
+                    val elem = row[index]
+                    val newFrom = max(from, elem.fromTimestamp)
+                    val newTo = min(to, elem.toTimestamp)
+                    if (!(newFrom > to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
+                        rec(curRow + listOf(row[index]), index + 1, newFrom, newTo) // continue the recursion
+                    }
+                } else { // else, I need to replace this items
+                    val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the properties to replace
+                    if (props.isEmpty()) { // if they are empty, add the null value as a return
+                        rec(curRow + listOf("null"), index + 1, from, to) // ... and continue the recursion
+                    } else {
+                        /* I cannot simply iterate over the properties to start the recursion, for instance let's consider
+                         * (a)---[0, 0)--->(b1)
+                         * (a)---[1, 1)--->(b2)
+                         * (a)---[2, 2)--->(b3)
+                         *
+                         * where (a) has two properties
+                         * a.name = "foo" in (0, 0)
+                         * a.name = "bar" in (1, 1)
+                         *
+                         * The query MATCH (a)-->(b) RETURN a.name, b
+                         * must return
+                         * -------------
+                         * | foo  | b1 |
+                         * | bar  | b2 |
+                         * | null | b3 |
+                         * -------------
+                         * So I need to check the time span of the next element to decide whether I should push a "null" value down the recursion
+                         */
+                        if (index + 1 < row.size) { // if this element is not the last
+                            val nextElem = row[index + 1] // look ahead the next element
+                            val overlappingProperties = props.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
+                            if (overlappingProperties.isEmpty()) { // if there is no overlapping, push null down to the recursion
+                                rec(curRow + listOf("null"), index + 1, from, to)
+                            } else {
+                                overlappingProperties.forEach { p ->  // if an overlapping property exists
+                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
                                 }
+                            }
+                        } else { // If this is the last element, simply iterate over the existing properties
+                            props.forEach { p ->  // if a property exists
+                                rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
                             }
                         }
-                    } else {
-                        acc.add(curRow)
-                    }
-                }
-                // val firstToReplace = toReplace.keys.min() no, non posso farlo. Devo calcolare il from e il to incrementale
-                // rec(row.subList(0, firstToReplace), firstToReplace, from, to)
-                rec(listOf(), 0, from, to)
-                acc
-            } else {
-                listOf(row)
-            }
-            //            var acc: MutableList<List<Any>> = mutableListOf(row) // accumulator of rows
-            //            toReplace.forEach { by -> // for each element (e.g., node or edge) to replace
-            //                val alias = mapAliases[by.n]!!
-            //                val index = alias.second + (if (alias.first == 1) match[0].size else 0) // find its index in the path
-            //                val acc2: MutableList<List<Any>> = mutableListOf() // current accumulator
-            //                acc.forEach { row -> // for each row
-            //                    val props = (row[index] as ElemP).getProps(name = by.property) // find the property to replace
-            //                    if (props.isEmpty()) { // if the element does not contain the property...
-            //                        acc2.add(row.subList(0, index) + listOf("null") + row.subList(index + 1, row.size)) // add a null value
-            //                    } else {
-            //                        props.forEach {  // else, for each matching property
-            //                            p -> acc2.add(row.subList(0, index) + listOf(p.value) + row.subList(index + 1, row.size)) // produce a new row with the replaced value
-            //                        }
-            //                    }
-            //                }
-            //                acc = acc2 // iterate over the new rows
-            //            }
-            //            acc
-        }
-        .groupBy { row ->
-            // group by all elements that are not aggregation operator
-            // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
-            // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
-            by.filter { it.operator == null }.map {
-                val alias = mapAliases[it.n]!!
-                row[alias.second + (if (alias.first == 1) match[0].size else 0)]
-            }
-        }
-        .mapValues { group: Map.Entry<List<Any>, List<List<Any>>> ->
-            if (!by.any { it.operator != null }) {
-                // no aggregation operator has been specified
-                group.value
-            } else {
-                // some aggregation operator has been specified
-                // TODO apply different aggregation operators, and possibly multiple aggregation operators
-                val value: Double = group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble()}.mean(true)
-                listOf(value) // E.g., [12.5]
-            }
-        }
-        .map {
-            if (by.isNotEmpty()) {
-                if (by.any { it.operator != null }) {
-                    it.key + it.value // MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
-                } else {
-                    if (by.size == 1) {
-                        it.key // MATCH (n) RETURN n.name => [a, b, ...]
-                    } else {
-                        listOf(it.key)  // MATCH (n)-->(m) RETURN n.name, m.name => [[a, b], [a, c], ...]
                     }
                 }
             } else {
-                it.value
+                acc.add(curRow)
             }
         }
-        .flatten()
+        rec(listOf(), 0, from, to)
+        acc
+    } else {
+        listOf(row)
+    }
 }
+
+private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>) =
+    if (by.isNotEmpty()) {
+        if (by.any { it.operator != null }) {
+            it.key + it.value // MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
+        } else {
+            if (by.size == 1) {
+                it.key // MATCH (n) RETURN n.name => [a, b, ...]
+            } else {
+                listOf(it.key)  // MATCH (n)-->(m) RETURN n.name, m.name => [[a, b], [a, c], ...]
+            }
+        }
+    } else {
+        it.value
+    }
+
+private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>) =
+    if (!by.any { it.operator != null }) {
+        // no aggregation operator has been specified
+        group.value
+    } else {
+        // some aggregation operator has been specified
+        // TODO apply different aggregation operators, and possibly multiple aggregation operators
+        val value: Double =
+            group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble() }
+                .mean(true)
+        listOf(value) // E.g., [12.5]
+    }
+
+private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: List<Any>, match: List<List<Step?>>) =
+    // group by all elements that are not aggregation operator
+    // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
+    // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
+    by.filter { it.operator == null }.map {
+        val alias = mapAliases[it.n]!!
+        row[alias.second + (if (alias.first == 1) match[0].size else 0)]
+    }
 
 fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<ElemP>> {
     val visited: MutableSet<Number> = mutableSetOf()
