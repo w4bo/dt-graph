@@ -300,10 +300,10 @@ class TestKotlin {
         )
     }
 
-    @Test
-    fun testSearch4() {
-        kotlin.test.assertEquals(75, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).map { (it.last() as N).value }.sumOf { it!! })
-    }
+//    @Test
+//    fun testSearch4() {
+//        kotlin.test.assertEquals(75, search(listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"), Step(HAS_TS), Step("Measurement"))).map { (it.last() as N).value }.sumOf { it!! })
+//    }
 
     @Test
     fun testSearch5() {

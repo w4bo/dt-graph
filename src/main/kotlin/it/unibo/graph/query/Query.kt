@@ -38,43 +38,83 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
     return result
 }
 
-private fun join(pattern1: List<List<ElemP>>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
-    pattern1.map { path -> // for each result (i.e., path) of the first pattern
-        var discard = false  // whether this path should be discarded because it will not match
-        // MATCH (a), (b) WHERE a.name = b.name
-        // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
-        val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
-            step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
-                val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
-                    .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
-                    .map {
-                        val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
-                        val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the property of the corresponding node/edge in the path; e.g. "a.name"
-                        if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
-                            discard = true
-                            Triple(it.property, it.operator, "foo")
-                        } else {
-                            Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+/**
+ * Join two patterns
+ */
+private fun join(pattern1: List<Path>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
+    // MATCH (a), (b) WHERE a.name = b.name
+    //    pattern1.map { path -> // for each result (i.e., path) of the first pattern
+    //        var discard = false  // whether this path should be discarded because it will not match
+    //        // RESULT of the first pattern, consider two nodes/paths ({name: "Alice"}), ({surname: "Black"})
+    //        val curMatch = match[1].map { step -> // push down the predicates given the values of the first path
+    //            step?.let { // for each step of the second pattern; e.g. try ({name: "Alice"}) first and then ({surname: "Black"})
+    //                val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
+    //                    .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
+    //                    .map {
+    //                        val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
+    //                        val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
+    //                        if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
+    //                            discard = true
+    //                            Triple(it.property, it.operator, "foo")
+    //                        } else {
+    //                            Triple(it.property, it.operator, props[0].value) // else, add this as a filter
+    //                        }
+    //                    }
+    //                Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+    //            }
+    //        }
+    //        if (discard) { // if the path is discarded, do not perform the search
+    //            emptyList()
+    //        } else { // else, search for valid paths for the second pattern
+    //            search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { path + it }
+    //        }
+    //    }
+    //    .flatten()
+    pattern1.flatMap { row -> // for each result (i.e., path) of the first pattern
+        // val acc: MutableList<List<Step?>> = mutableListOf()
+        val from = max(from, row.from)
+        val to = min(to, row.to)
+        val row = row.result
+        val acc: MutableList<Path> = mutableListOf()
+        fun rec(curMatch: List<Step?>, index: Int, from: Long, to: Long) {
+            if (index < match[1].size) {
+                val step = match[1][index]
+                if (step != null) {
+                    if (joinFilters.size > 1) throw IllegalArgumentException("Too many joining filters")
+                    val curJoinFilters = joinFilters.filter { step.alias == it.a || step.alias == it.b }
+                    if (curJoinFilters.isNotEmpty()) {
+                        if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step") // TODO I assume that there is a single joining filter on a step
+                        val curJoinFilter = curJoinFilters.first()
+                        val cAlias = if (step.alias != curJoinFilter.a) curJoinFilter.a else curJoinFilter.b // take the alias of the step in the previous pattern; e.g. "a"
+                        val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
+                        props.forEach { p ->
+                            rec(curMatch + Step(step.type, step.properties + Triple(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
                         }
+                    } else {
+                        rec(curMatch + step, index + 1, from, to)
                     }
-                Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+                } else {
+                    rec(curMatch + step, index + 1, from, to)
+                }
+            } else {
+                // acc.add(curMatch)
+                acc += search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
             }
         }
-        if (discard) { // if the path is discarded, do not perform the search
-            emptyList()
-        } else { // else, search for valid paths for the second pattern
-            search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { path + it }
-        }
+        rec(listOf(), 0, from, to)
+        acc
     }
-    .flatten()
 
 /**
  * Replace properties if necessary
  */
-private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long, timeaware: Boolean): List<List<Any>> {
+private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long, timeaware: Boolean): List<List<Any>> {
     // Find the nodes that should be replaced by their properties
     // MATCH (n)-->(m) RETURN n.name, m => only n
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
+    val from = max(from, row.from)
+    val to = min(to, row.to)
+    val row = row.result
     val toReplace = by.filter { it.property != null }.associateBy {
         val alias = mapAliases[it.n]!!
         alias.second + (if (alias.first == 1) match[0].size else 0)
@@ -188,9 +228,9 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
         row[alias.second + (if (alias.first == 1) match[0].size else 0)]
     }
 
-fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<List<ElemP>> {
+fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
     val visited: MutableSet<Number> = mutableSetOf()
-    val acc: MutableList<List<ElemP>> = mutableListOf()
+    val acc: MutableList<Path> = mutableListOf()
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
 
@@ -199,13 +239,13 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
         val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
-                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
+                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
             && e.timeOverlap(timeaware, from, to) // check time overlap
-            && (c == null || c.isOk(path[mapAlias[c.a]!!], e)) // apply the where clause
+            && (c == null || c.isOk(path[mapAlias[c.a]!!], e, timeaware)) // apply the where clause
         ) {
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
-                acc.add(curPath)
+                acc.add(Path(curPath, from, to))
             } else {
                 if (visited.contains(e.id)) {
                     return

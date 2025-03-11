@@ -8,7 +8,6 @@ enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
 class Compare(val a: String, val b: String, val property: String, val operator: Operators) {
     private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
-        //if ( a::class != b::class) return false
 
         if (operator == Operators.EQ) return a == b
 
@@ -44,9 +43,9 @@ class Compare(val a: String, val b: String, val property: String, val operator: 
         return geomA.contains(geomB)
     }
 
-    fun isOk(a: ElemP, b: ElemP): Boolean {
+    fun isOk(a: ElemP, b: ElemP, timeaware: Boolean): Boolean {
         val p1 = a.getProps(name = property)
         val p2 = b.getProps(name = property)
-        return p1.isNotEmpty() && p2.isNotEmpty() && compareIfSameType(p1[0].value, p2[0].value, operator)
+        return p1.isNotEmpty() && p2.isNotEmpty() && compareIfSameType(p1[0].value, p2[0].value, operator) && a.timeOverlap(timeaware, b.fromTimestamp, b.toTimestamp)
     }
 }
