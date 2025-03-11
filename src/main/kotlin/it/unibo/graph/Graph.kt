@@ -29,14 +29,15 @@ interface Elem: Serializable {
     val id: Number
     val fromTimestamp: Long
     var toTimestamp: Long
+    fun timeOverlap(timeaware: Boolean, from: Long, to: Long): Boolean = !timeaware || !(to < fromTimestamp || from >= toTimestamp)
 }
 
 interface ElemP: Elem {
     val type: String
     var nextProp: Int?
     val properties: MutableList<P>
-    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE): List<P> {
-        fun filter(p: P): Boolean = (filter == null || p.type == filter) && (name == null || p.key == name) && !(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)
+    fun getProps(next: Int? = nextProp, filter: PropType? = null, name: String? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<P> {
+        fun filter(p: P): Boolean = (filter == null || p.type == filter) && (name == null || p.key == name) && p.timeOverlap(timeaware,fromTimestamp, toTimestamp) //!(p.fromTimestamp > toTimestamp || p.toTimestamp < fromTimestamp)
         return if (next == null) {
             properties.filter { filter(it) }
         } else {
@@ -265,7 +266,7 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
 
-    fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from > it.toTimestamp)
+    //fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from >= it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
         val alias: String? = match[index]?.alias
@@ -273,7 +274,7 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
         if ((match[index] == null || ( // no filter
                 (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
                 && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
-            && timeOverlap(e, from, to) // check time overlap
+            && e.timeOverlap(timeaware, from, to) // check time overlap
             && (c == null || c.isOk(path[mapAlias[c.a]!!], e)) // apply the where clause
         ) {
             val curPath = path + listOf(e)
@@ -457,7 +458,7 @@ open class GraphMemory: Graph {
     override fun addEdgeLocal(key: Long, r: R): R {
         // Find the last edge version and update its toTimestamp
         // Update only if toTimestamp of old edge is > than fromTimestamp of new property.
-        rels.filter { it.id == r.id }
+        rels.filter { it.id == r.id}
             .maxByOrNull { it.toTimestamp }
             ?.let {
                 if (it.toTimestamp > r.fromTimestamp) {

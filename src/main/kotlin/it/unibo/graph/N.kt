@@ -27,7 +27,7 @@ open class N(
 
     var location: Geometry? = location?.let{ GeoJsonReader().read(it) }
 
-    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long): List<P> {
+    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
         return when (name) {
             VALUE -> if(value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE)) else emptyList()
             LOCATION -> {
@@ -35,11 +35,11 @@ open class N(
                 if(location != null && locationTimestamp >= fromTimestamp){
                     listOf(P(DUMMY_ID, id, NODE, LOCATION, location!!, PropType.GEOMETRY))
                 } else {
-                    super.getProps(next, filter, name, fromTimestamp, toTimestamp)
+                    super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
                 }
             }
             else -> {
-                super.getProps(next, filter, name, fromTimestamp, toTimestamp)
+                super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
             }
         }
     }
