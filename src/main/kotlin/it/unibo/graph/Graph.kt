@@ -178,16 +178,45 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
                             val elem = row[index]
                             val newFrom = max(from, elem.fromTimestamp)
                             val newTo = min(to, elem.toTimestamp)
-                            if (!(newFrom >= to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
+                            if (!(newFrom > to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
                                 rec(curRow + listOf(row[index]), index + 1, newFrom, newTo) // continue the recursion
                             }
                         } else { // else, I need to replace this items
                             val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the properties to replace
                             if (props.isEmpty()) { // if they are empty, add the null value as a return
                                 rec(curRow + listOf("null"), index + 1, from, to) // ... and continue the recursion
-                            } else {
-                                props.forEach { p ->  // if a property exists
-                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                            } else { // I cannot simply iterate over the properties to start the recursion, for instance
+                                /*
+                                 * (a)---[0, 0)--->(b1)
+                                 *    ---[1, 1)--->(b2)
+                                 *    ---[2, 2)--->(b3)
+                                 *
+                                 * and (a) has two properties
+                                 * - a.name = "foo" in (0, 0)
+                                 * - a.name = "bar" in (1, 1)
+                                 *
+                                 * The query MATCH (a)-->(b) RETURN a.name, b
+                                 * must return
+                                 * foo, b1
+                                 * bar, b2
+                                 * null, b3
+                                 *
+                                 * So I need to check the time span of the next element to decide whether I should push a "null" value down the recursion
+                                 */
+                                if (index + 1 < row.size) { // if this element is not the last
+                                    val nextElem = row[index + 1] // look ahead the next element
+                                    val overlappingProperties = props.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
+                                    if (overlappingProperties.isEmpty()) { // if there is no overlapping, push null down to the recursion
+                                        rec(curRow + listOf("null"), index + 1, from, to)
+                                    } else {
+                                        overlappingProperties.forEach { p ->  // if an overlapping property exists
+                                            rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                                        }
+                                    }
+                                } else { // If this is the last element, simply iterate over the existing properties
+                                    props.forEach { p ->  // if a property exists
+                                        rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                                    }
                                 }
                             }
                         }

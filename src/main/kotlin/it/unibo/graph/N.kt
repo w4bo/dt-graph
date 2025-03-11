@@ -74,7 +74,7 @@ open class N(
     }
 
     override fun toString(): String {
-        return "(id: $id, type: $type)"
+        return "(id: $id, type: $type, from: $fromTimestamp, to: $toTimestamp)"
     }
 
     override fun equals(other: Any?): Boolean {

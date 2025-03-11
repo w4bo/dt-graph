@@ -30,7 +30,7 @@ open class P(
     }
 
     override fun toString(): String {
-        return "{id: $id, node: $sourceId, key: $key, value: $value, type: $type}"
+        return "{id: $id, node: $sourceId, key: $key, value: $value, type: $type, from: $fromTimestamp, to: $toTimestamp}"
     }
 
     override fun equals(other: Any?): Boolean {
