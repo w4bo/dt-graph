@@ -4,8 +4,10 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
+import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class TestTemporal {
 
@@ -170,5 +172,17 @@ class TestTemporal {
         kotlin.test.assertEquals(1, search(steps, timeaware = false).size)
         kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 2).size)
+    }
+
+    @Test
+    fun testTimeOverlap() {
+        assertTrue(timeOverlap(0, 0, 0, 1)) // [0, 0) and [0, 1)
+        assertTrue(timeOverlap(0, 2, 0, 1)) // [0, 2) and [0, 1)
+        assertTrue(timeOverlap(0, 1, 0, 1)) // [0, 1) and [0, 1)
+        assertTrue(timeOverlap(0, 0, 0, 0)) // [0, 0) and [0, 0)
+        assertFalse(timeOverlap(0, 0, 1, 2)) // [0, 0) and [1, 2)
+        assertFalse(timeOverlap(1, 2, 0, 0)) // [1, 2) and [0, 0)
+        assertFalse(timeOverlap(0, 1, 1, 2)) // [0, 1) and [1, 2)
+        assertTrue(timeOverlap(0, 0, 0, 1)) // [0, 0) and [0, 1)
     }
 }

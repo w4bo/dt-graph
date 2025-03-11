@@ -7,12 +7,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 @JvmName("query")
-fun query(match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
+fun query(match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
     return query(listOf(match), where, by, from, to, timeaware)
 }
 
 @JvmName("queryJoin")
-fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Any> {
+fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -30,24 +30,15 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
         } else {
             join(pattern1, match, joinFilters, mapAliases, where, from, to, timeaware)
         }
-            .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to) }
-            .groupBy { row -> groupBy(by, mapAliases, row, match) }
-            .mapValues { aggregate(by, it, mapAliases) }
-            .map { wrapResult(by, it) }
-            .flatten()
+        .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
+        .groupBy { row -> groupBy(by, mapAliases, row, match) }
+        .mapValues { aggregate(by, it, mapAliases) }
+        .map { wrapResult(by, it) }
+        .flatten()
     return result
 }
 
-private fun join(
-    pattern1: List<List<ElemP>>,
-    match: List<List<Step?>>,
-    joinFilters: List<Compare>,
-    mapAliases: Map<String, Pair<Int, Int>>,
-    where: List<Compare>,
-    from: Long,
-    to: Long,
-    timeaware: Boolean
-) =
+private fun join(pattern1: List<List<ElemP>>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
     pattern1.map { path -> // for each result (i.e., path) of the first pattern
         var discard = false  // whether this path should be discarded because it will not match
         // MATCH (a), (b) WHERE a.name = b.name
@@ -57,10 +48,8 @@ private fun join(
                 val t = joinFilters // let's consider the joining filters; e.g. a.name = b.name
                     .filter { it.a == step.alias || it.b == step.alias } // take only the joining filters referring to the current step
                     .map {
-                        val cAlias =
-                            if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
-                        val props =
-                            path[mapAliases[cAlias]!!.second].getProps(name = it.property) // take the property of the corresponding node/edge in the path; e.g. "a.name"
+                        val cAlias = if (step.alias != it.a) it.a else it.b // take the alias of the step in the previous pattern; e.g. "a"
+                        val props = path[mapAliases[cAlias]!!.second].getProps(name = it.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the property of the corresponding node/edge in the path; e.g. "a.name"
                         if (props.isEmpty()) { // if the node has no such property, then this path can be discarded before the join // TODO, durante la ricerca dei path potrei già scartarlo tra i risultati possibili?
                             discard = true
                             Triple(it.property, it.operator, "foo")
@@ -68,28 +57,21 @@ private fun join(
                             Triple(it.property, it.operator, props[0].value) // else, add this as a filter
                         }
                     }
-                Step(
-                    step.type,
-                    it.properties + t,
-                    step.alias
-                ) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
+                Step(step.type, it.properties + t, step.alias) // ... and extend the step; e.g., Step("B", alias="b") becomes Step("B", alias="b", property=("name", EQ, "Alice")
             }
         }
         if (discard) { // if the path is discarded, do not perform the search
             emptyList()
         } else { // else, search for valid paths for the second pattern
-            search(
-                curMatch,
-                (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 },
-                from,
-                to,
-                timeaware
-            ).map { path + it }
+            search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { path + it }
         }
     }
     .flatten()
 
-private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long): List<List<Any>> {
+/**
+ * Replace properties if necessary
+ */
+private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long, timeaware: Boolean): List<List<Any>> {
     // Find the nodes that should be replaced by their properties
     // MATCH (n)-->(m) RETURN n.name, m => only n
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
@@ -104,15 +86,15 @@ private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>
                 val replace = toReplace[index] // find the next item to replace
                 if (replace == null) {  // if I don't need to replace this item... continue the recursion but compute the reduced from/to timestamps
                     val elem = row[index]
-                    val newFrom = max(from, elem.fromTimestamp)
-                    val newTo = min(to, elem.toTimestamp)
-                    if (!(newFrom > to || newTo < from)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
-                        rec(curRow + listOf(row[index]), index + 1, newFrom, newTo) // continue the recursion
+                    if (timeOverlap(from, to, elem.fromTimestamp, elem.toTimestamp, timeaware)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
+                        val newFrom = max(from, elem.fromTimestamp)
+                        val newTo = min(to, elem.toTimestamp)
+                        rec(curRow + row[index], index + 1, newFrom, newTo) // continue the recursion
                     }
-                } else { // else, I need to replace this items
-                    val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to) // find the properties to replace
+                } else { // else, I need to replace these items
+                    val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // find the properties to replace
                     if (props.isEmpty()) { // if they are empty, add the null value as a return
-                        rec(curRow + listOf("null"), index + 1, from, to) // ... and continue the recursion
+                        rec(curRow + "null", index + 1, from, to) // ... and continue the recursion
                     } else {
                         /* I cannot simply iterate over the properties to start the recursion, for instance let's consider
                          * (a)---[0, 0)--->(b1)
@@ -136,15 +118,15 @@ private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>
                             val nextElem = row[index + 1] // look ahead the next element
                             val overlappingProperties = props.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
                             if (overlappingProperties.isEmpty()) { // if there is no overlapping, push null down to the recursion
-                                rec(curRow + listOf("null"), index + 1, from, to)
+                                rec(curRow + "null", index + 1, from, to)
                             } else {
                                 overlappingProperties.forEach { p ->  // if an overlapping property exists
-                                    rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                                    rec(curRow + p.value, index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
                                 }
                             }
                         } else { // If this is the last element, simply iterate over the existing properties
                             props.forEach { p ->  // if a property exists
-                                rec(curRow + listOf(p.value), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                                rec(curRow + p.value, index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
                             }
                         }
                     }
@@ -160,6 +142,9 @@ private fun replaceTemporalProperties(row: List<ElemP>, match: List<List<Step?>>
     }
 }
 
+/**
+ * Make the result compatible with Neo4J
+ */
 private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>) =
     if (by.isNotEmpty()) {
         if (by.any { it.operator != null }) {
@@ -175,19 +160,25 @@ private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>)
         it.value
     }
 
+/**
+ * Aggregate the result of group by
+ */
 private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>) =
     if (!by.any { it.operator != null }) {
         // no aggregation operator has been specified
+        // E.g., MATCH (n) RETURN n.name => [a, b, ...]
         group.value
     } else {
         // some aggregation operator has been specified
+        // E.g., MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
         // TODO apply different aggregation operators, and possibly multiple aggregation operators
-        val value: Double =
-            group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble() }
-                .mean(true)
+        val value: Double = group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble() }.mean(true)
         listOf(value) // E.g., [12.5]
     }
 
+/**
+ * Group several rows by key
+ */
 private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: List<Any>, match: List<List<Step?>>) =
     // group by all elements that are not aggregation operator
     // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
@@ -202,8 +193,6 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
     val acc: MutableList<List<ElemP>> = mutableListOf()
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
-
-    //fun timeOverlap(it: Elem, from: Long, to: Long): Boolean = !timeaware || !(to < it.fromTimestamp || from >= it.toTimestamp)
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long) {
         val alias: String? = match[index]?.alias
