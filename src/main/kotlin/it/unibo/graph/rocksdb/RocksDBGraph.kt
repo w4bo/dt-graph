@@ -40,10 +40,10 @@ class RocksDBGraph : Graph {
         }
     }
     override var tsm: TSManager? = null
-    val db = RocksDBGraph.getInstance()
-    var nodeId = 0L
-    var edgeId = 0
-    var propId = 0
+    private val db = getInstance()
+    private var nodeId = 0L
+    private var edgeId = 0
+    private var propId = 0
 
     override fun clear() {
         listOf(nodes, edges, properties).forEach {
