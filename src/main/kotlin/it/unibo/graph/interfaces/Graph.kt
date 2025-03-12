@@ -5,6 +5,7 @@ import it.unibo.graph.utils.*
 interface Graph {
     var tsm: TSManager?
     fun getTSM(): TSManager = tsm!!
+    fun close() {}
     fun clear()
     fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())

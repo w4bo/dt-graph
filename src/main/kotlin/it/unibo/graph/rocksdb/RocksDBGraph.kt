@@ -7,33 +7,43 @@ import org.apache.commons.lang3.NotImplementedException
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 
-class RocksDBGraph() : Graph {
+
+class RocksDBGraph : Graph {
+
+    companion object {
+        private var db: RocksDB? = null
+        private const val DB_NAME = "db_graph"
+        var nodes: ColumnFamilyHandle? = null
+        var edges: ColumnFamilyHandle? = null
+        var properties: ColumnFamilyHandle? = null
+
+        // Synchronized function to ensure thread safety
+        @Synchronized
+        fun getInstance(): RocksDB {
+            if (db == null) {
+                val options: DBOptions = DBOptions()
+                options.setCreateIfMissing(true)
+                options.setCreateMissingColumnFamilies(true)
+                val cfDescriptors = listOf(
+                    ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
+                    ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions()),
+                    ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions()),
+                    ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
+                )
+                val cfHandles: List<ColumnFamilyHandle> = ArrayList()
+                db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
+                nodes = cfHandles[1]
+                edges = cfHandles[2]
+                properties = cfHandles[3]
+            }
+            return db!!
+        }
+    }
     override var tsm: TSManager? = null
-    val nodes: ColumnFamilyHandle
-    val edges: ColumnFamilyHandle
-    val properties: ColumnFamilyHandle
-    val db: RocksDB
+    val db = RocksDBGraph.getInstance()
     var nodeId = 0L
     var edgeId = 0
     var propId = 0
-    val DB_NAME = "db_graph"
-
-    init {
-        val options = DBOptions()
-        options.setCreateIfMissing(true)
-        options.setCreateMissingColumnFamilies(true)
-        val cfDescriptors = listOf(
-            ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
-            ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions()),
-            ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions()),
-            ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
-        )
-        val cfHandles: List<ColumnFamilyHandle> = ArrayList()
-        db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
-        nodes = cfHandles[1]
-        edges = cfHandles[2]
-        properties = cfHandles[3]
-    }
 
     override fun clear() {
         listOf(nodes, edges, properties).forEach {
@@ -49,11 +59,16 @@ class RocksDBGraph() : Graph {
         propId = 0
     }
 
+    override fun close() {
+        // db.close()
+        // options.close()
+    }
+
     override fun nextNodeId(): Long = nodeId++
 
     override fun nextPropertyId(): Int = propId++
 
-    override fun upsertFirstCitizenProperty(prop: P): P? {
+    override fun upsertFirstCitizenProperty(prop: P): P {
         val nodeId = prop.sourceId
         val n = getNode(nodeId)
         n.location = GeoJsonReader().read(prop.value.toString())
@@ -70,13 +85,13 @@ class RocksDBGraph() : Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        //TODO: close toTimestamp of previous property version
+        // TODO: close toTimestamp of previous property version
         db.put(properties, "${p.id}".toByteArray(), serialize(p))
         return p
     }
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        //TODO: close toTimestamp of previous edge version
+        // TODO: close toTimestamp of previous edge version
         db.put(edges, "${r.id}".toByteArray(), serialize(r))
         return r
     }

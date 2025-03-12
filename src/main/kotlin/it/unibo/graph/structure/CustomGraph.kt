@@ -54,6 +54,7 @@ class CustomGraph(val g: it.unibo.graph.interfaces.Graph) : Graph, it.unibo.grap
     }
 
     override fun close() {
+        g.close()
         clear()
     }
 

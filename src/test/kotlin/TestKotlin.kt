@@ -14,8 +14,13 @@ import kotlin.test.assertTrue
 
 class TestKotlin {
 
-    fun matrix(): List<CustomGraph> {
-        return listOf(MemoryGraph(), RocksDBGraph()).map { setup(it) }
+    fun matrix(f: (Graph) -> Unit) {
+        listOf(MemoryGraph(), RocksDBGraph())
+            .map { setup(it) }
+            .forEach {
+                f(it)
+                it.close()
+            }
     }
 
     fun setup(): CustomGraph {
@@ -141,7 +146,7 @@ class TestKotlin {
 
     @Test
     fun testRel() {
-        matrix().forEach { g ->
+        matrix { g ->
             listOf(
                 Pair(g.getNode(N0), 2),
                 Pair(g.getNode(N1), 4),
@@ -156,7 +161,7 @@ class TestKotlin {
 
     @Test
     fun testProps() {
-        matrix().forEach { g ->
+        matrix { g ->
             val m1 = g.getTSM().getTS(1).get(0)
             listOf(Pair(g.getNode(N0), 2), Pair(g.getNode(N1), 2), Pair(g.getNode(N2), 2), Pair(m1, 1)).forEach {
                 assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
@@ -166,7 +171,7 @@ class TestKotlin {
 
     @Test
     fun testTS() {
-        matrix().forEach { g ->
+        matrix { g ->
             listOf(Pair(g.getNode(N6), 6), Pair(g.getNode(N7), 3), Pair(g.getNode(N8), 3)).forEach {
                 assertTrue(it.first.value != null)
                 assertEquals(it.second, it.first.getTS().size, it.first.getTS().toString())
@@ -188,7 +193,7 @@ class TestKotlin {
 
     @Test
     fun testSearch0() {
-        matrix().forEach { g ->
+        matrix { g ->
             kotlin.test.assertEquals(1, search(g, listOf(Step("Device"), Step("hasHumidity"), Step("Humidity"))).size)
         }
     }
