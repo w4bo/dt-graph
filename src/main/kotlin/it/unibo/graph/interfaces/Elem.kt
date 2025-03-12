@@ -4,11 +4,9 @@ import java.io.Serializable
 
 fun timeOverlap(fromTimestamp: Long, toTimestamp: Long, from: Long, to: Long, timeaware: Boolean = true): Boolean {
     if (!timeaware) return true
-    return if (fromTimestamp != toTimestamp) {
-        !(to < fromTimestamp || from >= toTimestamp)
-    } else {
-        !(to < fromTimestamp || from > toTimestamp)
-    }
+    val f = fromTimestamp.coerceAtLeast(from)
+    val t = toTimestamp.coerceAtMost(to)
+    return f < t || (f == t && (fromTimestamp == toTimestamp || from == to))
 }
 
 interface Elem : Serializable {

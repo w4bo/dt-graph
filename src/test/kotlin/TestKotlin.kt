@@ -2,8 +2,7 @@ import it.unibo.graph.App
 import it.unibo.graph.App.tsm
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.decodeBitwise
-import it.unibo.graph.utils.encodeBitwise
+import it.unibo.graph.utils.*
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.BeforeTest

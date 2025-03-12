@@ -4,13 +4,16 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
+import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.EDGE
+import it.unibo.graph.utils.EPSILON
+import it.unibo.graph.utils.HAS_TS
 import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class TestTemporal {
-
     val g = App.g
 
     @BeforeTest
@@ -42,9 +45,7 @@ class TestTemporal {
 
         val ts1: TS = tsm.addTS()
         val m1 = ts1.add("Measurement", timestamp = 0, value = 0)
-        Thread.sleep(1)
         ts1.add("Measurement", timestamp = 1, value = 1)
-        Thread.sleep(1)
         ts1.add("Measurement", timestamp = 2, value = 2)
         val t1 = g.addNode("Temperature", value = ts1.getTSId())
         g.addEdge("hasTemperature", d1.id, t1.id)
@@ -53,9 +54,7 @@ class TestTemporal {
 
         val ts2 = tsm.addTS()
         ts2.add("Measurement", timestamp = 0, value = 10)
-        Thread.sleep(1)
         ts2.add("Measurement", timestamp = 1, value = 11)
-        Thread.sleep(1)
         ts2.add("Measurement", timestamp = 2, value = 12)
         val t2 = g.addNode("Temperature", value = ts2.getTSId())
         g.addEdge("hasTemperature", d2.id, t2.id)
@@ -111,11 +110,7 @@ class TestTemporal {
     fun testSearch3() {
         kotlin.test.assertEquals(
             1,
-            search(
-                listOf(
-                    Step("Person"),
-                ), timeaware = true, from = 0, to = 1
-            ).size
+            search(listOf(Step("Person")), timeaware = true, from = 0, to = 1).size
         )
     }
 
@@ -131,9 +126,9 @@ class TestTemporal {
             Step("Person")
         )
         kotlin.test.assertEquals(1, search(steps, timeaware = true).size)
-        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 4).size)
-        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0).size)
-        kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 1, to = 1).size)
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 4 + EPSILON).size)
+        kotlin.test.assertEquals(1, search(steps, timeaware = true, from = 0, to = 0 + EPSILON).size)
+        kotlin.test.assertEquals(0, search(steps, timeaware = true, from = 1, to = 1 + EPSILON).size)
         kotlin.test.assertEquals(2, search(steps, timeaware = false).size)
     }
 
@@ -183,6 +178,7 @@ class TestTemporal {
         assertFalse(timeOverlap(0, 0, 1, 2)) // [0, 0) and [1, 2)
         assertFalse(timeOverlap(1, 2, 0, 0)) // [1, 2) and [0, 0)
         assertFalse(timeOverlap(0, 1, 1, 2)) // [0, 1) and [1, 2)
+        assertFalse(timeOverlap(1, 2, 0, 1)) // [1, 2) and [0, 1)
         assertTrue(timeOverlap(0, 0, 0, 1)) // [0, 0) and [0, 1)
     }
 }

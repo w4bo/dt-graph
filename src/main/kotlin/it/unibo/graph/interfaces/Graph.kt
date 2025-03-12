@@ -1,8 +1,7 @@
 package it.unibo.graph.interfaces
 
 import it.unibo.graph.App
-import it.unibo.graph.utils.decodeBitwise
-import it.unibo.graph.utils.encodeBitwise
+import it.unibo.graph.utils.*
 
 interface Graph {
     fun clear()

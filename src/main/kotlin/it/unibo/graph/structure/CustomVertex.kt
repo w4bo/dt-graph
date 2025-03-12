@@ -1,9 +1,9 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.App
-import it.unibo.graph.interfaces.HAS_TS
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.utils.HAS_TS
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 

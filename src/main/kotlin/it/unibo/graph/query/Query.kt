@@ -2,6 +2,7 @@ package it.unibo.graph.query
 
 import it.unibo.graph.App
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.utils.HAS_TS
 import org.jetbrains.kotlinx.dataframe.math.mean
 import kotlin.math.max
 import kotlin.math.min

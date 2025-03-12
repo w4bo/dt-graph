@@ -1,6 +1,7 @@
 package it.unibo.graph.interfaces
 
 import it.unibo.graph.App
+import it.unibo.graph.utils.DUMMY_ID
 
 enum class Direction { IN, OUT }
 

@@ -21,11 +21,11 @@ class TestTemporalJoin {
         // val c1 = g.addNode("C")
         // val c2 = g.addNode("C")
 
-        g.addProperty(a1.id,"name", "Foo", PropType.STRING, from = 0, to = 1)
-        g.addProperty(a1.id,"name", "Bar", PropType.STRING, from = 1, to = 2)
+        g.addProperty(a1.id, "name", "Foo", PropType.STRING, from = 0, to = 1)
+        g.addProperty(a1.id, "name", "Bar", PropType.STRING, from = 1, to = 2)
 //        g.addProperty(b1.id,"name", "Foo", PropType.STRING, from = 0, to = 1)
 //        g.addProperty(b1.id,"name", "Bar", PropType.STRING, from = 1, to = 2)
-        g.addProperty(b2.id,"name", "Bar", PropType.STRING, from = 1, to = 2)
+        g.addProperty(b2.id, "name", "Bar", PropType.STRING, from = 1, to = 2)
     }
 
     @Test
@@ -38,6 +38,24 @@ class TestTemporalJoin {
                     listOf(Step("A", alias = "a")),
                     listOf(Step("B", alias = "b"))
                 ),
+                where = listOf(Compare("a", "b", property = "name", operator = Operators.EQ)),
+                by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))
+            ).toSet()
+        )
+    }
+
+    @Test
+    fun test2() {
+        // MATCH (a:A)-->(b:B) WHERE a.name = b.name and timestamp in [0, 1) RETURN a.name, b.name
+        kotlin.test.assertEquals(
+            setOf(),
+            query(
+                listOf(
+                    listOf(Step("A", alias = "a")),
+                    listOf(Step("B", alias = "b"))
+                ),
+                from = 0,
+                to = 1,
                 where = listOf(Compare("a", "b", property = "name", operator = Operators.EQ)),
                 by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))
             ).toSet()

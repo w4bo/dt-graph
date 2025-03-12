@@ -1,4 +1,4 @@
-package it.unibo.graph.interfaces
+package it.unibo.graph.utils
 
 const val HAS_TS = "hasTS"
 const val VALUE = "value"
@@ -7,4 +7,4 @@ const val LOCATION = "location"
 const val DUMMY_ID = -1
 const val NODE = true
 const val EDGE = false
-val EPSILON : Long = 1
+const val EPSILON : Long = 1
