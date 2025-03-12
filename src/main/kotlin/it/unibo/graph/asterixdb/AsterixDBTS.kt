@@ -20,13 +20,6 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
-        val toTimestamp = if (convertTimestampToISO8601(n.toTimestamp) ==
-            convertTimestampToISO8601(n.fromTimestamp)) {
-            convertTimestampToISO8601(n.toTimestamp + EPSILON)
-        } else {
-            convertTimestampToISO8601(n.toTimestamp)
-        }
-
         val insertQuery = """
             USE $dataverse;
             UPSERT INTO $dataset ([{
@@ -39,7 +32,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                 "relationships": [${n.getRels().map(::relToJson).joinToString(", ")}],
                 "properties": [${n.getProps().map(::propToJson).joinToString(", ")}],
                 "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
-                "toTimestamp": datetime("$toTimestamp"),
+                "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
             }]);
         """.trimIndent()
