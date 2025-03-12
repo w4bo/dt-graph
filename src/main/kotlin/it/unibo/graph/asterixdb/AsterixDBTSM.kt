@@ -1,5 +1,6 @@
 package it.unibo.graph.asterixdb
 
+import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
@@ -9,6 +10,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 class AsterixDBTSM private constructor(
+    override val g: Graph,
     host: String,
     port: String,
     val dataverse: String,
@@ -23,13 +25,13 @@ class AsterixDBTSM private constructor(
     }
 
     override fun addTS(): TS {
-        return CustomTS(AsterixDBTS(nextTSId(), dbHost, dataverse, dataset))
+        return CustomTS(AsterixDBTS(g, nextTSId(), dbHost, dataverse, dataset))
     }
 
     override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
-        return CustomTS(AsterixDBTS(id, dbHost, dataverse, dataset))
+        return CustomTS(AsterixDBTS(g, id, dbHost, dataverse, dataset))
     }
 
     override fun clear() {
@@ -132,8 +134,9 @@ class AsterixDBTSM private constructor(
     }
 
     companion object {
-        fun createDefault(): AsterixDBTSM {
+        fun createDefault(g: Graph): AsterixDBTSM {
             return AsterixDBTSM(
+                g,
                 "localhost",
                 "19002",
                 "Measurements_Dataverse",

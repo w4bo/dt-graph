@@ -7,8 +7,18 @@ import org.apache.tinkerpop.gremlin.structure.Property
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.apache.tinkerpop.gremlin.structure.VertexProperty
 
-class CustomProperty<V>(id: Int, sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, fromTimestamp: Long, toTimestamp: Long) : VertexProperty<V>,
-    P(id, sourceId, sourceType, key, value, type, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
+class CustomProperty<V>(
+    id: Int,
+    sourceId: Long,
+    sourceType: Boolean,
+    key: String,
+    value: Any,
+    type: PropType,
+    fromTimestamp: Long,
+    toTimestamp: Long,
+    g: it.unibo.graph.interfaces.Graph
+) : VertexProperty<V>,
+    P(id, sourceId, sourceType, key, value, type, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g) {
 
     override fun key(): String {
         return key

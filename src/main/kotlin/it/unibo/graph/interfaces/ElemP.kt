@@ -1,7 +1,5 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.App
-
 interface ElemP: Elem {
     val type: String
     var nextProp: Int?
@@ -12,7 +10,7 @@ interface ElemP: Elem {
         return if (next == null) {
             properties.filter { filter(it) }
         } else {
-            val p = App.g.getProp(next)
+            val p = g.getProp(next)
             (if (filter(p)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp, timeaware)
         }
     }

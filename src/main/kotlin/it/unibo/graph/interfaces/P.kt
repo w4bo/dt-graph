@@ -1,6 +1,5 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.App
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.GRAPH_SOURCE
 import it.unibo.graph.utils.NODE
@@ -16,18 +15,19 @@ open class P(
     val value: Any,
     val type: PropType,
     var next: Int? = null,
-    override val fromTimestamp: Long = Long.MIN_VALUE,
-    override var toTimestamp: Long = Long.MAX_VALUE
+    final override val fromTimestamp: Long = Long.MIN_VALUE,
+    final override var toTimestamp: Long = Long.MAX_VALUE,
+    @Transient final override var g: Graph
 ) : Elem {
     init {
         if (decodeBitwiseSource(sourceId) == GRAPH_SOURCE && id != DUMMY_ID) {
-            val n: ElemP = if (sourceType == NODE) App.g.getNode(sourceId) else App.g.getEdge(sourceId.toInt())
+            val n: ElemP = if (sourceType == NODE) g.getNode(sourceId) else g.getEdge(sourceId.toInt())
             if (n.nextProp == null) n.nextProp = id
             else {
                 next = n.nextProp
                 n.nextProp = id
             }
-            if (sourceType == NODE) App.g.addNode(n as N) else App.g.addEdge(n as R)
+            if (sourceType == NODE) g.addNode(n as N) else g.addEdge(n as R)
         }
     }
 

@@ -1,18 +1,23 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.App
 import it.unibo.graph.utils.*
 
 interface Graph {
+    var tsm: TSManager?
+    fun getTSM(): TSManager = tsm!!
     fun clear()
-    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to)
+    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
     fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
-    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P = P(id, sourceId, sourceType, key, value, type)
+    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P =
+        P(id, sourceId, sourceType, key, value, type, g = this)
     fun nextPropertyId(): Int
-    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P = addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id=id))
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P =
+        addProperty(
+            createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id)
+        )
     fun upsertFirstCitizenProperty(prop: P): P?
 
     fun addProperty(p: P): P {
@@ -33,7 +38,7 @@ interface Graph {
     fun addPropertyLocal(key: Long, p: P): P
     fun addPropertyTS(tsId: Long, key: Long, p: P): P {
         if (p.sourceType == NODE) {
-            val ts = App.tsm.getTS(tsId)
+            val ts = tsm!!.getTS(tsId)
             val n = ts.get(key)
             n.properties += p
             ts.add(n)
@@ -43,7 +48,7 @@ interface Graph {
         }
     }
 
-    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to)
+    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R {
         val (source, key) = decodeBitwise(r.fromN)
@@ -56,7 +61,7 @@ interface Graph {
 
     fun addEdgeLocal(key: Long, r: R): R
     fun addEdgeTS(tsId: Long, key: Long, r: R): R {
-        val ts = App.tsm.getTS(tsId)
+        val ts = tsm!!.getTS(tsId)
         val n = ts.get(key)
         n.relationships += r
         ts.add(n)

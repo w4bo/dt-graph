@@ -1,13 +1,11 @@
 package it.unibo.graph.inmemory
 
-import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.N
-import it.unibo.graph.interfaces.P
-import it.unibo.graph.interfaces.R
+import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.DUMMY_ID
 import org.locationtech.jts.io.geojson.GeoJsonReader
 
-open class GraphMemory: Graph {
+open class MemoryGraph: Graph {
+    override var tsm: TSManager? = null
     private val nodes: MutableList<N> = ArrayList()
     private val rels: MutableList<R> = ArrayList()
     private val props: MutableList<P> = ArrayList()

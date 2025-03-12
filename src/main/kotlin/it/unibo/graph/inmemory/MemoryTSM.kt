@@ -1,10 +1,11 @@
 package it.unibo.graph.inmemory
 
+import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
 
-class MemoryTSManager : TSManager {
+class MemoryTSM(override val g: Graph): TSManager {
     private val tss: MutableList<TS> = ArrayList()
 
     override fun getTS(id: Long): TS {
@@ -12,7 +13,7 @@ class MemoryTSManager : TSManager {
     }
 
     override fun addTS(): TS {
-        val ts = CustomTS(MemoryTS(nextTSId()))
+        val ts = CustomTS(MemoryTS(g, nextTSId()))
         tss += ts
         return ts
     }

@@ -1,26 +1,26 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.App
 import it.unibo.graph.utils.DUMMY_ID
 
 enum class Direction { IN, OUT }
 
 open class R(
-    override val id: Int, // id of the relationship
-    override val type: String, // label
+    final override val id: Int, // id of the relationship
+    final override val type: String, // label
     val fromN: Long, // from node
     val toN: Long, // to node
     var fromNextRel: Int? = null, // pointer to the next relationship of the `from node`
     var toNextRel: Int? = null, // pointer to the next relationship of the `to node`
-    override val fromTimestamp: Long = Long.MIN_VALUE,
-    override var toTimestamp: Long = Long.MAX_VALUE,
-    override var nextProp: Int? = null,
-    override val properties: MutableList<P> = mutableListOf()
+    final override val fromTimestamp: Long = Long.MIN_VALUE,
+    final override var toTimestamp: Long = Long.MAX_VALUE,
+    final override var nextProp: Int? = null,
+    final override val properties: MutableList<P> = mutableListOf(),
+    @Transient final override var g: Graph
 ): ElemP {
     init {
         if (id != DUMMY_ID) {
-            val from = App.g.getNode(fromN)
-            val to = App.g.getNode(toN)
+            val from = g.getNode(fromN)
+            val to = g.getNode(toN)
 
             if (from.nextRel == null) { // this is the first edge
                 from.nextRel = id
@@ -49,8 +49,8 @@ open class R(
                 to.nextRel = id
             }
 
-            App.g.addNode(from)
-            App.g.addNode(to)
+            g.addNode(from)
+            g.addNode(to)
         }
     }
 

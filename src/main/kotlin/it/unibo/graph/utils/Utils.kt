@@ -1,5 +1,7 @@
 package it.unibo.graph.utils
 
+import it.unibo.graph.interfaces.Elem
+import it.unibo.graph.interfaces.Graph
 import java.io.*
 
 // Serialize an object to byte array
@@ -11,10 +13,12 @@ fun serialize(obj: Serializable): ByteArray {
 }
 
 // Deserialize a byte array to an object
-inline fun <reified T : Serializable> deserialize(bytes: ByteArray?): T {
-    ByteArrayInputStream(bytes).use { bis ->
-        ObjectInputStream(bis).use { `in` -> return `in`.readObject() as T }
+inline fun <reified T : Elem> deserialize(bytes: ByteArray?, g: Graph): T {
+    val r: T = ByteArrayInputStream(bytes).use { bis ->
+        ObjectInputStream(bis).use { `in` -> `in`.readObject() as T }
     }
+    (r as Elem).g = g
+    return r
 }
 
 fun encodeBitwise(x: Long, y: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Long {

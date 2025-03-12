@@ -1,17 +1,18 @@
-import it.unibo.graph.App
-import it.unibo.graph.App.tsm
+import it.unibo.graph.asterixdb.AsterixDBTSM
+import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
-import kotlin.test.BeforeTest
+import it.unibo.graph.structure.CustomGraph
 import kotlin.test.Test
 
 class TestTemporalJoin {
-    val g = App.g
 
-    @BeforeTest
-    fun setup() {
+    fun setup(): Graph {
+        val g = CustomGraph(MemoryGraph())
+        g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
-        tsm.clear()
+        g.getTSM().clear()
 
         val a1 = g.addNode("A")
 //        val a2 = g.addNode("A")
@@ -26,14 +27,17 @@ class TestTemporalJoin {
 //        g.addProperty(b1.id,"name", "Foo", PropType.STRING, from = 0, to = 1)
 //        g.addProperty(b1.id,"name", "Bar", PropType.STRING, from = 1, to = 2)
         g.addProperty(b2.id, "name", "Bar", PropType.STRING, from = 1, to = 2)
+
+        return g
     }
 
     @Test
     fun test1() {
+        val g = setup()
         // MATCH (a:A)-->(b:B) WHERE a.name = b.name RETURN a.name, b.name
         kotlin.test.assertEquals(
             setOf(listOf("Bar", "Bar")),
-            query(
+            query(g,
                 listOf(
                     listOf(Step("A", alias = "a")),
                     listOf(Step("B", alias = "b"))
@@ -46,10 +50,12 @@ class TestTemporalJoin {
 
     @Test
     fun test2() {
+        val g = setup()
         // MATCH (a:A)-->(b:B) WHERE a.name = b.name and timestamp in [0, 1) RETURN a.name, b.name
         kotlin.test.assertEquals(
             setOf(),
             query(
+                g,
                 listOf(
                     listOf(Step("A", alias = "a")),
                     listOf(Step("B", alias = "b"))

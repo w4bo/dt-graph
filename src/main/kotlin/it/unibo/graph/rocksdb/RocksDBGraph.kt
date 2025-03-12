@@ -1,15 +1,14 @@
 package it.unibo.graph.rocksdb
 
-import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.N
-import it.unibo.graph.interfaces.P
-import it.unibo.graph.interfaces.R
+import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.deserialize
 import it.unibo.graph.utils.serialize
 import org.apache.commons.lang3.NotImplementedException
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 
-class GraphRocksDB : Graph {
+class RocksDBGraph() : Graph {
+    override var tsm: TSManager? = null
     val nodes: ColumnFamilyHandle
     val edges: ColumnFamilyHandle
     val properties: ColumnFamilyHandle
@@ -55,7 +54,12 @@ class GraphRocksDB : Graph {
     override fun nextPropertyId(): Int = propId++
 
     override fun upsertFirstCitizenProperty(prop: P): P? {
-        TODO("Not yet implemented")
+        val nodeId = prop.sourceId
+        val n = getNode(nodeId)
+        n.location = GeoJsonReader().read(prop.value.toString())
+        n.locationTimestamp = prop.fromTimestamp
+        addNode(n)
+        return prop
     }
 
     override fun nextEdgeId(): Int = edgeId++
@@ -86,7 +90,7 @@ class GraphRocksDB : Graph {
         val iterator = db.newIterator(nodes)
         iterator.seekToFirst()
         while (iterator.isValid) {
-            acc += deserialize<N>(iterator.value())
+            acc += deserialize<N>(iterator.value(), this)
             iterator.next()
         }
         return acc
@@ -98,16 +102,16 @@ class GraphRocksDB : Graph {
 
     override fun getProp(id: Int): P {
         val b = db.get(properties, "$id".toByteArray())
-        return deserialize<P>(b)
+        return deserialize<P>(b, this)
     }
 
     override fun getNode(id: Long): N {
         val b = db.get(nodes, "$id".toByteArray())
-        return deserialize<N>(b)
+        return deserialize<N>(b, this)
     }
 
     override fun getEdge(id: Int): R {
         val b = db.get(edges, "$id".toByteArray())
-        return deserialize<R>(b)
+        return deserialize<R>(b, this)
     }
 }

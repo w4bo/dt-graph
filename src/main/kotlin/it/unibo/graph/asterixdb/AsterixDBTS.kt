@@ -14,8 +14,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class AsterixDBTS(val id: Long, private val dbHost: String, private val dataverse: String, private val dataset: String):
-    TS {
+class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: String, private val dataverse: String, private val dataset: String): TS {
 
     override fun getTSId(): Long = id
 
@@ -72,13 +71,13 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                     return result.entities[0]
                 }else{
                     //TODO: Fix this random return
-                    return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type ="Error")
+                    return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
                 }
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
                 //TODO fix this empty node
-                return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type ="Error")
+                return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
             }
         }
     }
@@ -134,7 +133,8 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
                                 location = jsonEntity.getJSONObject("location").toString(),
                                 fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
                                 toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
-                                value = jsonEntity.getDouble("value").toLong()
+                                value = jsonEntity.getDouble("value").toLong(),
+                                g = g
                             )
                             entity.relationships.addAll(
                                 jsonEntity.getJSONArray("relationships")
@@ -189,6 +189,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             toN = json.getLong("toN"),
             fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
             toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+            g = g
         )
         newRelationship.properties.addAll(
             json.getJSONArray("properties")
@@ -208,6 +209,7 @@ class AsterixDBTS(val id: Long, private val dbHost: String, private val datavers
             type = PropType.entries[json.getInt("type")],
             fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
             toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+            g = g
         )
     }
     private fun parsePropertyValue(value: JSONObject, type: PropType): Any {

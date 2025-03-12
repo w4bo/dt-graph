@@ -1,6 +1,5 @@
 package it.unibo.graph.query
 
-import it.unibo.graph.App
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.HAS_TS
 import org.jetbrains.kotlinx.dataframe.math.mean
@@ -8,12 +7,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 @JvmName("query")
-fun query(match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
-    return query(listOf(match), where, by, from, to, timeaware)
+fun query(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+    return query(g, listOf(match), where, by, from, to, timeaware)
 }
 
 @JvmName("queryJoin")
-fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -24,12 +23,12 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
             }
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.a]!!.first != mapAliases[it.b]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
-    val pattern1 = search(match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
     val result =
         if (match.size == 1) {
             pattern1
         } else {
-            join(pattern1, match, joinFilters, mapAliases, where, from, to, timeaware)
+            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware)
         }
         .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
         .groupBy { row -> groupBy(by, mapAliases, row, match) }
@@ -42,7 +41,7 @@ fun query(match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Ag
 /**
  * Join two patterns
  */
-private fun join(pattern1: List<Path>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
+private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
     // MATCH (a), (b) WHERE a.name = b.name
     //    pattern1.map { path -> // for each result (i.e., path) of the first pattern
     //        var discard = false  // whether this path should be discarded because it will not match
@@ -99,7 +98,7 @@ private fun join(pattern1: List<Path>, match: List<List<Step?>>, joinFilters: Li
                 }
             } else {
                 // acc.add(curMatch)
-                acc += search(curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
+                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
             }
         }
         rec(listOf(), 0, from, to)
@@ -229,7 +228,7 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
         row[alias.second + (if (alias.first == 1) match[0].size else 0)]
     }
 
-fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
     val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<Path> = mutableListOf()
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
@@ -263,21 +262,21 @@ fun search(match: List<Step?>, where: List<Compare> = listOf(), from: Long = Lon
                 } else { // is edge...
                     val r = (e as R)
                     if (e.type == HAS_TS) { // ... to time series
-                        App.tsm
+                        g.getTSM()
                             .getTS(r.toN)
                             .getValues()
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to)
                             }
                     } else { // ... or to graph node
-                        val n = App.g.getNode(r.toN)
+                        val n = g.getNode(r.toN)
                         dfs(n, index + 1, curPath, from, to)
                     }
                 }
             }
         }
     }
-    for (node in App.g.getNodes()) {
+    for (node in g.getNodes()) {
         dfs(node, 0, emptyList(), from, to)
     }
     return acc

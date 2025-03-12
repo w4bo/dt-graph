@@ -13,5 +13,6 @@ interface Elem : Serializable {
     val id: Number
     val fromTimestamp: Long
     var toTimestamp: Long
+    var g: Graph
     fun timeOverlap(timeaware: Boolean, from: Long, to: Long): Boolean = timeOverlap(fromTimestamp, toTimestamp, from, to, timeaware)
 }

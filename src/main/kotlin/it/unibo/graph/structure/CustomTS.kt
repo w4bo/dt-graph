@@ -13,7 +13,8 @@ class CustomTS(ts: TS) : TS by ts {
                 timestamp = timestamp,
                 value = value,
                 fromTimestamp = timestamp,
-                toTimestamp = timestamp
+                toTimestamp = timestamp,
+                g = g
             )
         )
     }

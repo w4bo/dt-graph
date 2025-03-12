@@ -4,6 +4,8 @@ import it.unibo.graph.utils.encodeBitwise
 import java.io.Serializable
 
 interface TS : Serializable {
+    val g: Graph
+
     fun getTSId(): Long
     fun add(label: String, timestamp: Long, value: Long) = add(
         N(
@@ -12,7 +14,8 @@ interface TS : Serializable {
             timestamp = timestamp,
             value = value,
             fromTimestamp = timestamp,
-            toTimestamp = timestamp
+            toTimestamp = timestamp,
+            g = g
         )
     )
 
