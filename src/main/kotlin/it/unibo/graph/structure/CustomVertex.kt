@@ -1,12 +1,10 @@
 package it.unibo.graph.structure
 
-import it.unibo.graph.App
-import it.unibo.graph.HAS_TS
-import it.unibo.graph.N
-import it.unibo.graph.PropType
+import it.unibo.graph.interfaces.N
+import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.utils.HAS_TS
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
-import org.json.JSONObject
 
 class CustomVertex(
     id: Long,
@@ -14,9 +12,10 @@ class CustomVertex(
     value: Long? = null,
     timestamp: Long? = null,
     location: String? = null,
-    override val fromTimestamp: Long,
-    override var toTimestamp: Long
-) : Vertex, N(id, type, value = value, timestamp = timestamp, location = location, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp) {
+    fromTimestamp: Long,
+    toTimestamp: Long,
+    g: it.unibo.graph.interfaces.Graph
+) : Vertex, N(id, type, value = value, timestamp = timestamp, location = location, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g) {
 
     override fun id(): Any {
         return id
@@ -27,7 +26,7 @@ class CustomVertex(
     }
 
     override fun graph(): Graph {
-        return App.g
+        return g as Graph
     }
 
     override fun <V : Any?> property(
@@ -36,7 +35,7 @@ class CustomVertex(
         value: V,
         vararg keyValues: Any?
     ): VertexProperty<V> {
-        return App.g.addProperty(id, key!!, value.toString(), PropType.STRING) as CustomProperty<V>
+        return g.addProperty(id, key!!, value.toString(), PropType.STRING) as CustomProperty<V>
     }
 
     override fun remove() {
@@ -59,6 +58,7 @@ class CustomVertex(
                         it.type,
                         fromTimestamp = it.fromTimestamp,
                         toTimestamp = it.toTimestamp,
+                        g = g
                     )
                 }
             }
@@ -66,14 +66,14 @@ class CustomVertex(
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
-        return App.g.addEdge(label, id, inVertex.id() as Long) as CustomEdge
+        return g.addEdge(label, id, inVertex.id() as Long) as CustomEdge
     }
 
-    fun dir2dir(direction: Direction): it.unibo.graph.Direction {
+    fun dir2dir(direction: Direction): it.unibo.graph.interfaces.Direction {
         return if (direction == Direction.IN) {
-            it.unibo.graph.Direction.IN
+            it.unibo.graph.interfaces.Direction.IN
         } else {
-            it.unibo.graph.Direction.OUT
+            it.unibo.graph.interfaces.Direction.OUT
         }
     }
 
@@ -95,9 +95,9 @@ class CustomVertex(
         return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
             .flatMap { r ->
                 if (r.type == HAS_TS) {
-                    App.tsm.getTS(r.toN).getValues().map { it as CustomVertex }
+                    g.getTSM().getTS(r.toN).getValues().map { it as CustomVertex }
                 } else {
-                    listOf(App.g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)
+                    listOf(g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)
                 }
             }
             .iterator()
