@@ -2,13 +2,8 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.interfaces.TS
-import it.unibo.graph.query.Aggregate
-import it.unibo.graph.query.Operators
-import it.unibo.graph.query.Step
-import it.unibo.graph.query.query
+import it.unibo.graph.query.*
 import it.unibo.graph.structure.CustomGraph
-import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.EDGE
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -181,5 +176,48 @@ class TestTemporalProperty {
     @Test
     fun test6() {
         // TODO test historical properties on TS Measurements
+    }
+
+    @Test
+    fun test7() {
+        val g = init()
+        val a1 = g.addNode("A")
+        val b1 = g.addNode("B")
+        val e1 = g.addEdge("foo", a1.id, b1.id)
+        g.addProperty(a1.id, "name", "A1", PropType.STRING)
+        g.addProperty(b1.id, "name", "B1", PropType.STRING)
+        g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
+
+        val pattern1 = listOf(Step("A", alias = "a1"), Step("foo", alias = "e1"), Step("B", alias = "b1"))
+        val pattern2 = listOf(Step("A", alias = "a2"), Step("foo", alias = "e2"), Step("B", alias = "b2"))
+        val by = listOf(
+            Aggregate("a1", property = "name"),
+            Aggregate("e1", property = "name"),
+            Aggregate("b1", property = "name"),
+            Aggregate("a2", property = "name"),
+            Aggregate("e2", property = "name"),
+            Aggregate("b2", property = "name")
+        )
+        val where = listOf(Compare("a1", "a2", "name", Operators.EQ))
+
+        // MATCH (a:A)-(e)->(b:B), (a:A)-(e)->(b:B) WHERE a.name = b RETURN a.name, e.name, b.name
+        assertEquals(
+            setOf(
+                listOf("A1", "E1-Foo", "B1", "A1", "E1-Foo", "B1"),
+                listOf("A1", "E1-Foo", "B1", "A1", "E1-Bar", "B1"),
+                listOf("A1", "E1-Bar", "B1", "A1", "E1-Foo", "B1"),
+                listOf("A1", "E1-Bar", "B1", "A1", "E1-Bar", "B1")
+            ),
+            query(g, listOf(pattern1, pattern2), by = by, where = where, timeaware = false).toSet()
+        )
+
+        assertEquals(
+            setOf(
+                listOf("A1", "E1-Foo", "B1", "A1", "E1-Foo", "B1"),
+                listOf("A1", "E1-Bar", "B1", "A1", "E1-Bar", "B1")
+            ),
+            query(g, listOf(pattern1, pattern2), by = by, where = where, timeaware = true).toSet()
+        )
     }
 }
