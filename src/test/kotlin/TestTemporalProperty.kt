@@ -2,11 +2,13 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.interfaces.TS
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.query
 import it.unibo.graph.structure.CustomGraph
+import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.EDGE
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -148,29 +150,36 @@ class TestTemporalProperty {
         )
     }
 
-//    @Test
-//    fun test5() {
-//        val g = init()
-//        val a1 = g.addNode("A")
-//        val b1 = g.addNode("B")
-//        g.addEdge("foo", a1.id, b1.id)
-//        g.addEdge("foo", a1.id, b1.id, from = 0, to = 2)
-//        g.addEdge("foo", a1.id, b1.id, from = 3, to = 4)
-//        g.addEdge("foo", a1.id, b1.id, from = 4)
-//
-//        val pattern = listOf(Step("A", alias = "a"), Step("foo", alias = "e"), Step("B", alias = "b"))
-//
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a, e, b
-//        assertEquals(1, query(g, pattern).size)
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [-1, 0) RETURN a, e, b
-//        assertEquals(1, query(g, pattern, from = -1, to = 0).size)
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [-1, inf) RETURN a, e, b
-//        assertEquals(1, query(g, pattern, from = -1).size)
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [1, 2) RETURN a, e, b
-//        assertEquals(1, query(g, pattern, from = 1, to = 2).size)
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [2, 3) RETURN a, e, b
-//        assertEquals(0, query(g, pattern, from = 2, to = 3).size)
-//        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [4, inf) RETURN a, e, b
-//        assertEquals(0, query(g, pattern, from = 4).size)
-//    }
+    @Test
+    fun test5() {
+        val g = init()
+        // CREATE (a:A {name: 'a2'}), (b:B {name: 'b2'}), (a)-[:foo {from: "-inf", to: "0"}]->(b), (a)-[:foo {from: "-inf", to: "0"}]->(b), (a)-[:foo {from: "0", to: "2"}]->(b), (a)-[:foo {from: "3", to: "4"}]->(b), (a)-[:foo {from: "4", to: "+inf"}]->(b)
+        // MATCH (a:A {name: "a2"})-[e]->(b:B) return a, e, b, count(*)
+        val a1 = g.addNode("A")
+        val b1 = g.addNode("B")
+        g.addEdge("foo", a1.id, b1.id)
+        g.addEdge("foo", a1.id, b1.id, from = 0, to = 2)
+        g.addEdge("foo", a1.id, b1.id, from = 4, to = 5)
+        g.addEdge("foo", a1.id, b1.id, from = 5)
+
+        val pattern = listOf(Step("A", alias = "a"), Step("foo", alias = "e"), Step("B", alias = "b"))
+
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a, e, b
+        assertEquals(4, query(g, pattern).size)
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [-1, 0) RETURN a, e, b
+        assertEquals(1, query(g, pattern, from = -1, to = 0).size)
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [-1, inf) RETURN a, e, b
+        assertEquals(4, query(g, pattern, from = -1).size)
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [1, 2) RETURN a, e, b
+        assertEquals(2, query(g, pattern, from = 1, to = 3).size)
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [2, 3) RETURN a, e, b
+        assertEquals(1, query(g, pattern, from = 2, to = 4).size) // it still exists the first edge! the one spanning -inf, +inf
+        // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [4, inf) RETURN a, e, b
+        assertEquals(2, query(g, pattern, from = 5).size)
+    }
+
+    @Test
+    fun test6() {
+        // TODO test historical properties on TS Measurements
+    }
 }
