@@ -55,7 +55,7 @@ class TestTemporalProperty {
     fun test1() {
         val g = setup()
         // MATCH (a:A)-->(b:B) RETURN a.name, b.name
-        kotlin.test.assertEquals(
+        assertEquals(
             setOf(listOf("Foo", "b1"), listOf("Bar", "b1"), listOf("Bar", "b2"), listOf("null", "b3")),
             query(g, listOf(Step("A", alias = "a"), null, Step("B", alias = "b")), by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))).toSet()
         )

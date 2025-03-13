@@ -1,6 +1,9 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.GRAPH_SOURCE
+import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.decodeBitwiseSource
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
