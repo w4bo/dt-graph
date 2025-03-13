@@ -24,7 +24,7 @@ interface Graph {
     fun addProperty(p: P): P {
         val (source, key) = decodeBitwise(p.sourceId)
         return if (source == GRAPH_SOURCE) {
-            when (p.key){
+            when (p.key) {
                 LOCATION -> {
                     upsertFirstCitizenProperty(p)
                     addPropertyLocal(key, p)

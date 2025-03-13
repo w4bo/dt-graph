@@ -193,5 +193,9 @@ class TestTemporal {
         assertFalse(timeOverlap(0, 1, 1, 2)) // [0, 1) and [1, 2)
         assertFalse(timeOverlap(1, 2, 0, 1)) // [1, 2) and [0, 1)
         assertTrue(timeOverlap(0, 0, 0, 1)) // [0, 0) and [0, 1)
+        assertTrue(timeOverlap(Long.MIN_VALUE, Long.MAX_VALUE, 0, 1)) // [-inf, +inf) and [0, 1)
+        assertTrue(timeOverlap(0, 1, Long.MIN_VALUE, Long.MAX_VALUE)) // [0, 1) and [-inf, +inf)
+        assertTrue(timeOverlap(Long.MIN_VALUE, Long.MAX_VALUE, 0, 0)) // [-inf, +inf) and [0, 0)
+        assertTrue(timeOverlap(0, 0, Long.MIN_VALUE, Long.MAX_VALUE)) // [0, 0) and [-inf, +inf)
     }
 }

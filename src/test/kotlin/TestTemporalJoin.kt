@@ -8,26 +8,16 @@ import kotlin.test.Test
 
 class TestTemporalJoin {
 
-    fun setup(): Graph {
+    private fun setup(): Graph {
         val g = CustomGraph(MemoryGraph())
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()
-
         val a1 = g.addNode("A")
-//        val a2 = g.addNode("A")
-//        val b1 = g.addNode("B")
         val b2 = g.addNode("B")
-//        val b3 = g.addNode("B")
-        // val c1 = g.addNode("C")
-        // val c2 = g.addNode("C")
-
         g.addProperty(a1.id, "name", "Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(a1.id, "name", "Bar", PropType.STRING, from = 1, to = 2)
-//        g.addProperty(b1.id,"name", "Foo", PropType.STRING, from = 0, to = 1)
-//        g.addProperty(b1.id,"name", "Bar", PropType.STRING, from = 1, to = 2)
         g.addProperty(b2.id, "name", "Bar", PropType.STRING, from = 1, to = 2)
-
         return g
     }
 

@@ -25,10 +25,10 @@ open class N(
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
         return when (name) {
-            VALUE -> if(value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE, g = g)) else emptyList()
+            VALUE -> if (value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE, g = g)) else emptyList()
             LOCATION -> {
-                //If searching for last location
-                if(location != null && locationTimestamp >= fromTimestamp){
+                // If searching for last location
+                if (location != null && locationTimestamp >= fromTimestamp) {
                     listOf(P(DUMMY_ID, id, NODE, LOCATION, location!!, PropType.GEOMETRY, g = g))
                 } else {
                     super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)

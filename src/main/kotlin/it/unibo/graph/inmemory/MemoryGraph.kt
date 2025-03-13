@@ -46,16 +46,11 @@ open class MemoryGraph: Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        // Find the last properties and update its toTimestamp
-        // Update only if toTimestamp of old property is > than fromTimestamp of new property.
-        props.filter { it.key == p.key && it.sourceId == p.sourceId }
-            .maxByOrNull { it.toTimestamp }
-            ?.let {
-                if (it.toTimestamp > p.fromTimestamp) {
-                    it.toTimestamp = p.fromTimestamp
-                }
-            }
-        props += p
+        if (p.id >= props.size) {
+            props += p
+        } else {
+            props[p.id] = p
+        }
         return p
     }
 
@@ -64,7 +59,7 @@ open class MemoryGraph: Graph {
     override fun addEdgeLocal(key: Long, r: R): R {
         // Find the last edge version and update its toTimestamp
         // Update only if toTimestamp of old edge is > than fromTimestamp of new property.
-        rels.filter { it.id == r.id}
+        rels.filter { it.id == r.id }
             .maxByOrNull { it.toTimestamp }
             ?.let {
                 if (it.toTimestamp > r.fromTimestamp) {

@@ -1,9 +1,6 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.GRAPH_SOURCE
-import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.decodeBitwiseSource
+import it.unibo.graph.utils.*
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
@@ -20,14 +17,21 @@ open class P(
     @Transient final override var g: Graph
 ) : Elem {
     init {
-        if (decodeBitwiseSource(sourceId) == GRAPH_SOURCE && id != DUMMY_ID) {
-            val n: ElemP = if (sourceType == NODE) g.getNode(sourceId) else g.getEdge(sourceId.toInt())
-            if (n.nextProp == null) n.nextProp = id
+        if (decodeBitwiseSource(sourceId) == GRAPH_SOURCE && id != DUMMY_ID) { // If the source is the graph and the property is not created at runtime
+            val elem: ElemP = if (sourceType == NODE) g.getNode(sourceId) else g.getEdge(sourceId.toInt()) // get the source of the property (either an edge or a node)
+            if (elem.nextProp == null) elem.nextProp = id // if the element already has no properties, do nothing
             else {
-                next = n.nextProp
-                n.nextProp = id
+                // TODO we only update the `toTimestamp` of properties of elements of the graph (and not of the TS)
+                // TODO here we iterate all the properties of the element, but maybe we could exploit some sorting over time
+                val oldP: P? = elem.getProps(name = key).maxByOrNull { it.toTimestamp } // check if the element contains a property with the same name
+                if (oldP != null && oldP.toTimestamp > fromTimestamp) { // if so, and if the `toTimestamp` is ge than `fromTimestamp`
+                    oldP.toTimestamp = fromTimestamp // update the previous `toTimestamp`
+                    g.addProperty(oldP) // update the property
+                }
+                next = elem.nextProp  // update the next pointer of the node
+                elem.nextProp = id
             }
-            if (sourceType == NODE) g.addNode(n as N) else g.addEdge(n as R)
+            if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again
         }
     }
 

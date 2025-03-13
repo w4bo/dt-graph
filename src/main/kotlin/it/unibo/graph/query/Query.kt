@@ -88,7 +88,7 @@ private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: L
     // MATCH (n)-->(m) RETURN n.name, m => only n
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
     val toReplace = by.filter { it.property != null }.associateBy {
-        val alias = mapAliases[it.n]!!
+        val alias = mapAliases[it.n] ?: throw IllegalArgumentException("Alias `${it.n}` is not defined")
         alias.second + (if (alias.first == 1) match[0].size else 0)
     } // find its index in the path
     val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
