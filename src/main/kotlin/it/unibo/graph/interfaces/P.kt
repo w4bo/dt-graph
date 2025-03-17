@@ -1,9 +1,7 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.GRAPH_SOURCE
-import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.decodeBitwiseSource
+import it.unibo.graph.utils.*
+import org.locationtech.jts.io.geojson.GeoJsonReader
 
 enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
 
@@ -33,6 +31,11 @@ open class P(
                 }
                 next = elem.nextProp  // update the next pointer of the node
                 elem.nextProp = id
+            }
+            if (elem is N && key == LOCATION) {
+                // TODO why don't edges have the location as a first citizen?
+                elem.location = GeoJsonReader().read(value.toString())
+                elem.locationTimestamp = fromTimestamp
             }
             if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again
         }

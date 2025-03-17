@@ -38,13 +38,6 @@ open class MemoryGraph: Graph {
 
     override fun nextPropertyId(): Int = props.size
 
-    override fun upsertFirstCitizenProperty(prop: P): P? {
-        val nodeId = prop.sourceId
-        nodes[nodeId.toInt()].location = GeoJsonReader().read(prop.value.toString())
-        nodes[nodeId.toInt()].locationTimestamp = prop.fromTimestamp
-        return prop
-    }
-
     override fun addPropertyLocal(key: Long, p: P): P {
         if (p.id >= props.size) {
             props += p
@@ -57,15 +50,6 @@ open class MemoryGraph: Graph {
     override fun nextEdgeId(): Int = rels.size
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        // Find the last edge version and update its toTimestamp
-        // Update only if toTimestamp of old edge is > than fromTimestamp of new property.
-        rels.filter { it.id == r.id }
-            .maxByOrNull { it.toTimestamp }
-            ?.let {
-                if (it.toTimestamp > r.fromTimestamp) {
-                    it.toTimestamp = r.fromTimestamp
-                }
-            }
         rels += r
         return r
     }

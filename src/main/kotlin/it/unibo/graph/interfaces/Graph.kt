@@ -19,18 +19,11 @@ interface Graph {
         addProperty(
             createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id)
         )
-    fun upsertFirstCitizenProperty(prop: P): P?
 
     fun addProperty(p: P): P {
         val (source, key) = decodeBitwise(p.sourceId)
         return if (source == GRAPH_SOURCE) {
-            when (p.key) {
-                LOCATION -> {
-                    upsertFirstCitizenProperty(p)
-                    addPropertyLocal(key, p)
-                }
-                else -> addPropertyLocal(key, p)
-            }
+            addPropertyLocal(key, p)
         } else {
             addPropertyTS(source, key, p)
         }

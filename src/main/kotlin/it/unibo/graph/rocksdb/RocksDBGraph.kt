@@ -68,15 +68,6 @@ class RocksDBGraph : Graph {
 
     override fun nextPropertyId(): Int = propId++
 
-    override fun upsertFirstCitizenProperty(prop: P): P {
-        val nodeId = prop.sourceId
-        val n = getNode(nodeId)
-        n.location = GeoJsonReader().read(prop.value.toString())
-        n.locationTimestamp = prop.fromTimestamp
-        addNode(n)
-        return prop
-    }
-
     override fun nextEdgeId(): Int = edgeId++
 
     override fun addNode(n: N): N {
