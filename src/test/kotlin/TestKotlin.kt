@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 class TestKotlin {
 
     fun matrix(f: (Graph) -> Unit) {
-        listOf(/*MemoryGraph(), */RocksDBGraph())
+        listOf(MemoryGraph(), RocksDBGraph())
             .map { setup(it) }
             .forEach {
                 f(it)
