@@ -7,7 +7,6 @@ import org.apache.commons.lang3.NotImplementedException
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 
-
 class RocksDBGraph : Graph {
 
     companion object {
@@ -76,13 +75,11 @@ class RocksDBGraph : Graph {
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        // TODO: close toTimestamp of previous property version
         db.put(properties, "${p.id}".toByteArray(), serialize(p))
         return p
     }
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        // TODO: close toTimestamp of previous edge version
         db.put(edges, "${r.id}".toByteArray(), serialize(r))
         return r
     }

@@ -201,7 +201,7 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
     }
 
 fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
-    val visited: MutableSet<Number> = mutableSetOf()
+    // val visited: MutableSet<Number> = mutableSetOf()
     val acc: MutableList<Path> = mutableListOf()
     val mapWhere: Map<String, Compare> = where.associateBy { it.b }
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
@@ -219,13 +219,13 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: 
             if (curPath.size == match.size) {
                 acc.add(Path(curPath, from, to))
             } else {
-                if (visited.contains(e.id)) {
-                    return
-                }
+                // if (visited.contains(e.id)) {
+                //     return
+                // }
                 val from = max(e.fromTimestamp, from)
                 val to = min(e.toTimestamp, to)
                 if (index % 2 == 0) { // is node
-                    visited += e.id
+                    // visited += e.id
                     (e as N)
                         .getRels(direction = Direction.OUT, includeHasTs = true)
                         .forEach {

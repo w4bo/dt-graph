@@ -14,7 +14,7 @@ open class R(
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     final override var nextProp: Int? = null,
-    final override val properties: MutableList<P> = mutableListOf(),
+    @Transient final override val properties: MutableList<P> = mutableListOf(),
     @Transient final override var g: Graph
 ): ElemP {
     init {
@@ -38,13 +38,6 @@ open class R(
             if (to.nextRel == null) { // this is the first edge
                 to.nextRel = id
             } else {
-                // Non credo mi serva, è la  stessa relazione sopra
-                // for (it in to.getRels(direction = Direction.IN, label = type)) {
-                //     if (it.fromN == fromN && toTimestamp == Long.MAX_VALUE) {
-                //         it.toTimestamp = fromTimestamp
-                //         break
-                //     }
-                // }
                 toNextRel = to.nextRel
                 to.nextRel = id
             }

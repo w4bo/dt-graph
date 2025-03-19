@@ -8,6 +8,8 @@ import it.unibo.graph.utils.EDGE
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+const val FOO = "foo"
+
 class TestTemporalProperty {
 
     private fun init(): Graph {
@@ -27,11 +29,11 @@ class TestTemporalProperty {
         val c1 = g.addNode("C")
         val c2 = g.addNode("C")
 
-        g.addEdge("foo", a.id, b1.id, from = 0, to = 2)
-        g.addEdge("foo", a.id, b2.id, from = 1, to = 1)
-        g.addEdge("foo", a.id, b3.id, from = 2, to = 2)
-        g.addEdge("foo", b1.id, c1.id, from = 0, to = 0)
-        g.addEdge("foo", b1.id, c2.id, from = 1)
+        g.addEdge(FOO, a.id, b1.id, from = 0, to = 2)
+        g.addEdge(FOO, a.id, b2.id, from = 1, to = 1)
+        g.addEdge(FOO, a.id, b3.id, from = 2, to = 2)
+        g.addEdge(FOO, b1.id, c1.id, from = 0, to = 0)
+        g.addEdge(FOO, b1.id, c2.id, from = 1)
 
         g.addProperty(a.id,"name", "Foo", PropType.STRING, from = 0, to = 0)
         g.addProperty(a.id,"name", "Bar", PropType.STRING, from = 1, to = 1)
@@ -77,13 +79,13 @@ class TestTemporalProperty {
         val g = init()
         val a1 = g.addNode("A")
         val b1 = g.addNode("B")
-        val e1 = g.addEdge("foo", a1.id, b1.id, from = 0, to = 2)
+        val e1 = g.addEdge(FOO, a1.id, b1.id, from = 0, to = 2)
         g.addProperty(e1.id.toLong(), "name", "Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
         g.addProperty(e1.id.toLong(), "name", "Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
-        val pattern = listOf(Step("A"), Step("foo", alias = "e"), Step("B"))
-        val pattern1 = listOf(Step("A"), Step("foo", alias = "e", properties = listOf(Triple("name", Operators.EQ, "Foo"))), Step("B"))
-        val pattern2 = listOf(Step("A"), Step("foo", alias = "e", properties = listOf(Triple("name", Operators.EQ, "Bar"))), Step("B"))
+        val pattern = listOf(Step("A"), Step(FOO, alias = "e"), Step("B"))
+        val pattern1 = listOf(Step("A"), Step(FOO, alias = "e", properties = listOf(Triple("name", Operators.EQ, "Foo"))), Step("B"))
+        val pattern2 = listOf(Step("A"), Step(FOO, alias = "e", properties = listOf(Triple("name", Operators.EQ, "Bar"))), Step("B"))
 
         // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a, b, e
         assertEquals(1, query(g, pattern).size)
@@ -115,7 +117,7 @@ class TestTemporalProperty {
         val g = init()
         val a1 = g.addNode("A")
         val b1 = g.addNode("B")
-        val e1 = g.addEdge("foo", a1.id, b1.id, from = 0, to = 2)
+        val e1 = g.addEdge(FOO, a1.id, b1.id, from = 0, to = 2)
         g.addProperty(a1.id, "name", "A1", PropType.STRING)
         g.addProperty(b1.id, "name", "B1-Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(b1.id, "name", "B1-Bar", PropType.STRING, from = 1, to = 2)
@@ -130,7 +132,7 @@ class TestTemporalProperty {
         assertEquals(0, e1.getProps(name="name").minOf { it.fromTimestamp })
         assertEquals(2, e1.getProps(name="name").maxOf { it.toTimestamp })
 
-        val pattern = listOf(Step("A", alias = "a"), Step("foo", alias = "e"), Step("B", alias = "b"))
+        val pattern = listOf(Step("A", alias = "a"), Step(FOO, alias = "e"), Step("B", alias = "b"))
 
         // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a.name, e.name, b.name
         assertEquals(
@@ -152,12 +154,12 @@ class TestTemporalProperty {
         // MATCH (a:A {name: "a2"})-[e]->(b:B) return a, e, b, count(*)
         val a1 = g.addNode("A")
         val b1 = g.addNode("B")
-        g.addEdge("foo", a1.id, b1.id)
-        g.addEdge("foo", a1.id, b1.id, from = 0, to = 2)
-        g.addEdge("foo", a1.id, b1.id, from = 4, to = 5)
-        g.addEdge("foo", a1.id, b1.id, from = 5)
+        g.addEdge(FOO, a1.id, b1.id)
+        g.addEdge(FOO, a1.id, b1.id, from = 0, to = 2)
+        g.addEdge(FOO, a1.id, b1.id, from = 4, to = 5)
+        g.addEdge(FOO, a1.id, b1.id, from = 5)
 
-        val pattern = listOf(Step("A", alias = "a"), Step("foo", alias = "e"), Step("B", alias = "b"))
+        val pattern = listOf(Step("A", alias = "a"), Step(FOO, alias = "e"), Step("B", alias = "b"))
 
         // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a, e, b
         assertEquals(4, query(g, pattern).size)
@@ -183,14 +185,14 @@ class TestTemporalProperty {
         val g = init()
         val a1 = g.addNode("A")
         val b1 = g.addNode("B")
-        val e1 = g.addEdge("foo", a1.id, b1.id)
+        val e1 = g.addEdge(FOO, a1.id, b1.id)
         g.addProperty(a1.id, "name", "A1", PropType.STRING)
         g.addProperty(b1.id, "name", "B1", PropType.STRING)
         g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
         g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
-        val pattern1 = listOf(Step("A", alias = "a1"), Step("foo", alias = "e1"), Step("B", alias = "b1"))
-        val pattern2 = listOf(Step("A", alias = "a2"), Step("foo", alias = "e2"), Step("B", alias = "b2"))
+        val pattern1 = listOf(Step("A", alias = "a1"), Step(FOO, alias = "e1"), Step("B", alias = "b1"))
+        val pattern2 = listOf(Step("A", alias = "a2"), Step(FOO, alias = "e2"), Step("B", alias = "b2"))
         val by = listOf(
             Aggregate("a1", property = "name"),
             Aggregate("e1", property = "name"),
@@ -226,15 +228,15 @@ class TestTemporalProperty {
         val g = init()
         val a1 = g.addNode("A")
         val b1 = g.addNode("B")
-        val e1 = g.addEdge("foo", a1.id, b1.id)
+        val e1 = g.addEdge(FOO, a1.id, b1.id)
         g.addProperty(a1.id, "name", "A1-Foo", PropType.STRING, to = 1) // Change wrt test7
         g.addProperty(a1.id, "name", "A1-Bar", PropType.STRING, from = 1) // Change wrt test7
         g.addProperty(b1.id, "name", "B1", PropType.STRING)
         g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 2, sourceType = EDGE) // Change wrt test7
         g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 2, to = 3, sourceType = EDGE) // Change wrt test7
 
-        val pattern1 = listOf(Step("A", alias = "a1"), Step("foo", alias = "e1"), Step("B", alias = "b1"))
-        val pattern2 = listOf(Step("A", alias = "a2"), Step("foo", alias = "e2"), Step("B", alias = "b2"))
+        val pattern1 = listOf(Step("A", alias = "a1"), Step(FOO, alias = "e1"), Step("B", alias = "b1"))
+        val pattern2 = listOf(Step("A", alias = "a2"), Step(FOO, alias = "e2"), Step("B", alias = "b2"))
         val by = listOf(
             Aggregate("a1", property = "name"),
             Aggregate("e1", property = "name"),
@@ -254,5 +256,25 @@ class TestTemporalProperty {
             ),
             query(g, listOf(pattern1, pattern2), by = by, where = where, timeaware = true).toSet()
         )
+    }
+
+    @Test
+    fun test9() {
+        val g = init()
+        val a1 = g.addNode("A")
+        val b1 = g.addNode("B")
+        val b2 = g.addNode("B")
+        val c1 = g.addNode("C")
+        val d1 = g.addNode("D")
+        g.addEdge(FOO, a1.id, b1.id)
+        g.addEdge(FOO, a1.id, b2.id)
+        g.addEdge(FOO, b1.id, b1.id)
+        g.addEdge(FOO, b1.id, c1.id)
+        g.addEdge(FOO, b2.id, c1.id)
+        g.addEdge(FOO, c1.id, d1.id)
+        // MATCH (a:A)-->(b:B)-->(c:C)-->(d:D) RETURN a, b, c, d
+        val pattern = listOf(Step("A"), null, Step("B"), null, Step("C"), null, Step("D"))
+        assertEquals(2, query(g, pattern, timeaware = true).size)
+        assertEquals(2, query(g, pattern, timeaware = false).size)
     }
 }

@@ -13,8 +13,8 @@ open class N(
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     location: String? = null, // location of a measurement
-    val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
-    final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
+    @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
+    @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     var locationTimestamp: Long = fromTimestamp,
