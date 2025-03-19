@@ -10,7 +10,7 @@ interface ElemP: Elem {
                     && (name == null || p.key == name)
                     && p.timeOverlap(timeaware, fromTimestamp, toTimestamp)
         return if (next == null) {
-            properties.filter { filter(it) }
+            if (properties == null) emptyList() else properties.filter { filter(it) }
         } else {
             val p = g.getProp(next)
             (if (filter(p)) listOf(p) else emptyList()) + getProps(p.next, filter, name, fromTimestamp, toTimestamp, timeaware)

@@ -24,8 +24,8 @@ open class P(
             else {
                 // TODO we only update the `toTimestamp` of properties of elements of the graph (and not of the TS)
                 // TODO here we iterate all the properties of the element, but maybe we could exploit some sorting over time
-                val oldP: P? = elem.getProps(name = key).maxByOrNull { it.toTimestamp } // check if the element contains a property with the same name
-                if (oldP != null && oldP.toTimestamp > fromTimestamp) { // if so, and if the `toTimestamp` is ge than `fromTimestamp`
+                val oldP: P? = elem.getProps(name = key).filter { it.toTimestamp > fromTimestamp }.maxByOrNull { it.toTimestamp } // check if the element contains a property with the same name
+                if (oldP != null) { // if so, and if the `toTimestamp` is ge than `fromTimestamp`
                     oldP.toTimestamp = fromTimestamp // update the previous `toTimestamp`
                     g.addProperty(oldP) // update the property
                 }
