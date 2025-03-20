@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import it.unibo.graph.utils.*
 
 class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: String, private val dataverse: String, private val dataset: String): TS {
 
@@ -27,7 +28,12 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
                 ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
                 ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
                 "property": "${n.type}",
-                "location": st_geom_from_geojson(${n.location?.let { GeoJsonWriter().write(it) } ?: "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}"}),
+                "location": st_geom_from_geojson(
+                    ${n.getProps(name = "location").firstOrNull()?.value
+                            ?.let { it as? String }
+                            ?.takeIf { it.isNotBlank() }
+                            ?: "{\"coordinates\":[0, 0],\"type\":\"Point\"}"}
+                ),
                 "relationships": [${n.getRels().map(::relToJson).joinToString(", ")}],
                 "properties": [${n.getProps().map(::propToJson).joinToString(", ")}],
                 "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
@@ -143,12 +149,12 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
                                     .let { array -> List(array.length()) { array.getJSONObject(it) } }
                                     .map(::jsonToRel)
                             )
-                            entities.add(entity)
                             entity.properties.addAll(
                                 jsonEntity.getJSONArray("properties")
                                     .let { array -> List(array.length()) { array.getJSONObject(it) } }
                                     .map(::jsonToProp)
                             )
+                           entities.add(entity)
                         }
                         AsterixDBResult.SelectResult(entities)
                     } catch (e: Exception) {
@@ -219,6 +225,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
             PropType.INT -> value.getInt("intValue")
             PropType.DOUBLE -> value.getDouble("doubleValue")
             PropType.STRING -> value.getString("stringValue")
+            PropType.GEOMETRY -> value.getString("geometryValue")
             else -> ""
         }
     }
@@ -251,6 +258,9 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
             }
             PropType.INT -> return JSONObject().apply{
                 put("intValue",value)
+            }
+            PropType.GEOMETRY -> return JSONObject().apply{
+                put("geometryValue", value.toString())
             }
             else -> JSONObject().apply{
                 put("stringValue", value)

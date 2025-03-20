@@ -79,7 +79,8 @@ class AsterixDBTSM private constructor(
            CREATE TYPE PropertyValue AS OPEN {
               stringValue: string?,
               doubleValue: double?,
-              intValue: int?
+              intValue: int?,
+              geometryValue: string?
           };
     
           CREATE TYPE Property AS CLOSED {

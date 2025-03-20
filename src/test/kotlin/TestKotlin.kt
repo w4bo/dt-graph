@@ -81,9 +81,9 @@ class TestKotlin {
         ts1.add(Measurement, timestamp = timestamp++, value = 15)
 
         val ts3 = g.getTSM().addTS()
-        val m2 = ts3.add(Measurement, timestamp = timestamp++, value = 23)
-        ts3.add(Measurement, timestamp = timestamp++, value = 24)
-        ts3.add(Measurement, timestamp = timestamp, value = 25)
+        val m2 = ts3.add(Measurement, timestamp = timestamp++, value = 23, location = "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}")
+        ts3.add(Measurement, timestamp = timestamp++, value = 24, location = "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}")
+        ts3.add(Measurement, timestamp = timestamp, value = 25, location = "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}")
         val n8 = g.addNode(SolarRadiation, value = ts3.getTSId())
         g.addEdge(HasSolarRadiation, n2.id, n8.id)
         g.addEdge(HasManutentor, m2.id, n4.id, id = DUMMY_ID)

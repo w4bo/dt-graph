@@ -284,12 +284,14 @@ class TestTemporalProperty {
         val b1 = g.addNode(B)
         val c1 = g.addNode(C)
         val d1 = g.addNode(D)
+
         g.addProperty(a1.id, "name", "foo", PropType.STRING)
         g.addProperty(c1.id, "name", "bar", PropType.STRING)
         g.addProperty(d1.id, "name", "foo", PropType.STRING)
         g.addEdge(Foo, a1.id, b1.id)
         g.addEdge(Foo, b1.id, c1.id)
         g.addEdge(Foo, c1.id, d1.id)
+
         // MATCH (a:A)-->(b:B)-->(c:C)-->(d:D) WHERE a.name == d.name RETURN a, b, c, d
         val pattern = listOf(Step(A, alias = "a"), null, Step(B), null, Step(C, alias = "c"), null, Step(D, alias = "d"))
         assertEquals(1, query(g, pattern, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)

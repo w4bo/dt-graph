@@ -202,25 +202,48 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
 
 fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
-    val mapWhere: Map<String, Compare> = where.associateBy { it.b }
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
+    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.a, it.b) }.toSet()}.maxByOrNull { it.value }?.key!!}
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
+        fun whereClause(
+            e: ElemP,
+            path: List<ElemP>,
+            alias: String,
+            mapWhere: Map<String, Compare>,
+            c: Compare,
+            timeaware: Boolean
+        ): Boolean {
+            if (mapWhere[alias]?.a == alias) {
+                return c.isOk(e, path[mapAlias[c.b]!!], timeaware)
+            } else if(mapWhere[alias]?.b == alias){
+                return c.isOk(path[mapAlias[c.a]!!], e, timeaware)
+            }else{
+                return false
+            }
+        }
         val alias: String? = match[index]?.alias
         val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
-                (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
-                && match[index]!!.properties.all { f -> e.getProps(name = f.first, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> p.value == f.third }})) // filter on properties, TODO should implement different operators
+                    (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
+                            && match[index]!!.properties.all { f ->
+                        e.getProps(
+                            name = f.first,
+                            fromTimestamp = from,
+                            toTimestamp = to,
+                            timeaware = timeaware
+                        ).any { p -> Compare.apply(f.third, p.value, f.second) }
+                    })) // filter on properties
             && e.timeOverlap(timeaware, from, to) // check time overlap
-            && (c == null || c.isOk(path[mapAlias[c.a]!!], e, timeaware)) // apply the where clause
+            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
         ) {
             val curPath = path + listOf(e)
             if (curPath.size == match.size) {
                 acc.add(Path(curPath, from, to))
             } else {
-                 if (visited.contains(e.id)) {
-                     return
-                 }
+//                if (visited.contains(e.id)) {
+//                    return
+//                }
                 val from = max(e.fromTimestamp, from)
                 val to = min(e.toTimestamp, to)
                 if (index % 2 == 0) { // is node

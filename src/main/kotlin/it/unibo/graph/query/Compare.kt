@@ -1,12 +1,20 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.ElemP
+import org.jetbrains.kotlinx.dataframe.io.JSON
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.geojson.GeoJsonReader
+import org.locationtech.jts.io.geojson.GeoJsonWriter
 
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
-class Compare(val a: String, val b: String, val property: String, val operator: Operators) {
+class Compare(val a: Any, val b: Any, val property: String, val operator: Operators) {
+
+    companion object {
+        fun apply(a: Any, b: Any, operator: Operators): Boolean {
+            return Compare(a, b, "", operator).compareIfSameType(a, b, operator)
+        }
+    }
     private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
 
         if (operator == Operators.EQ) return a == b
@@ -30,6 +38,9 @@ class Compare(val a: String, val b: String, val property: String, val operator: 
 
     private fun geometryContains(a: Any, b: Any): Boolean {
         val parser = GeoJsonReader()
+        if (a == "" || b == "") {
+            return false
+        }
         val geomA = when (a) {
             is Geometry -> a
             is String -> parser.read(a)
