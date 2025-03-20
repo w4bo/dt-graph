@@ -1,14 +1,16 @@
 package it.unibo.graph.structure
 
+import it.unibo.graph.interfaces.Label
+import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.utils.HAS_TS
+import it.unibo.graph.interfaces.labelFromString
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
 class CustomVertex(
     id: Long,
-    type: String,
+    type: Label,
     value: Long? = null,
     timestamp: Long? = null,
     location: String? = null,
@@ -22,7 +24,7 @@ class CustomVertex(
     }
 
     override fun label(): String {
-        return type
+        return type.toString()
     }
 
     override fun graph(): Graph {
@@ -66,7 +68,7 @@ class CustomVertex(
     }
 
     override fun addEdge(label: String, inVertex: Vertex, vararg keyValues: Any?): Edge {
-        return g.addEdge(label, id, inVertex.id() as Long) as CustomEdge
+        return g.addEdge(labelFromString(label), id, inVertex.id() as Long) as CustomEdge
     }
 
     fun dir2dir(direction: Direction): it.unibo.graph.interfaces.Direction {
@@ -86,15 +88,15 @@ class CustomVertex(
     }
 
     override fun edges(direction: Direction, vararg edgeLabels: String): Iterator<Edge> {
-        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
+        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels)?.let { labelFromString(it) })
             .map { it as CustomEdge }
             .iterator()
     }
 
     override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
-        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels))
+        return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels)?.let { labelFromString(it) })
             .flatMap { r ->
-                if (r.type == HAS_TS) {
+                if (r.type == HasTS) {
                     g.getTSM().getTS(r.toN).getValues().map { it as CustomVertex }
                 } else {
                     listOf(g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)

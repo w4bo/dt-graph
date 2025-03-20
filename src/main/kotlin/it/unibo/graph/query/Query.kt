@@ -1,7 +1,7 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.utils.HAS_TS
+import it.unibo.graph.interfaces.Labels.HasTS
 import org.jetbrains.kotlinx.dataframe.math.mean
 import kotlin.math.max
 import kotlin.math.min
@@ -231,7 +231,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: 
                         }
                 } else { // is edge...
                     val r = (e as R)
-                    if (e.type == HAS_TS) { // ... to time series
+                    if (e.type == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
                             .getValues()

@@ -67,17 +67,19 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         val result = queryAsterixDB(selectQuery)
         when (result) {
             is AsterixDBResult.SelectResult -> {
-                if (result.entities.size > 0){
+                if (result.entities.size > 0) {
                     return result.entities[0]
-                }else{
+                } else {
                     //TODO: Fix this random return
-                    return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
+                    throw IllegalArgumentException()
+                    // return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
                 }
             }
+
             else -> {
-                println("Error occurred while performing query \n $selectQuery")
                 //TODO fix this empty node
-                return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
+                throw IllegalArgumentException("Error occurred while performing query \n $selectQuery")
+                // return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
             }
         }
     }
@@ -129,7 +131,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
                             val entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
                                 timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
-                                type = jsonEntity.getString("property"),
+                                type = labelFromString(jsonEntity.getString("property")),
                                 location = jsonEntity.getJSONObject("location").toString(),
                                 fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
                                 toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
@@ -184,7 +186,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
     private fun jsonToRel(json: JSONObject): R {
         val newRelationship = R(
             id = json.getInt("id"),
-            type = json.getString("type"),
+            type = enumValueOf<Labels>(json.getString("type")),
             fromN = 0L, // Valore placeholder, se non è nel JSON
             toN = json.getLong("toN"),
             fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,

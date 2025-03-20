@@ -1,16 +1,19 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.GRAPH_SOURCE
+import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.decodeBitwise
+import it.unibo.graph.utils.encodeBitwise
 
 interface Graph {
     var tsm: TSManager?
     fun getTSM(): TSManager = tsm!!
     fun close() {}
     fun clear()
-    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
+    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
-    fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
+    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P =
         P(id, sourceId, sourceType, key, value, type, g = this)
@@ -42,7 +45,7 @@ interface Graph {
         }
     }
 
-    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
+    fun createEdge(label: Label, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextEdgeId(): Int
     fun addEdge(r: R): R {
         val (source, key) = decodeBitwise(r.fromN)
@@ -62,7 +65,7 @@ interface Graph {
         return r
     }
 
-    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
+    fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>

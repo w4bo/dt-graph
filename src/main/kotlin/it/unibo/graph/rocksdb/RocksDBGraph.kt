@@ -4,7 +4,6 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.deserialize
 import it.unibo.graph.utils.serialize
 import org.apache.commons.lang3.NotImplementedException
-import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 
 class RocksDBGraph : Graph {

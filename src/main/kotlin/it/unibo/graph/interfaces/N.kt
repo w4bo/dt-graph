@@ -1,13 +1,17 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.*
+import it.unibo.graph.interfaces.Labels.HasTS
+import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.LOCATION
+import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.VALUE
 import org.apache.commons.lang3.NotImplementedException
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.geojson.GeoJsonReader
 
 open class N(
     final override val id: Long, // node id
-    final override val type: String, // node label
+    final override val type: Label, // node label
     var nextRel: Int? = null, // if graph node, link to the next relationship
     final override var nextProp: Int? = null, // if graph node, link to the next property
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
@@ -44,9 +48,9 @@ open class N(
         return g.getTSM().getTS(value!!).getValues()
     }
 
-    fun getRels(next: Int? = nextRel, direction: Direction? = null, label: String? = null, includeHasTs: Boolean = false): List<R> {
-        return if (label == HAS_TS) { // Jump to the time series
-            listOf(R(DUMMY_ID, HAS_TS, id, value!!, g = g))
+    fun getRels(next: Int? = nextRel, direction: Direction? = null, label: Label? = null, includeHasTs: Boolean = false): List<R> {
+        return if (label == HasTS) { // Jump to the time series
+            listOf(R(DUMMY_ID, HasTS, id, value!!, g = g))
         } else { // Iterate within the graph
             if (timestamp != null) { // If TS snapshot
                 when (direction) {
@@ -54,7 +58,7 @@ open class N(
                     else -> relationships.filter { label == null || it.type == label }.toList()
                 }
             } else { // Graph node
-                if (next == null) return if(includeHasTs && value != null) listOf(R(DUMMY_ID, HAS_TS, id, value, g = g)) else emptyList()
+                if (next == null) return if(includeHasTs && value != null) listOf(R(DUMMY_ID, HasTS, id, value, g = g)) else emptyList()
                 val r = g.getEdge(next)
                 if (label == null || r.type == label) {
                     when (direction) {

@@ -2,7 +2,6 @@ package it.unibo.graph.inmemory
 
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.DUMMY_ID
-import org.locationtech.jts.io.geojson.GeoJsonReader
 
 open class MemoryGraph: Graph {
     override var tsm: TSManager? = null

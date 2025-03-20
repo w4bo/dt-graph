@@ -1,12 +1,13 @@
 package it.unibo.graph.structure
 
+import it.unibo.graph.interfaces.Label
 import it.unibo.graph.interfaces.R
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.structure.*
 
 class CustomEdge(
     id: Int,
-    type: String,
+    type: Label,
     prevNode: Long,
     nextNode: Long,
     fromTimestamp: Long,
@@ -18,7 +19,7 @@ class CustomEdge(
     }
 
     override fun label(): String {
-        return type
+        return type.toString()
     }
 
     override fun graph(): Graph {

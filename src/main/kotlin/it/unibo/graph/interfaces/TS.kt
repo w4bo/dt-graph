@@ -7,7 +7,7 @@ interface TS : Serializable {
     val g: Graph
 
     fun getTSId(): Long
-    fun add(label: String, timestamp: Long, value: Long) = add(
+    fun add(label: Label, timestamp: Long, value: Long) = add(
         N(
             encodeBitwise(getTSId(), timestamp),
             label,

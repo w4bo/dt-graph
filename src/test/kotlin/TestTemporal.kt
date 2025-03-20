@@ -1,6 +1,7 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.timeOverlap
@@ -11,7 +12,6 @@ import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.EDGE
 import it.unibo.graph.utils.EPSILON
-import it.unibo.graph.utils.HAS_TS
 import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -24,43 +24,43 @@ class TestTemporal {
         g.clear()
         g.getTSM().clear()
 
-        val f1 = g.addNode("AgriFarm")
-        val p1 = g.addNode("AgriParcel")
-        val p2 = g.addNode("AgriParcel")
-        val d1 = g.addNode("Device")
-        val d2 = g.addNode("Device")
-        val h1 = g.addNode("Person", from = 0)
-        val h2 = g.addNode("Person", from = 2)
+        val f1 = g.addNode(AgriFarm)
+        val p1 = g.addNode(AgriParcel)
+        val p2 = g.addNode(AgriParcel)
+        val d1 = g.addNode(Device)
+        val d2 = g.addNode(Device)
+        val h1 = g.addNode(Person, from = 0)
+        val h2 = g.addNode(Person, from = 2)
 
-        val r1 = g.addEdge("hasParcel", f1.id, p1.id)
+        val r1 = g.addEdge(HasParcel, f1.id, p1.id)
         g.addProperty(r1.id.toLong(),"dateChanged", "today", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
         g.addProperty(r1.id.toLong(),"dateChanged", "yesterday", PropType.STRING, from = 2, sourceType = EDGE)
-        g.addEdge("hasParcel", f1.id, p2.id)
-        g.addEdge("hasDevice", p1.id, d1.id, from = 0, to = 2)
-        g.addEdge("hasDevice", p1.id, d2.id, from = 2, to = 4)
-        g.addEdge("hasDevice", p2.id, d2.id, from = 0, to = 2)
-        g.addEdge("hasDevice", p2.id, d1.id, from = 2, to = 4)
-        g.addEdge("hasManutentor", d1.id, h1.id, from = 0, to = 2)
-        g.addEdge("hasManutentor", d1.id, h2.id, from = 2, to = 4)
+        g.addEdge(HasParcel, f1.id, p2.id)
+        g.addEdge(HasDevice, p1.id, d1.id, from = 0, to = 2)
+        g.addEdge(HasDevice, p1.id, d2.id, from = 2, to = 4)
+        g.addEdge(HasDevice, p2.id, d2.id, from = 0, to = 2)
+        g.addEdge(HasDevice, p2.id, d1.id, from = 2, to = 4)
+        g.addEdge(HasManutentor, d1.id, h1.id, from = 0, to = 2)
+        g.addEdge(HasManutentor, d1.id, h2.id, from = 2, to = 4)
         g.addProperty(h1.id, "name", "Alice", PropType.STRING)
         g.addProperty(h1.id, "address", "Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(h1.id, "address", "Bar", PropType.STRING, from = 2)
 
         val ts1: TS = g.getTSM().addTS()
-        val m1 = ts1.add("Measurement", timestamp = 0, value = 0)
-        ts1.add("Measurement", timestamp = 1, value = 1)
-        ts1.add("Measurement", timestamp = 2, value = 2)
-        val t1 = g.addNode("Temperature", value = ts1.getTSId())
-        g.addEdge("hasTemperature", d1.id, t1.id)
-        g.addEdge("hasOwner", m1.id, h1.id, from = 0, to = 2, id = DUMMY_ID)
-        g.addEdge("hasOwner", m1.id, h2.id, from = 2, to = 4, id = DUMMY_ID)
+        val m1 = ts1.add(Measurement, timestamp = 0, value = 0)
+        ts1.add(Measurement, timestamp = 1, value = 1)
+        ts1.add(Measurement, timestamp = 2, value = 2)
+        val t1 = g.addNode(Temperature, value = ts1.getTSId())
+        g.addEdge(HasTemperature, d1.id, t1.id)
+        g.addEdge(HasOwner, m1.id, h1.id, from = 0, to = 2, id = DUMMY_ID)
+        g.addEdge(HasOwner, m1.id, h2.id, from = 2, to = 4, id = DUMMY_ID)
 
         val ts2 = g.getTSM().addTS()
-        ts2.add("Measurement", timestamp = 0, value = 10)
-        ts2.add("Measurement", timestamp = 1, value = 11)
-        ts2.add("Measurement", timestamp = 2, value = 12)
-        val t2 = g.addNode("Temperature", value = ts2.getTSId())
-        g.addEdge("hasTemperature", d2.id, t2.id)
+        ts2.add(Measurement, timestamp = 0, value = 10)
+        ts2.add(Measurement, timestamp = 1, value = 11)
+        ts2.add(Measurement, timestamp = 2, value = 12)
+        val t2 = g.addNode(Temperature, value = ts2.getTSId())
+        g.addEdge(HasTemperature, d2.id, t2.id)
 
         return g
     }
@@ -72,11 +72,11 @@ class TestTemporal {
             6,
             search(g, 
                 listOf(
-                    Step("Device"),
-                    Step("hasTemperature"),
-                    Step("Temperature"),
-                    Step(HAS_TS),
-                    Step("Measurement")
+                    Step(Device),
+                    Step(HasTemperature),
+                    Step(Temperature),
+                    Step(HasTS),
+                    Step(Measurement)
                 ), timeaware = true
             ).size
         )
@@ -89,11 +89,11 @@ class TestTemporal {
             4,
             search(g, 
                 listOf(
-                    Step("Device"),
-                    Step("hasTemperature"),
-                    Step("Temperature"),
-                    Step(HAS_TS),
-                    Step("Measurement")
+                    Step(Device),
+                    Step(HasTemperature),
+                    Step(Temperature),
+                    Step(HasTS),
+                    Step(Measurement)
                 ), timeaware = true, from = 0, to = 1
             ).size
         )
@@ -106,9 +106,9 @@ class TestTemporal {
             1,
             search(g, 
                 listOf(
-                    Step("Device"),
-                    Step("hasManutentor"),
-                    Step("Person"),
+                    Step(Device),
+                    Step(HasManutentor),
+                    Step(Person),
                 ), timeaware = true, from = 0, to = 1
             ).size
         )
@@ -119,7 +119,7 @@ class TestTemporal {
         val g = setup()
         kotlin.test.assertEquals(
             1,
-            search(g, listOf(Step("Person")), timeaware = true, from = 0, to = 1).size
+            search(g, listOf(Step(Person)), timeaware = true, from = 0, to = 1).size
         )
     }
 
@@ -127,13 +127,13 @@ class TestTemporal {
     fun testSearch4() {
         val g = setup()
         val steps = listOf(
-            Step("Device"),
-            Step("hasTemperature"),
-            Step("Temperature"),
-            Step(HAS_TS),
-            Step("Measurement"),
-            Step("hasOwner"),
-            Step("Person")
+            Step(Device),
+            Step(HasTemperature),
+            Step(Temperature),
+            Step(HasTS),
+            Step(Measurement),
+            Step(HasOwner),
+            Step(Person)
         )
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 4 + EPSILON).size)
@@ -146,13 +146,13 @@ class TestTemporal {
     fun testSearch5() {
         val g = setup()
         val steps = listOf(
-            Step("Device"),
-            Step("hasTemperature"),
-            Step("Temperature"),
-            Step(HAS_TS),
-            Step("Measurement"),
-            Step("hasOwner"),
-            Step("Person", listOf(Triple("name", Operators.EQ, "Alice")))
+            Step(Device),
+            Step(HasTemperature),
+            Step(Temperature),
+            Step(HasTS),
+            Step(Measurement),
+            Step(HasOwner),
+            Step(Person, listOf(Triple("name", Operators.EQ, "Alice")))
         )
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
@@ -162,7 +162,7 @@ class TestTemporal {
     fun testSearch6() {
         val g = setup()
         val steps = listOf(
-            Step("Person", listOf(Triple("name", Operators.EQ, "Alice"), Triple("address", Operators.EQ, "Foo")))
+            Step(Person, listOf(Triple("name", Operators.EQ, "Alice"), Triple("address", Operators.EQ, "Foo")))
         )
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
@@ -173,10 +173,10 @@ class TestTemporal {
     @Test
     fun testSearch7() {
         val g = setup()
-        var steps = listOf(Step("AgriFarm"), Step("hasParcel"), Step("AgriParcel"))
+        var steps = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel))
         kotlin.test.assertEquals(2, search(g, steps, timeaware = false).size)
 
-        steps = listOf(Step("AgriFarm"), Step("hasParcel", listOf(Triple("dateChanged", Operators.EQ, "today"))), Step("AgriParcel"))
+        steps = listOf(Step(AgriFarm), Step(HasParcel, listOf(Triple("dateChanged", Operators.EQ, "today"))), Step(AgriParcel))
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(0, search(g, steps, timeaware = true, from = 2).size)

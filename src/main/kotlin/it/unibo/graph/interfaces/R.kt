@@ -6,7 +6,7 @@ enum class Direction { IN, OUT }
 
 open class R(
     final override val id: Int, // id of the relationship
-    final override val type: String, // label
+    final override val type: Label, // label
     val fromN: Long, // from node
     val toN: Long, // to node
     var fromNextRel: Int? = null, // pointer to the next relationship of the `from node`
