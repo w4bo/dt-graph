@@ -25,10 +25,6 @@ class TestKotlin {
             }
     }
 
-    fun setup(): CustomGraph {
-        return setup(MemoryGraph())
-    }
-
     fun setup(g: Graph): CustomGraph {
         val g = CustomGraph(g)
         g.tsm = AsterixDBTSM.createDefault(g)
@@ -183,20 +179,22 @@ class TestKotlin {
 
     @Test
     fun testTSAsNode0() {
-        val g = GraphTraversalSource(setup())
-        kotlin.test.assertEquals(
-            1, g.V()
-                .hasLabel(Device.toString())
-                .out(HasHumidity.toString())
-                .hasLabel(Humidity.toString())
-                .toList().size
-        )
+        matrix {
+            val g = GraphTraversalSource(it as CustomGraph)
+            assertEquals(
+                1, g.V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .toList().size
+            )
+        }
     }
 
     @Test
     fun testSearch0() {
         matrix { g ->
-            kotlin.test.assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity))).size)
+            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity))).size)
         }
     }
 
@@ -207,15 +205,15 @@ class TestKotlin {
             listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
             listOf(Step(D, alias = "d"), null, Step(E), null, Step(F))
         )
-        kotlin.test.assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
-        kotlin.test.assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
+        assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
+        assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
         patterns = listOf(
             listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
             listOf(Step(D), null, Step(E, alias = "d"), null, Step(F))
         )
-        kotlin.test.assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
-        kotlin.test.assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
-        kotlin.test.assertEquals(
+        assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
+        assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
+        assertEquals(
             listOf(listOf("Errano", "Errano", "Errano")),
             query(g, 
                 listOf(
@@ -238,7 +236,7 @@ class TestKotlin {
                     listOf(Step(D), null, Step(E), null, Step(F))
                 )
             )
-        kotlin.test.assertEquals(
+        assertEquals(
             4,
             res.size,
             res.toString()
@@ -247,84 +245,91 @@ class TestKotlin {
 
     @Test
     fun testTSAsNode1() {
-        val g = GraphTraversalSource(setup())
-        kotlin.test.assertEquals(
-            6, g.V()
-                .hasLabel(Device.toString())
-                .out(HasHumidity.toString())
-                .hasLabel(Humidity.toString())
-                .out(HasTS.toString()).toList().size
-        )
+        matrix {
+            val g = GraphTraversalSource(it as CustomGraph)
+            assertEquals(
+                6, g.V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .out(HasTS.toString()).toList().size
+            )
+        }
     }
 
     @Test
     fun testSearch1() {
-        val g = setup()
-        kotlin.test.assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS))).size)
+        matrix {
+            assertEquals(1, search(it, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS))).size)
+        }
     }
 
     @Test
     fun testSearch2() {
-        val g = setup()
-        val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device, alias = "d"))
-        kotlin.test.assertEquals(2, search(g, pattern).size)
-        kotlin.test.assertEquals(1, search(g, pattern, listOf(Compare("p", "d", "location", Operators.ST_CONTAINS))).size)
+        matrix { g ->
+            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device, alias = "d"))
+            assertEquals(2, search(g, pattern).size)
+            assertEquals(1, search(g, pattern, listOf(Compare("p", "d", "location", Operators.ST_CONTAINS))).size)
+        }
     }
 
     @Test
     fun testSearchTS() {
-        val g = setup()
-        val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
-        kotlin.test.assertEquals(3, search(g, pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
+        matrix { g ->
+            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
+            assertEquals(3, search(g, pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
+        }
     }
 
     @Test
     fun testSearch1bis() {
-        val g = setup()
-        kotlin.test.assertEquals(6, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement))).size)
-        kotlin.test.assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Triple("unit", Operators.EQ, "Celsius"))))).size)
+        matrix { g ->
+            assertEquals(6, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement))).size)
+            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Triple("unit", Operators.EQ, "Celsius"))))).size)
+        }
     }
 
     @Test
     fun testTSAsNode4() {
-        val g = setup()
-        kotlin.test.assertEquals(
-            listOf(12.5), GraphTraversalSource(g).V()
-                .hasLabel(Device.toString())
-                .out(HasHumidity.toString())
-                .hasLabel(Humidity.toString())
-                .out(HasTS.toString())
-                .values<Number>(VALUE)
-                .mean<Number>()
-                .toList()
-        )
-
-        kotlin.test.assertEquals(
-            listOf(12.5 as Any),
-            query(g, 
-                listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, alias = "m")),
-                by = listOf(Aggregate("m", "value", AggOperator.AVG))
+        matrix { g ->
+            assertEquals(
+                listOf(12.5), GraphTraversalSource(g as CustomGraph).V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .out(HasTS.toString())
+                    .values<Number>(VALUE)
+                    .mean<Number>()
+                    .toList()
             )
-        )
 
-        kotlin.test.assertEquals(
-            listOf(15.0 as Any),
-            query(g, 
-                listOf(Step(AgriParcel), null, Step(Device), null, null, Step(HasTS), Step(Measurement, alias = "m")),
-                by = listOf(Aggregate("m", "value", AggOperator.AVG))
+            assertEquals(
+                listOf(12.5 as Any),
+                query(g,
+                    listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, alias = "m")),
+                    by = listOf(Aggregate("m", "value", AggOperator.AVG))
+                )
             )
-        )
+
+            assertEquals(
+                listOf(15.0 as Any),
+                query(g,
+                    listOf(Step(AgriParcel), null, Step(Device), null, null, Step(HasTS), Step(Measurement, alias = "m")),
+                    by = listOf(Aggregate("m", "value", AggOperator.AVG))
+                )
+            )
+        }
     }
 
     @Test
     fun testReturn() {
         val g = setup1()
-        kotlin.test.assertEquals(
+        assertEquals(
             listOf(listOf("Errano", "Bar"), listOf("null", "null")),
             query(g, listOf(Step(A, alias = "n"), null, Step(B, alias = "m")), by = listOf(Aggregate("n", "name"), Aggregate("m", "name")))
         )
 
-        kotlin.test.assertEquals(
+        assertEquals(
             listOf("Errano" as Any, "null" as Any),
             query(g, listOf(Step(A, alias = "n")), by = listOf(Aggregate("n", "name")))
         )
@@ -332,49 +337,59 @@ class TestKotlin {
 
     @Test
     fun testSearch5() {
-        val g = setup()
-        kotlin.test.assertEquals(12, search(g, listOf(null, Step(HasTS), Step(Measurement))).size)
+        matrix { g ->
+            assertEquals(12, search(g, listOf(null, Step(HasTS), Step(Measurement))).size)
+        }
     }
 
     @Test
     fun testTSAsNode5() {
-        val g = GraphTraversalSource(setup())
-        kotlin.test.assertEquals(
-            listOf(24.0), g.V()
-                .hasLabel(Device.toString())
-                .out(HasSolarRadiation.toString())
-                .hasLabel(SolarRadiation.toString())
-                .out(HasTS.toString())
-                .values<Number>(VALUE)
-                .mean<Number>()
-                .toList()
-        )
+        matrix { g ->
+            assertEquals(
+                listOf(24.0),
+                GraphTraversalSource(g as CustomGraph)
+                    .V()
+                    .hasLabel(Device.toString())
+                    .out(HasSolarRadiation.toString())
+                    .hasLabel(SolarRadiation.toString())
+                    .out(HasTS.toString())
+                    .values<Number>(VALUE)
+                    .mean<Number>()
+                    .toList()
+            )
+        }
     }
 
     @Test
     fun testTSAsNode2() {
-        val g = GraphTraversalSource(setup())
-        kotlin.test.assertEquals(
-            1, g.V()
-                .hasLabel(Device.toString())
-                .out(HasHumidity.toString())
-                .hasLabel(Humidity.toString())
-                .out(HasTS.toString())
-                .out(HasManutentor.toString()).toList().size
-        )
+        matrix { g ->
+            assertEquals(
+                1,
+                GraphTraversalSource(g as CustomGraph)
+                    .V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .out(HasTS.toString())
+                    .out(HasManutentor.toString()).toList().size
+            )
+        }
     }
 
     @Test
     fun testTSAsNode3() {
-        val g = GraphTraversalSource(setup())
-        kotlin.test.assertEquals(
-            1, g.V()
-                .hasLabel(Device.toString())
-                .out(HasHumidity.toString())
-                .hasLabel(Humidity.toString())
-                .out(HasTS.toString())
-                .out(HasManutentor.toString())
-                .out(HasFriend.toString()).toList().size
-        )
+        matrix { g ->
+            assertEquals(
+                1,
+                GraphTraversalSource(g as CustomGraph)
+                    .V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .out(HasTS.toString())
+                    .out(HasManutentor.toString())
+                    .out(HasFriend.toString()).toList().size
+            )
+        }
     }
 }
