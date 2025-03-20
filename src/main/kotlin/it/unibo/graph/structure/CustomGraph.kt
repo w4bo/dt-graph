@@ -1,9 +1,6 @@
 package it.unibo.graph.structure
 
-import it.unibo.graph.N
-import it.unibo.graph.P
-import it.unibo.graph.PropType
-import it.unibo.graph.R
+import it.unibo.graph.interfaces.*
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
@@ -12,9 +9,9 @@ import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
 import org.apache.tinkerpop.gremlin.structure.Vertex
 
-class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
+class CustomGraph(val g: it.unibo.graph.interfaces.Graph) : Graph, it.unibo.graph.interfaces.Graph by g {
     override fun addVertex(vararg keyValues: Any?): Vertex {
-        val n = this.addNode(keyValues[1].toString()) as CustomVertex
+        val n = this.addNode(labelFromString(keyValues[1].toString())) as CustomVertex
         keyValues
             .toList()
             .forEachIndexed { idx, v ->
@@ -54,20 +51,21 @@ class CustomGraph(g: it.unibo.graph.Graph) : Graph, it.unibo.graph.Graph by g {
     }
 
     override fun close() {
+        g.close()
         clear()
     }
 
-    override fun addNode(label: String, value: Long?, from: Long, to: Long): N {
-        return addNode(CustomVertex(nextNodeIdOffset(), label, value = value, fromTimestamp = from, toTimestamp = to))
+    override fun addNode(label: Label, value: Long?, from: Long, to: Long): N {
+        return addNode(CustomVertex(nextNodeIdOffset(), label, value = value, fromTimestamp = from, toTimestamp = to, g = g))
     }
 
     override fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long, to: Long, sourceType: Boolean, id: Int): P {
         return addProperty(
-            CustomProperty<String>(id, sourceId, sourceType, key, value, type, from, to)
+            CustomProperty<String>(id, sourceId, sourceType, key, value, type, from, to, g = g)
         )
     }
 
-    override fun addEdge(label: String, fromNode: Long, toNode: Long, id: Int, from: Long, to: Long): R {
-        return addEdge(CustomEdge(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to))
+    override fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Int, from: Long, to: Long): R {
+        return addEdge(CustomEdge(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = g))
     }
 }
