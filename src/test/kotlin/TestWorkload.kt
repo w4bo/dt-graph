@@ -1,19 +1,12 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.interfaces.TS
-import it.unibo.graph.query.*
-import it.unibo.graph.rocksdb.RocksDBGraph
-import it.unibo.graph.structure.CustomGraph
-import it.unibo.graph.utils.*
-import org.apache.tinkerpop.gremlin.process.traversal.Pop
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.TestFactory
-import kotlin.test.Test
-import kotlin.test.assertTrue
 import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.query.*
+import it.unibo.graph.structure.CustomGraph
+import org.junit.jupiter.api.Assertions.assertEquals
+import kotlin.test.Test
 
 class TestWorkload{
 

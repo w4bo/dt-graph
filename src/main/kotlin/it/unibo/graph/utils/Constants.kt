@@ -1,6 +1,5 @@
 package it.unibo.graph.utils
 
-//const val HAS_TS = "hasTS"
 const val VALUE = "value"
 const val GRAPH_SOURCE = 0L
 const val LOCATION = "location"

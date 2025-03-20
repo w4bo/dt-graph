@@ -2,12 +2,9 @@ package it.unibo.graph.interfaces
 
 import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.LOCATION
 import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.VALUE
 import org.apache.commons.lang3.NotImplementedException
-import org.locationtech.jts.geom.Geometry
-import org.locationtech.jts.io.geojson.GeoJsonReader
 
 open class N(
     final override val id: Long, // node id
@@ -16,28 +13,16 @@ open class N(
     final override var nextProp: Int? = null, // if graph node, link to the next property
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
     val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
-    location: String? = null, // location of a measurement
     @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
     @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
-    var locationTimestamp: Long = fromTimestamp,
     @Transient final override var g: Graph
 ) : ElemP {
-
-    var location: Geometry? = location?.let{ GeoJsonReader().read(it) }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
         return when (name) {
             VALUE -> if (value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE, g = g)) else emptyList()
-//            LOCATION -> {
-//                // If searching for last location
-//                if (location != null && locationTimestamp >= fromTimestamp) {
-//                    listOf(P(DUMMY_ID, id, NODE, LOCATION, location!!, PropType.GEOMETRY, g = g))
-//                } else {
-//                    super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
-//                }
-//            }
             else -> {
                 super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
             }

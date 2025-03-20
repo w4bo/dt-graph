@@ -1,10 +1,8 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.ElemP
-import org.jetbrains.kotlinx.dataframe.io.JSON
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.geojson.GeoJsonReader
-import org.locationtech.jts.io.geojson.GeoJsonWriter
 
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 

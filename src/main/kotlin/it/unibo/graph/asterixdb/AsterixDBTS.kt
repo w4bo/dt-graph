@@ -4,7 +4,6 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.encodeBitwise
 import org.json.JSONObject
-import org.locationtech.jts.io.geojson.GeoJsonWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -13,7 +12,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import it.unibo.graph.utils.*
 
 class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: String, private val dataverse: String, private val dataset: String): TS {
 
@@ -138,7 +136,6 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
                                 timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = labelFromString(jsonEntity.getString("property")),
-                                location = jsonEntity.getJSONObject("location").toString(),
                                 fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
                                 toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
                                 value = jsonEntity.getDouble("value").toLong(),
