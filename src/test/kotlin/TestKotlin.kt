@@ -246,9 +246,10 @@ class TestKotlin {
     @Test
     fun testTSAsNode1() {
         matrix {
-            val g = GraphTraversalSource(it as CustomGraph)
             assertEquals(
-                6, g.V()
+                6,
+                GraphTraversalSource(it as CustomGraph)
+                    .V()
                     .hasLabel(Device.toString())
                     .out(HasHumidity.toString())
                     .hasLabel(Humidity.toString())
@@ -293,7 +294,9 @@ class TestKotlin {
     fun testTSAsNode4() {
         matrix { g ->
             assertEquals(
-                listOf(12.5), GraphTraversalSource(g as CustomGraph).V()
+                listOf(12.5),
+                GraphTraversalSource(g as CustomGraph)
+                    .V()
                     .hasLabel(Device.toString())
                     .out(HasHumidity.toString())
                     .hasLabel(Humidity.toString())
