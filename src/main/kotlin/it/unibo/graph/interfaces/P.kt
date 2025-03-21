@@ -1,18 +1,21 @@
 package it.unibo.graph.interfaces
 
+import it.unibo.graph.rocksdb.RocksDBGraph
+import it.unibo.graph.rocksdb.RocksDBGraph.Companion
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.GRAPH_SOURCE
 import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwiseSource
+import org.rocksdb.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-enum class PropType { INT, DOUBLE, STRING, TS, GEOMETRY }
+enum class PropType { INT, LONG, DOUBLE, STRING, GEOMETRY }
 
-const val MAX_LENGTH_STRING = 24
-
-val PROPERTY_SIZE: Int = 41 * MAX_LENGTH_STRING * 2
+const val MAX_LENGTH_KEY = 24
+const val MAX_LENGTH_VALUE = 8
+const val PROPERTY_SIZE: Int = 41 * MAX_LENGTH_KEY + MAX_LENGTH_VALUE
 
 open class P(
     final override val id: Int,
@@ -28,6 +31,20 @@ open class P(
 ) : Elem {
 
     companion object {
+
+        private val db: RocksDB
+        private val DB_NAME = "properties"
+        init {
+            val options: DBOptions = DBOptions()
+            options.setCreateIfMissing(true)
+            options.setCreateMissingColumnFamilies(true)
+            val cfDescriptors = listOf(
+                ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
+            )
+            val cfHandles: List<ColumnFamilyHandle> = ArrayList()
+            db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
+        }
+
         fun fromByteArray(bytes: ByteArray, g: Graph): P {
             val buffer = ByteBuffer.wrap(bytes)
             val id = buffer.long.toInt()
@@ -41,28 +58,34 @@ open class P(
                 buffer.get(bytes)
                 return bytes.toString(StandardCharsets.UTF_8).trimEnd('\u0000') // Trim null padding
             }
-            val key = readString(buffer, MAX_LENGTH_STRING)
-            val valueStr = readString(buffer, MAX_LENGTH_STRING) // Read as string first
+            val key = readString(buffer, MAX_LENGTH_KEY)
             val typeOrdinal = buffer.int
             val type = PropType.entries[typeOrdinal]
+            val value: Any = when (type) {
+                PropType.LONG -> buffer.long       // Serialize Long as 8 bytes
+                PropType.DOUBLE -> buffer.double // Serialize Double as 8 bytes
+                PropType.INT -> {                                    // Serialize Int as 4 bytes + 4 bytes as padding
+                    buffer.int
+                    buffer.int
+                }
+                PropType.STRING -> {                                 // Serialize String (using your serializeString method)
+                    val v = readString(buffer, MAX_LENGTH_VALUE)
+                    v.ifEmpty {
+                        String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)
+                    }
+                }
+                else -> throw IllegalArgumentException("Unsupported type: $type")
+            }
             val next = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
-            // // Convert value based on PropType
-            // val value: Any = when (type) {
-            //     PropType.STRING -> valueStr
-            //     PropType.INTEGER -> valueStr.toIntOrNull() ?: 0
-            //     PropType.FLOAT -> valueStr.toFloatOrNull() ?: 0f
-            //     PropType.BOOLEAN -> valueStr.toBooleanStrictOrNull() ?: false
-            // }
-            val value = valueStr
             return P(id, sourceId, sourceType, key, value, type, next, fromTimestamp, toTimestamp, g = g)
         }
     }
 
     fun serialize(): ByteArray {
-        fun serializeString(s: String): ByteArray {
-            val sBuffer = ByteBuffer.allocate(MAX_LENGTH_STRING)
+        fun serializeString(s: String, size: Int): ByteArray {
+            val sBuffer = ByteBuffer.allocate(size)
             val bytes = s.toByteArray(StandardCharsets.UTF_8)
-            val truncated = bytes.copyOfRange(0, minOf(bytes.size, MAX_LENGTH_STRING)) // Trim if too long
+            val truncated = bytes.copyOfRange(0, minOf(bytes.size, size)) // Trim if too long
             sBuffer.put(truncated)
             return sBuffer.array()
         }
@@ -72,11 +95,28 @@ open class P(
         buffer.putLong(toTimestamp)                     // 8 bytes
         buffer.putLong(sourceId)                        // 8 bytes
         buffer.put(if (sourceType) 1 else 0)            // 1 Byte
-        buffer.put(serializeString(key))                // MAX_LENGTH_STRING Bytes
-        buffer.put(serializeString(value.toString()))   // MAX_LENGTH_STRING Bytes
+        buffer.put(serializeString(key, MAX_LENGTH_KEY))// MAX_LENGTH_KEY Bytes
         buffer.putInt(type.ordinal)                     // 4 bytes
+        when (type) {
+            PropType.LONG -> buffer.putLong(value as Long)       // Serialize Long as 8 bytes
+            PropType.DOUBLE -> buffer.putDouble(value as Double) // Serialize Double as 8 bytes
+            PropType.INT -> {                                    // Serialize Int as 4 bytes + 4 bytes as padding
+                buffer.putInt(0)
+                buffer.putInt(value as Int)
+            }
+            PropType.STRING -> {                                 // Serialize String (using your serializeString method)
+                val value = value as String
+                if (value.length > MAX_LENGTH_VALUE) { // in place if the string is longer than 8 bytes
+                    db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+                    repeat(8) { buffer.put(0.toByte()) } // Add 8 empty bytes (0x00)
+                } else { // in place if the string is shorter than or equal to 8 bytes
+                    buffer.put(serializeString(value, MAX_LENGTH_VALUE))
+                }
+            }
+            else -> throw IllegalArgumentException("Unsupported type: ${value::class.simpleName}")
+        }
         buffer.putInt(next?: Int.MIN_VALUE)       // 4 bytes
-        return buffer.array()                           // 41 + MAX_LENGTH_STRING * 2
+        return buffer.array()                           // 41 + MAX_LENGTH_KEY + MAX_LENGTH_VALUE
     }
 
     init {

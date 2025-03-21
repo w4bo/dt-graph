@@ -1,11 +1,8 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.*
-import it.unibo.graph.interfaces.N
-import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.interfaces.TS
 import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.structure.CustomGraph
@@ -420,21 +417,23 @@ class TestKotlin {
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()
-
         val n0 = g.addNode(AgriFarm)
         val n1 = g.addNode(Device)
         val e1 = g.addEdge(HasDevice, n0.id, n1.id)
         val p1 = g.addProperty(n0.id, "name", "N0", PropType.STRING)
         val p2 = g.addProperty(n1.id, "name", "N1", PropType.STRING)
         val p3 = g.addProperty(e1.id.toLong(), "name", "E1", PropType.STRING, sourceType = EDGE)
-
+        val p4 = g.addProperty(e1.id.toLong(), "p4", 1, PropType.INT, sourceType = EDGE)
+        val p5 = g.addProperty(e1.id.toLong(), "p5", "A".repeat(MAX_LENGTH_VALUE + 1), PropType.STRING, sourceType = EDGE)
+        val p6 = g.addProperty(e1.id.toLong(), "p6", 1L, PropType.LONG, sourceType = EDGE)
+        val p7 = g.addProperty(e1.id.toLong(), "p7", 1.0, PropType.DOUBLE, sourceType = EDGE)
+        val p8 = g.addProperty(e1.id.toLong(), "p8", 1.0, PropType.DOUBLE, sourceType = EDGE)
         g.flushToDisk()
-
         assertEquals(g.getNode(N0), g.getNodeFromDisk(N0))
         assertEquals(n1, g.getNodeFromDisk(N1))
         assertEquals(e1, g.getEdgeFromDisk(e1.id.toLong()))
-        assertEquals(p1, g.getPropertyFromDisk(p1.id.toLong()))
-        assertEquals(p2, g.getPropertyFromDisk(p2.id.toLong()))
-        assertEquals(p3, g.getPropertyFromDisk(p3.id.toLong()))
+        listOf(p1, p2, p3, p4, p5, p6, p7, p8).forEach {
+            assertEquals(it, g.getPropertyFromDisk(it.id.toLong()))
+        }
     }
 }

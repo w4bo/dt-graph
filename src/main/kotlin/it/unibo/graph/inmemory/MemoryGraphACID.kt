@@ -133,7 +133,7 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
 
     @Throws(IOException::class)
     fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
-        lock.lock()
+        // lock.lock()
         try {
             val record = WALRecord(fileChannel, offset, payload, true)
             toWrite.add(record)
@@ -147,7 +147,7 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
                 }
             }
         } finally {
-            lock.unlock()
+            // lock.unlock()
         }
     }
 
