@@ -23,7 +23,7 @@ class CustomVertex(
     }
 
     override fun label(): String {
-        return type.toString()
+        return label.toString()
     }
 
     override fun graph(): Graph {
@@ -95,7 +95,7 @@ class CustomVertex(
     override fun vertices(direction: Direction, vararg edgeLabels: String): Iterator<Vertex> {
         return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels)?.let { labelFromString(it) })
             .flatMap { r ->
-                if (r.type == HasTS) {
+                if (r.label == HasTS) {
                     g.getTSM().getTS(r.toN).getValues().map { it as CustomVertex }
                 } else {
                     listOf(g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)

@@ -25,7 +25,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
                 "timestamp": datetime("${convertTimestampToISO8601(n.timestamp!!)}"),
                 ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
                 ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
-                "property": "${n.type}",
+                "property": "${n.label}",
                 "location": st_geom_from_geojson(
                     ${n.getProps(name = "location").firstOrNull()?.value
                             ?.let { it as? String }
@@ -176,7 +176,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         return """
         {
             "id": ${relationship.id},
-            "type": "${relationship.type}",
+            "type": "${relationship.label}",
             "fromN": ${relationship.fromN},
             "toN": ${relationship.toN},
             $fromTimestampStr
@@ -189,7 +189,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
     private fun jsonToRel(json: JSONObject): R {
         val newRelationship = R(
             id = json.getInt("id"),
-            type = enumValueOf<Labels>(json.getString("type")),
+            label = enumValueOf<Labels>(json.getString("type")),
             fromN = 0L, // Valore placeholder, se non è nel JSON
             toN = json.getLong("toN"),
             fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,

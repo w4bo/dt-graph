@@ -19,7 +19,7 @@ class CustomEdge(
     }
 
     override fun label(): String {
-        return type.toString()
+        return label.toString()
     }
 
     override fun graph(): Graph {

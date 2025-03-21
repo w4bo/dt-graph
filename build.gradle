@@ -42,6 +42,7 @@ dependencies {
     implementation 'org.locationtech.jts.io:jts-io-common:1.20.0'
     implementation 'org.jetbrains.kotlinx:dataframe:0.15.0'
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+    implementation "org.openjdk.jol:jol-core:0.16"
     testImplementation 'org.jetbrains.kotlin:kotlin-test' // :2.1.0
 }
 

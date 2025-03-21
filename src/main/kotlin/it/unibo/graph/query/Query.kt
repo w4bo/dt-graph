@@ -225,7 +225,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: 
         val alias: String? = match[index]?.alias
         val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
-                    (match[index]!!.type == null || match[index]!!.type == e.type)  // filter on label
+                    (match[index]!!.type == null || match[index]!!.type == e.label)  // filter on label
                             && match[index]!!.properties.all { f ->
                         e.getProps(
                             name = f.first,
@@ -254,7 +254,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: 
                         }
                 } else { // is edge...
                     val r = (e as R)
-                    if (e.type == HasTS) { // ... to time series
+                    if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
                             .getValues()

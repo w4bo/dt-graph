@@ -1,7 +1,9 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.query.*
@@ -17,7 +19,7 @@ import kotlin.test.assertTrue
 class TestKotlin {
 
     fun matrix(f: (Graph) -> Unit) {
-        listOf(MemoryGraph(), RocksDBGraph())
+        listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
             .map { setup(it) }
             .forEach {
                 f(it)
@@ -140,6 +142,15 @@ class TestKotlin {
         assertEquals(Pair(n, n), decodeBitwise(encodeBitwise(n, n)))
         val ts = System.currentTimeMillis()
         assertEquals(Pair(n, ts), decodeBitwise(encodeBitwise(n, ts)))
+    }
+
+    @Test
+    fun `test size`() {
+        // println(ClassLayout.parseClass(N::class.java).toPrintable())
+        // println(ClassLayout.parseClass(R::class.java).toPrintable())
+        // println(ClassLayout.parseClass(P::class.java).toPrintable())
+        val g = setup(MemoryGraph())
+        assertEquals(52, g.getNode(N0).serialize().size)
     }
 
     @Test
@@ -346,7 +357,7 @@ class TestKotlin {
     }
 
     @Test
-    fun testTSAsNode5() {
+    fun `graph to TS`() {
         matrix { g ->
             assertEquals(
                 listOf(24.0),
@@ -364,7 +375,7 @@ class TestKotlin {
     }
 
     @Test
-    fun testTSAsNode2() {
+    fun `graph to TS to graph 1`() {
         matrix { g ->
             assertEquals(
                 1,
@@ -380,7 +391,7 @@ class TestKotlin {
     }
 
     @Test
-    fun testTSAsNode3() {
+    fun `graph to TS to graph 2`() {
         matrix { g ->
             assertEquals(
                 1,
@@ -394,5 +405,36 @@ class TestKotlin {
                     .out(HasFriend.toString()).toList().size
             )
         }
+    }
+
+    @Test
+    fun `serialize and deserialize`() {
+        matrix { g ->
+            assertEquals(g.getNode(N0), N.fromByteArray(g.getNode(N0).serialize(), g))
+        }
+    }
+
+    @Test
+    fun `ACID graph`() {
+        val g = MemoryGraphACID()
+        g.tsm = AsterixDBTSM.createDefault(g)
+        g.clear()
+        g.getTSM().clear()
+
+        val n0 = g.addNode(AgriFarm)
+        val n1 = g.addNode(Device)
+        val e1 = g.addEdge(HasDevice, n0.id, n1.id)
+        val p1 = g.addProperty(n0.id, "name", "N0", PropType.STRING)
+        val p2 = g.addProperty(n1.id, "name", "N1", PropType.STRING)
+        val p3 = g.addProperty(e1.id.toLong(), "name", "E1", PropType.STRING, sourceType = EDGE)
+
+        g.flushToDisk()
+
+        assertEquals(g.getNode(N0), g.getNodeFromDisk(N0))
+        assertEquals(n1, g.getNodeFromDisk(N1))
+        assertEquals(e1, g.getEdgeFromDisk(e1.id.toLong()))
+        assertEquals(p1, g.getPropertyFromDisk(p1.id.toLong()))
+        assertEquals(p2, g.getPropertyFromDisk(p2.id.toLong()))
+        assertEquals(p3, g.getPropertyFromDisk(p3.id.toLong()))
     }
 }

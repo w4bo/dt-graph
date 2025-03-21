@@ -17,15 +17,6 @@ open class MemoryGraph: Graph {
 
     override fun nextNodeId(): Long = nodes.size.toLong()
 
-    override fun addEdge(r: R): R {
-        if (r.id >= rels.size || r.id == DUMMY_ID) {
-            return super.addEdge(r)
-        } else {
-            rels[(r.id as Number).toInt()] = r
-            return r
-        }
-    }
-
     override fun addNode(n: N): N {
         if (n.id >= nodes.size) {
             nodes += n
@@ -49,7 +40,11 @@ open class MemoryGraph: Graph {
     override fun nextEdgeId(): Int = rels.size
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        rels += r
+        if (r.id >= rels.size) {
+            rels += r
+        } else {
+            rels[(r.id as Number).toInt()] = r
+        }
         return r
     }
 
