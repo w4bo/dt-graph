@@ -6,6 +6,8 @@ import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import it.unibo.graph.structure.CustomGraph
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.TestFactory
+import kotlin.math.truncate
 import kotlin.test.Test
 
 class TestWorkload{
@@ -22,8 +24,8 @@ class TestWorkload{
         Step(AgriFarm, alias="farm"),
         Step(HasParcel),
         Step(AgriParcel, alias="parcel"),
-        Step(HasDrone),
-        Step(Drone, alias="device"),
+        Step(HasDevice),
+        Step(Device, alias="device"),
     )
     fun setup(dynamicDevices: Boolean = false): CustomGraph {
         return setup(MemoryGraph(), dynamicDevices)
@@ -67,21 +69,21 @@ class TestWorkload{
             var measurementTimestamp = 0L
 
             // Moving device
-            val erranoDrone = g.addNode(Drone)
+            val erranoDrone = g.addNode(Device)
             g.addProperty(erranoDrone.id, "name", "Errano Drone" ,PropType.STRING)
             g.addProperty(erranoDrone.id, "location", """{"coordinates":[11.799328,44.235394],"type":"Point"}""", PropType.GEOMETRY, from = 0, to = 2)
 
             val droneTs = g.getTSM().addTS()
             val droneNDVI = g.addNode(NDVI, value = droneTs.getTSId())
 
-            g.addEdge(HasDrone, erranoT1.id, erranoDrone.id, from = 0, to = 2)
+            g.addEdge(HasDevice, erranoT1.id, erranoDrone.id, from = 0, to = 2)
             g.addEdge(HasNDVI, erranoDrone.id, droneNDVI.id)
 
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
 
             //Moving device from T1 to T2
-            g.addEdge(HasDrone, erranoT2.id, erranoDrone.id, from = 2, to = 5)
+            g.addEdge(HasDevice, erranoT2.id, erranoDrone.id, from = 2, to = 5)
             g.addProperty(erranoDrone.id, "location", """{"coordinates":[11.800711,44.234904],"type":"Point"}""", PropType.GEOMETRY, from = 2, to = 5)
 
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
@@ -91,6 +93,7 @@ class TestWorkload{
 
         // Weather station, not linked to anything
         val weatherStation = g.addNode(Device)
+        g.addProperty(weatherStation.id, "name", """Errano Weather Station""" ,PropType.GEOMETRY)
         g.addProperty(weatherStation.id, "location", """{"coordinates":[11.80164,44.234831],"type":"Point"}""" ,PropType.GEOMETRY)
 
         // g.addEdge(hasDevice, errano.id, weatherStation.id)
@@ -103,10 +106,9 @@ class TestWorkload{
         val weatherTS = g.getTSM().addTS()
 
         for (timestamp in 0L..1){
-            println("Added measruement")
             t1TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
-            //t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
-            //weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.80164,44.234831],"type":"Point"}""")
+            t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
+            weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.80164,44.234831],"type":"Point"}""")
         }
 
         val weatherTemperature = g.addNode(Temperature, value = weatherTS.getTSId())
@@ -142,6 +144,7 @@ class TestWorkload{
                 listOf(Step(AgriFarm, alias="farm")),
                 listOf(Step(Device, alias="device"))
             )
+
         // Devices in farm throuh spatial join
         kotlin.test.assertEquals(3, query(g, pattern, listOf(Compare("farm","device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
     }
@@ -193,26 +196,94 @@ class TestWorkload{
         kotlin.test.assertEquals(2, result.size)
     }
 
+    // A -> E -> M
+    @Test
+    fun agentHistory(){
+        //TODO
+        /*
+            AgentHistory(𝐴): where A is a set of agents. List, for
+            each 𝛼 ∈ 𝐴, the average value for measurements for
+            each environment in the past 24 hours.
+         */
+    }
+
     // A -> M -> E
-//    @Test
-//    fun AgentCoverage(){
-//        val g = setup(dynamicDevices=true)
-//        val devices = listOf(Pair(1,"Errano T1 MoistureDevice"), Pair(1,"Errano T1 MoistureDevice"), Pair(2,"Errano Drone"))
-//        devices.forEach {
-//            val pattern = listOf(
-//                listOf(Step(AgriParcel, alias = "env")),
-//                listOf(Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
-//                    null,
-//                    null,
-//                    Step(HasTS),
-//                    Step(Measurement, alias = "meas")
-//                )
-//            )
-//            val result = query(g, pattern, where = listOf(Compare("env", "meas", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")))
-//
-//            kotlin.test.assertEquals(it.first, result.size)
-//        }
-//
-//    }
+    @Test
+    fun agentCoverage(){
+        val g = setup(dynamicDevices=true)
+        val devices = listOf(Pair(1,"Errano T1 MoistureDevice"), Pair(1,"Errano T1 MoistureDevice"), Pair(2,"Errano Drone"))
+        devices.forEach {
+
+            // v.1 graph traversal
+            val traversalPattern = listOf(
+                Step(AgriFarm, alias="farm"),
+                null,
+                Step(AgriParcel, alias = "env"),
+                Step(HasDevice),
+                Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
+                null,
+                null,
+                Step(HasTS),
+                Step(Measurement, alias = "meas")
+            )
+
+            // v.2 Spatial contains
+            val pattern = listOf(
+                listOf(Step(AgriParcel, alias = "env")),
+                listOf(Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
+                    null,
+                    null,
+                    Step(HasTS),
+                    Step(Measurement, alias = "meas")
+                )
+            )
+            val spatialResult = query(g, pattern, where = listOf(Compare("env", "meas", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")))
+            val traversalResult = query(g, traversalPattern, where = listOf(Compare("env", "meas", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), timeaware = true)
+
+            kotlin.test.assertEquals(it.first, spatialResult.size)
+            kotlin.test.assertEquals(it.first, traversalResult.size)
+        }
+    }
+
+    // M -> A -> E
+    @Test
+    fun currentAgentLocation(){
+        val g = setup(dynamicDevices = true)
+        val resultMap = mapOf(
+            "Errano T1 MoistureDevice" to "Errano T1",
+            "Errano T2 MoistureDevice" to "Errano T2",
+            "Errano Drone" to "Errano T2",
+            "Errano Weather Station" to ""
+        )
+        val historicalPattern = listOf(
+            Step(Device, alias="oldDevice"),
+            null,
+            null,
+            Step(HasTS),
+            null
+        )
+
+        val nowPattern = listOf(
+                Step(AgriParcel, alias = "env"),
+                Step(HasDevice),
+                Step(Device, alias = "nowDevice")
+            )
+
+        val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
+
+        kotlin.test.assertEquals(4, devicesInTime.size)
+
+        devicesInTime.forEach{
+            val pattern = listOf(
+                listOf(Step(Device, listOf(Triple("name", Operators.EQ, it)), alias = "device")),
+                nowPattern
+            )
+            val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
+
+            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+        }
+    }
+    
+
 
 }
