@@ -33,7 +33,7 @@ open class P(
     companion object {
 
         private val db: RocksDB
-        private val DB_NAME = "properties"
+        private val DB_NAME = "db_properties"
         init {
             val options: DBOptions = DBOptions()
             options.setCreateIfMissing(true)
