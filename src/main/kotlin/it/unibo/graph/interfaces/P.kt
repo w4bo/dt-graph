@@ -113,6 +113,10 @@ open class P(
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
                 }
             }
+            PropType.GEOMETRY -> {
+                val value = value as String
+                db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+            }
             else -> throw IllegalArgumentException("Unsupported type: ${value::class.simpleName}")
         }
         buffer.putInt(next?: Int.MIN_VALUE)       // 4 bytes

@@ -10,6 +10,15 @@ import org.junit.jupiter.api.TestFactory
 import kotlin.math.truncate
 import kotlin.test.Test
 
+
+/**
+ * Problemi:
+ *  1. Non abbiamo possibilità di fare dei BIN temporali, e.g., SELECT timestamp, AVG(value) GROUP BY HOUR(timestamp)
+ *  2. Nella search sulle TS, il toTimestamp è incluso.
+ *  3. Senza Gremlin, non ho accesso alla TS come lista di elementi
+ *  4. Non abbiamo percorsi di dimensione variabile e.g., [*2...5]
+ *
+ */
 class TestWorkload{
 
     val staticDevicePattern = listOf(
@@ -111,14 +120,14 @@ class TestWorkload{
             weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.80164,44.234831],"type":"Point"}""")
         }
 
-        val weatherTemperature = g.addNode(Temperature, value = weatherTS.getTSId())
+        val weatherTemperature = g.addNode(Humidity, value = weatherTS.getTSId())
         val t1Humidity = g.addNode(Humidity, value = t1TS.getTSId())
         val t2Humidity = g.addNode(Humidity, value = t2TS.getTSId())
 
 
         g.addEdge(HasHumidity, t1Moisture.id, t1Humidity.id)
         g.addEdge(HasHumidity, t2Moisture.id, t2Humidity.id)
-        g.addEdge(HasTemperature, weatherStation.id, weatherTemperature.id)
+        g.addEdge(HasHumidity, weatherStation.id, weatherTemperature.id)
 
         return g
     }
@@ -158,6 +167,9 @@ class TestWorkload{
 
 
         // v.1 Following graph edges
+        /**
+         * MATCH (:AgriFarm ) -> [:hasAgriParcel ] -> (:Parcel ) -> [:hasDevice ] -> (:Device) -> [:hasTemperature] -> (:Temperature) -> [:hasTS]
+         */
         val pattern = staticDevicePattern + listOf(
             Step(HasHumidity),
             Step(tau),
@@ -165,16 +177,25 @@ class TestWorkload{
         )
 
         // v.2 Following spatial contains
+        /**
+         * MATCH (env: AgriFarm), (dev:Device)->[:hasHumidity]->(:Humidity)-[:HasTS]
+         * WHERE ST_CONTAINS (env.location, dev.location)
+         * RETURN env, dev
+         */
         val targetLocation = g.addNode(TargetLocation)
         g.addProperty(targetLocation.id, "location", sarchLocation, PropType.GEOMETRY)
 
         val spatialPattern = listOf(
             listOf(Step(TargetLocation, alias="targetLocation")),
-            listOf(Step(Device, alias="device"))
+            listOf(Step(Device, alias="device"),
+                Step(HasHumidity),
+                Step(tau),
+                Step(HasTS)
+            )
         )
 
         // v.1
-        kotlin.test.assertEquals(2, search(g, pattern, listOf(Compare("parcel", "device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(2, search(g, pattern, timeaware = false).size)
 
         // v.2
         kotlin.test.assertEquals(3, query(g, spatialPattern, listOf(Compare("targetLocation","device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
@@ -190,9 +211,10 @@ class TestWorkload{
         val pattern = dynamicDevicePattern + listOf(
             null,
             Step(tau),
-            Step(HasTS)
+            Step(HasTS),
         )
-        val result = search(g, pattern )
+
+        val result = search(g, pattern, timeaware = true)
         kotlin.test.assertEquals(2, result.size)
     }
 
@@ -215,6 +237,12 @@ class TestWorkload{
         devices.forEach {
 
             // v.1 graph traversal
+            /**
+             *  MATCH (farm:Farm) - [] - (env:Parcel) - [:hasDevice] - (device) - [] - () - [:hasTS] - (meas:Measurement)
+             *  WHERE ST_CONTAINS(env.location, meas.location)
+             *  AND device.name IN ["Errano T1 MoistureDevice", "Errano T1 MoistureDevice", "Errano Drone"]
+             *  RETURN env, device, meas
+             */
             val traversalPattern = listOf(
                 Step(AgriFarm, alias="farm"),
                 null,
@@ -228,6 +256,13 @@ class TestWorkload{
             )
 
             // v.2 Spatial contains
+            /**
+             *  MATCH (env:AgriParcel),
+             *        (device) - [] - () - [:HasTS] - (meas:Measurement)
+             *  WHERE ST_CONTAINS(env.location, meas.location)
+             *  AND device.name IN ["Errano T1 MoistureDevice", "Errano T1 MoistureDevice", "Errano Drone"]
+             *  RETURN env, device, meas
+             */
             val pattern = listOf(
                 listOf(Step(AgriParcel, alias = "env")),
                 listOf(Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
@@ -246,6 +281,11 @@ class TestWorkload{
     }
 
     // M -> A -> E
+    /**
+     * CurrenteAgentLocation(𝑡𝑎 , 𝑡𝑏 ): list the current location
+     * for the agents that performed measurements during
+     * [𝑡𝑎, 𝑡𝑏 [.
+     */
     @Test
     fun currentAgentLocation(){
         val g = setup(dynamicDevices = true)
@@ -269,6 +309,31 @@ class TestWorkload{
                 Step(Device, alias = "nowDevice")
             )
 
+
+        // v.1 Following path traversal
+        /**
+         *
+         * MATCH    (device: Device),
+         *          (nowEnv:AgriParcel) - [:HasDevice] - (nowDevice: Device)
+         *  WHERE device.name IN (
+         *          MATCH (oldDevice:Device) - [] - () - [:HasTS] - ()
+         *          VALID FROM 0 TO 2
+         *          RETURN oldDevice.name)
+         *  AND device.name == nowDevice.name
+         *  RETURN nowDevice, nowEnv
+         */
+
+        // v.2 Following spatial contains
+        /**
+         * MATCH    (device: Device),
+         *          (nowEnv:AgriParcel)
+         *  WHERE device.name IN (
+         *          MATCH (oldDevice:Device) - [] - () - [:HasTS] - ()
+         *          VALID FROM 0 TO 2
+         *          RETURN oldDevice.name)
+         *  AND ST_CONTAINS(nowEnv, device)
+         *  RETURN nowDevice, nowEnv
+         */
         val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
 
         kotlin.test.assertEquals(4, devicesInTime.size)
@@ -278,12 +343,26 @@ class TestWorkload{
                 listOf(Step(Device, listOf(Triple("name", Operators.EQ, it)), alias = "device")),
                 nowPattern
             )
+            val nowSpatialPattern = listOf(
+                    listOf(Step(AgriParcel, alias = "parcel")),
+                    listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
+                )
+
             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
 
+            val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+
             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
     }
-    
+
+    // M -> E -> A
+    @Test
+    fun activeAgents(){
+        val g = setup(dynamicDevices = true)
+
+    }
 
 
 }
