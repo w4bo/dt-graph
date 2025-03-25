@@ -113,7 +113,7 @@ open class P(
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
                 }
             }
-            else -> throw IllegalArgumentException("Unsupported type: ${value::class.simpleName}")
+            else -> throw IllegalArgumentException("Unsupported type: $type")
         }
         buffer.putInt(next?: Int.MIN_VALUE)       // 4 bytes
         return buffer.array()                           // 41 + MAX_LENGTH_KEY + MAX_LENGTH_VALUE
