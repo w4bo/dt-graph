@@ -10,6 +10,26 @@ import org.junit.jupiter.api.TestFactory
 import kotlin.math.truncate
 import kotlin.test.Test
 
+
+/**
+ * Problemi:
+ *  1. Non abbiamo possibilità di fare dei BIN temporali, e.g., SELECT timestamp, AVG(value) GROUP BY HOUR(timestamp)
+ *  2. Nella search sulle TS, il toTimestamp è incluso.
+ *  3. Senza Gremlin, non ho accesso alla TS come lista di elementi
+ *  4. Non abbiamo percorsi di dimensione variabile e.g., [*2...5]
+ *  5. Questo funziona
+ *     val nowSpatialPattern = listOf(
+ *            listOf(Step(AgriParcel, alias = "parcel")),
+ *            listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
+ *        )
+ *     Questo no, perchè?
+ *     val nowSpatialPattern = listOf(
+ *            listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
+ *            listOf(Step(AgriParcel, alias = "parcel")),
+ *        )
+ *    query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+ *    6. Possiamo specificare due validità diverse temporali nella stessa query? Don't think so, e.g., di tutti i device attivi 10 ore fa, dammi a cosa sono collegati ora.
+ */
 class TestWorkload{
 
     val staticDevicePattern = listOf(
@@ -53,6 +73,7 @@ class TestWorkload{
         val erranoT2 = g.addNode(AgriParcel)
         g.addProperty(erranoT2.id, "location", """{"coordinates":[[[11.799569,44.235609],[11.79977,44.235759],[11.801395,44.234782],[11.80108,44.234572],[11.799569,44.235609]]],"type":"Polygon"}""" ,PropType.GEOMETRY)
         g.addProperty(erranoT2.id, "name", "Errano T2" ,PropType.STRING)
+
 
         g.addEdge(HasParcel, errano.id, erranoT1.id)
         g.addEdge(HasParcel, errano.id, erranoT2.id)
@@ -105,20 +126,20 @@ class TestWorkload{
         val t2TS = g.getTSM().addTS()
         val weatherTS = g.getTSM().addTS()
 
-        for (timestamp in 0L..1){
+        for (timestamp in 0L..5){
             t1TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
             t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
             weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.80164,44.234831],"type":"Point"}""")
         }
 
-        val weatherTemperature = g.addNode(Temperature, value = weatherTS.getTSId())
+        val weatherTemperature = g.addNode(Humidity, value = weatherTS.getTSId())
         val t1Humidity = g.addNode(Humidity, value = t1TS.getTSId())
         val t2Humidity = g.addNode(Humidity, value = t2TS.getTSId())
 
 
         g.addEdge(HasHumidity, t1Moisture.id, t1Humidity.id)
         g.addEdge(HasHumidity, t2Moisture.id, t2Humidity.id)
-        g.addEdge(HasTemperature, weatherStation.id, weatherTemperature.id)
+        g.addEdge(HasHumidity, weatherStation.id, weatherTemperature.id)
 
         return g
     }
@@ -150,6 +171,23 @@ class TestWorkload{
     }
 
     // E* -> A*
+    /*
+     * EnvironmentCoverage(L, 𝜏), where L is a list of loca-
+     * tions, and 𝜏 is a measurement type: lists all agents that
+     * can generate measurements of a given type 𝜏 that can
+     * cover the environments/locations specified in L.
+     */
+
+    // v.1 Following graph edges
+    /**
+     * MATCH (:AgriFarm ) -> [:hasAgriParcel ] -> (:Parcel ) -> [:hasDevice ] -> (:Device) -> [:hasTemperature] -> (:Temperature) -> [:hasTS]
+     */
+    // v.2 Following spatial contains
+    /**
+     * MATCH (env: AgriFarm), (dev:Device)->[:hasHumidity]->(:Humidity)-[:HasTS]
+     * WHERE ST_CONTAINS (env.location, dev.location)
+     * RETURN env, dev
+     */
     @Test
     fun environmentCoverage() {
         val g = setup()
@@ -157,64 +195,97 @@ class TestWorkload{
         val sarchLocation = """{"coordinates":[[[11.798105,44.234354],[11.801217,44.237683],[11.805286,44.235809],[11.803987,44.234851],[11.804789,44.233683],[11.80268,44.231419],[11.798105,44.234354]]],"type":"Polygon"}"""
 
 
-        // v.1 Following graph edges
+
         val pattern = staticDevicePattern + listOf(
             Step(HasHumidity),
             Step(tau),
             Step(HasTS)
         )
 
-        // v.2 Following spatial contains
+
         val targetLocation = g.addNode(TargetLocation)
         g.addProperty(targetLocation.id, "location", sarchLocation, PropType.GEOMETRY)
 
         val spatialPattern = listOf(
             listOf(Step(TargetLocation, alias="targetLocation")),
-            listOf(Step(Device, alias="device"))
+            listOf(Step(Device, alias="device"),
+                Step(HasHumidity),
+                Step(tau),
+                Step(HasTS)
+            )
         )
 
         // v.1
-        kotlin.test.assertEquals(2, search(g, pattern, listOf(Compare("parcel", "device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(2, search(g, pattern, timeaware = false).size)
 
         // v.2
         kotlin.test.assertEquals(3, query(g, spatialPattern, listOf(Compare("targetLocation","device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
     }
 
     // E* ->  A* -> M
+    /*
+     *  EnvironmentAggregate(𝜖, 𝜏, 𝑡𝑎 , 𝑡𝑏 ): where 𝜖 is an
+     * environment. List, for each agent currently in the envi-
+     * ronment 𝜖, the average hourly value of type 𝜏 during
+     * the period [𝑡𝑎, 𝑡𝑏 [.
+     */
     @Test
     fun environmentAggregate(){
         val g = setup(dynamicDevices=true)
         val tau = NDVI
 
+        // TODO
+
         // v.1 Following graph edges
         val pattern = dynamicDevicePattern + listOf(
             null,
             Step(tau),
-            Step(HasTS)
+            Step(HasTS),
         )
-        val result = search(g, pattern )
+
+        val result = search(g, pattern, timeaware = true)
         kotlin.test.assertEquals(2, result.size)
     }
 
     // A -> E -> M
+    /*
+     *     AgentHistory(𝐴): where A is a set of agents. List, for
+     *     each 𝛼 ∈ 𝐴, the average value for measurements for
+     *     each environment in the past 24 hours.
+    */
     @Test
     fun agentHistory(){
         //TODO
-        /*
-            AgentHistory(𝐴): where A is a set of agents. List, for
-            each 𝛼 ∈ 𝐴, the average value for measurements for
-            each environment in the past 24 hours.
-         */
+
     }
 
     // A -> M -> E
+    /*
+     * AgentCoverage(𝐴): where 𝐴 is a set of agents. For each
+     * 𝛼 ∈ 𝐴, list all environments 𝜖 for which 𝛼 generated
+     * measurements in.
+     */
+    // v.1 graph traversal
+    /**
+     *  MATCH (farm:Farm) - [] - (env:Parcel) - [:hasDevice] - (device) - [] - () - [:hasTS] - (meas:Measurement)
+     *  WHERE ST_CONTAINS(env.location, meas.location)
+     *  AND device.name IN ["Errano T1 MoistureDevice", "Errano T1 MoistureDevice", "Errano Drone"]
+     *  RETURN env, device, meas
+     *
+     *    // v.2 Spatial contains
+     *
+     *  MATCH (env:AgriParcel),
+     *        (device) - [] - () - [:HasTS] - (meas:Measurement)
+     *  WHERE ST_CONTAINS(env.location, meas.location)
+     *  AND device.name IN ["Errano T1 MoistureDevice", "Errano T1 MoistureDevice", "Errano Drone"]
+     *  RETURN env, device, meas
+     */
     @Test
     fun agentCoverage(){
         val g = setup(dynamicDevices=true)
         val devices = listOf(Pair(1,"Errano T1 MoistureDevice"), Pair(1,"Errano T1 MoistureDevice"), Pair(2,"Errano Drone"))
         devices.forEach {
 
-            // v.1 graph traversal
             val traversalPattern = listOf(
                 Step(AgriFarm, alias="farm"),
                 null,
@@ -227,7 +298,6 @@ class TestWorkload{
                 Step(Measurement, alias = "meas")
             )
 
-            // v.2 Spatial contains
             val pattern = listOf(
                 listOf(Step(AgriParcel, alias = "env")),
                 listOf(Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
@@ -246,6 +316,36 @@ class TestWorkload{
     }
 
     // M -> A -> E
+    /*
+     * CurrenteAgentLocation(𝑡𝑎 , 𝑡𝑏 ): list the current location
+     * for the agents that performed measurements during
+     * [𝑡𝑎, 𝑡𝑏 [.
+     */
+     /**
+      * // v.1 Following path traversal
+      *
+      *
+      *  MATCH    (device: Device),
+      *          (nowEnv:AgriParcel) - [:HasDevice] - (nowDevice: Device)
+      *  WHERE device.name IN (
+      *          MATCH (oldDevice:Device) - [] - () - [:HasTS] - ()
+      *          VALID FROM 0 TO 2
+      *          RETURN oldDevice.name)
+      *  AND device.name == nowDevice.name
+      *  RETURN nowDevice, nowEnv
+      *
+      *
+      * // v.2 Following spatial contains
+      *
+      *  MATCH    (device: Device),
+      *          (nowEnv:AgriParcel)
+      *  WHERE device.name IN (
+      *          MATCH (oldDevice:Device) - [] - () - [:HasTS] - ()
+      *          VALID FROM 0 TO 2
+      *          RETURN oldDevice.name)
+      *  AND ST_CONTAINS(nowEnv, device)
+      *  RETURN nowDevice, nowEnv
+     */
     @Test
     fun currentAgentLocation(){
         val g = setup(dynamicDevices = true)
@@ -271,19 +371,120 @@ class TestWorkload{
 
         val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
 
-        kotlin.test.assertEquals(4, devicesInTime.size)
+        kotlin.test.assertEquals(resultMap.size, devicesInTime.size)
 
         devicesInTime.forEach{
             val pattern = listOf(
                 listOf(Step(Device, listOf(Triple("name", Operators.EQ, it)), alias = "device")),
                 nowPattern
             )
+            val nowSpatialPattern = listOf(
+                    listOf(Step(AgriParcel, alias = "parcel")),
+                    listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
+                )
+
             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
 
+            val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+
             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
     }
-    
+
+    // M -> E -> A
+    /*
+     * ActiveAgents(𝑡𝑎 , 𝑡𝑏 ): list all the agents currently in the
+     * environments in which were performed some measurements in the period [𝑡𝑎, 𝑡𝑏 [
+     */
+    /**
+     * // v.1 Following path traversal
+     *
+     * MATCH (env:AgriParcel) - [:HasDevice] -> (dev:Device)
+     * WHERE env.name in (
+     *      MATCH (env:Agriparcel),
+     *            () - [:HasTS] -> (meas)
+     *      WHERE ST_CONTAINS(env.location, meas.location)
+     *      VALID FROM 0 to 2
+     *      RETURN env.name)
+     * RETURN env, dev
+     *
+     * // v.2 Following spatial contains
+     * MATCH    (env:AgriParcel),
+     *          (dev:Device)
+     * WHERE env.name in (
+     *      MATCH (env:Agriparcel),
+     *            () - [:HasTS] -> (meas)
+     *      WHERE ST_CONTAINS(env.location, meas.location)
+     *      VALID FROM 0 to 2
+     *      RETURN env.name)
+     * AND ST_CONTAINS(env.location, dev.location)
+     * RETURN env, dev
+     */
+    @Test
+    fun activeAgents(){
+        val resultMap = mapOf(
+            "Errano T1" to listOf("Errano T1 MoistureDevice"),
+            "Errano T2" to listOf("Errano T2 MoistureDevice", "Errano Drone"),
+        )
+        val g = setup(dynamicDevices = true)
+        val tA = 0L
+        val tB = 2L
+
+        // Adding a new parcel that should not be considered
+        val erranoT0 = g.addNode(AgriParcel)
+        g.addProperty(erranoT0.id, "location","{\"coordinates\":[[[11.798775,44.235004],[11.799136,44.235376],[11.800661,44.234333],[11.800189,44.234023],[11.798775,44.235004]]],\"type\":\"Polygon\"}", PropType.GEOMETRY)
+        val t0Device = g.addNode(Device)
+        g.addEdge(HasDevice,erranoT0.id,t0Device.id)
+
+        val t0TS = g.getTSM().addTS()
+        t0TS.add(Measurement, 4,4,"{\"coordinates\":[11.798998,44.235024],\"type\":\"Point\"}")
+
+        val t0Hum = g.addNode(Humidity, value = t0TS.getTSId())
+        g.addEdge(HasHumidity, t0Device.id, t0Hum.id)
+
+        val oldMeasurementsLocationPattern = listOf(
+            listOf(
+                Step(AgriParcel, alias="env")
+            ),
+            listOf(
+                null,
+                Step(HasTS),
+                Step(Measurement, alias = "meas")
+            ),
+        )
+        val oldMeasurementsLocations = query(g, oldMeasurementsLocationPattern, where = listOf(Compare("env","meas","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("env", "name")), from = tA, to = tB, timeaware = true)
+
+        oldMeasurementsLocations.forEach{
+            val activeAgentsPattern = listOf(
+                Step(AgriParcel, listOf(Triple("name", Operators.EQ, it.toString())), alias = "env"),
+                Step(HasDevice),
+                Step(Device, alias = "dev")
+            )
+            val activeAgentsSpatialPattern = listOf(
+                listOf(Step(AgriParcel, listOf(Triple("name", Operators.EQ, it.toString())), alias = "env")),
+                listOf(Step(Device, alias = "dev"))
+            )
+
+            val activeAgents = query(g, activeAgentsPattern, by = listOf(Aggregate("env", "name"), Aggregate("dev","name")), from = 4)
+            val activeSpatialAgents = query(g, activeAgentsSpatialPattern, where = listOf(Compare("env","dev","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("env", "name"), Aggregate("dev","name")), from = 4)
+
+            var result = (activeAgents as List<List<Any>>)
+                .filter { it.isNotEmpty() }
+                .groupBy({ it[0] }, { it.drop(1) })
+                .mapValues { it.value.flatten() }
+
+            kotlin.test.assertEquals(resultMap[it].toString(),  result[it].toString())
+
+            result = (activeSpatialAgents as List<List<Any>>)
+                .filter { it.isNotEmpty() }
+                .groupBy({ it[0] }, { it.drop(1) })
+                .mapValues { it.value.flatten() }
+
+            kotlin.test.assertEquals(resultMap[it].toString(),  result[it].toString())
+        }
+
+    }
 
 
 }

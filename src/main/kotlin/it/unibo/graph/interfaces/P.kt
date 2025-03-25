@@ -104,7 +104,7 @@ open class P(
                 buffer.putInt(0)
                 buffer.putInt(value as Int)
             }
-            PropType.STRING -> {                                 // Serialize String (using your serializeString method)
+            PropType.STRING -> {                                 // Serialize String
                 val value = value as String
                 if (value.length > MAX_LENGTH_VALUE) { // in place if the string is longer than 8 bytes
                     db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
@@ -112,6 +112,10 @@ open class P(
                 } else { // in place if the string is shorter than or equal to 8 bytes
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
                 }
+            }
+            PropType.GEOMETRY -> {
+                val value = value as String
+                db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
             }
             else -> throw IllegalArgumentException("Unsupported type: $type")
         }
