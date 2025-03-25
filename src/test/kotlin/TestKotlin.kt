@@ -428,11 +428,12 @@ class TestKotlin {
         val p6 = g.addProperty(e1.id.toLong(), "p6", 1L, PropType.LONG, sourceType = EDGE)
         val p7 = g.addProperty(e1.id.toLong(), "p7", 1.0, PropType.DOUBLE, sourceType = EDGE)
         val p8 = g.addProperty(e1.id.toLong(), "location", "{\"coordinates\":[11.799328,44.235394],\"type\":\"Point\"}", PropType.GEOMETRY, sourceType = EDGE)
+        val p9 = g.addProperty(e1.id.toLong(), "p9", "A".repeat(MAX_LENGTH_VALUE), PropType.STRING, sourceType = EDGE)
         g.flushToDisk()
         assertEquals(g.getNode(N0), g.getNodeFromDisk(N0))
         assertEquals(n1, g.getNodeFromDisk(N1))
         assertEquals(e1, g.getEdgeFromDisk(e1.id.toLong()))
-        listOf(p1, p2, p3, p4, p5, p6, p7, p8).forEach {
+        listOf(p1, p2, p3, p4, p5, p6, p7, p8, p9).forEach {
             assertEquals(it, g.getPropertyFromDisk(it.id.toLong()))
         }
     }
