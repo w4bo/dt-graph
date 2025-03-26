@@ -83,8 +83,8 @@ class TestTemporalProperty {
         g.addProperty(e1.id.toLong(), "name", "Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
         val pattern = listOf(Step(A), Step(Foo, alias = "e"), Step(B))
-        val pattern1 = listOf(Step(A), Step(Foo, alias = "e", properties = listOf(Triple("name", Operators.EQ, "Foo"))), Step(B))
-        val pattern2 = listOf(Step(A), Step(Foo, alias = "e", properties = listOf(Triple("name", Operators.EQ, "Bar"))), Step(B))
+        val pattern1 = listOf(Step(A), Step(Foo, alias = "e", properties = listOf(Filter("name", Operators.EQ, "Foo"))), Step(B))
+        val pattern2 = listOf(Step(A), Step(Foo, alias = "e", properties = listOf(Filter("name", Operators.EQ, "Bar"))), Step(B))
 
         // MATCH (a:A)-(e)->(b:B)-->(c:C) RETURN a, b, e
         assertEquals(1, query(g, pattern).size)

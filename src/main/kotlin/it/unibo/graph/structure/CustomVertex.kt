@@ -96,7 +96,7 @@ class CustomVertex(
         return getRels(direction = dir2dir(direction), label = getFirst(edgeLabels)?.let { labelFromString(it) })
             .flatMap { r ->
                 if (r.label == HasTS) {
-                    g.getTSM().getTS(r.toN).getValues().map { it as CustomVertex }
+                    g.getTSM().getTS(r.toN).getValues(emptyList(), emptyList()).map { it as CustomVertex }
                 } else {
                     listOf(g.getNode(if (direction == Direction.IN) r.fromN else r.toN) as CustomVertex)
                 }

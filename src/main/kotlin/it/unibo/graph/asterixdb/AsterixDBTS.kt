@@ -1,6 +1,8 @@
 package it.unibo.graph.asterixdb
 
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.query.Aggregate
+import it.unibo.graph.query.Filter
 import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.encodeBitwise
 import org.json.JSONObject
@@ -45,7 +47,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         return n
     }
 
-    override fun getValues(): List<N> {
+    override fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N> {
         val selectQuery = """
         USE $dataverse;
         SELECT * FROM $dataset

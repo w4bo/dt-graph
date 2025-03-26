@@ -1,5 +1,7 @@
 package it.unibo.graph.interfaces
 
+import it.unibo.graph.query.Aggregate
+import it.unibo.graph.query.Filter
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.LOCATION
 import it.unibo.graph.utils.NODE
@@ -20,6 +22,6 @@ interface TS : Serializable {
     fun add(label: Label, timestamp: Long, value: Long) = add(label, timestamp, value, null)
 
     fun add(n: N): N
-    fun getValues(): List<N>
+    fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N>
     fun get(id: Long): N
 }

@@ -3,6 +3,8 @@ package it.unibo.graph.rocksdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.TS
+import it.unibo.graph.query.Aggregate
+import it.unibo.graph.query.Filter
 import it.unibo.graph.utils.deserialize
 import it.unibo.graph.utils.serialize
 import org.rocksdb.RocksDB
@@ -15,7 +17,7 @@ class RocksDBTS(override val g: Graph, val id: Long, val db: RocksDB) : TS {
         return n
     }
 
-    override fun getValues(): List<N> {
+    override fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N> {
         val acc: MutableList<N> = mutableListOf()
         val iterator = db.newIterator()
         iterator.seek("$id|".toByteArray())

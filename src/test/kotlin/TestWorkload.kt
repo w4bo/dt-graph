@@ -338,7 +338,7 @@ class TestWorkload{
                 null,
                 Step(AgriParcel, alias = "env"),
                 Step(HasDevice),
-                Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
+                Step(null, listOf(Filter("name", Operators.EQ, it.second)), alias = "device"),
                 null,
                 null,
                 Step(HasTS),
@@ -347,7 +347,7 @@ class TestWorkload{
 
             val pattern = listOf(
                 listOf(Step(AgriParcel, alias = "env")),
-                listOf(Step(null, listOf(Triple("name", Operators.EQ, it.second)), alias = "device"),
+                listOf(Step(null, listOf(Filter("name", Operators.EQ, it.second)), alias = "device"),
                     null,
                     null,
                     Step(HasTS),
@@ -422,12 +422,12 @@ class TestWorkload{
 
         devicesInTime.forEach{
             val pattern = listOf(
-                listOf(Step(Device, listOf(Triple("name", Operators.EQ, it)), alias = "device")),
+                listOf(Step(Device, listOf(Filter("name", Operators.EQ, it)), alias = "device")),
                 nowPattern
             )
             val nowSpatialPattern = listOf(
                     listOf(Step(AgriParcel, alias = "parcel")),
-                    listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
+                    listOf(Step(Device, listOf(Filter("name",Operators.EQ, it)), alias = "nowDevice")),
                 )
 
             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
@@ -505,12 +505,12 @@ class TestWorkload{
 
         oldMeasurementsLocations.forEach{
             val activeAgentsPattern = listOf(
-                Step(AgriParcel, listOf(Triple("name", Operators.EQ, it.toString())), alias = "env"),
+                Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "env"),
                 Step(HasDevice),
                 Step(Device, alias = "dev")
             )
             val activeAgentsSpatialPattern = listOf(
-                listOf(Step(AgriParcel, listOf(Triple("name", Operators.EQ, it.toString())), alias = "env")),
+                listOf(Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "env")),
                 listOf(Step(Device, alias = "dev"))
             )
 

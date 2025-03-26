@@ -24,6 +24,8 @@ open class N(
     @Transient final override var g: Graph
 ) : ElemP {
 
+    @Transient var sum: Double? = null
+
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): N {
             val buffer = ByteBuffer.wrap(bytes)
@@ -63,7 +65,7 @@ open class N(
     }
 
     fun getTS(): List<N> {
-        return g.getTSM().getTS(value!!).getValues()
+        return g.getTSM().getTS(value!!).getValues(emptyList(), emptyList())
     }
 
     fun getRels(next: Int? = nextRel, direction: Direction? = null, label: Label? = null, includeHasTs: Boolean = false): List<R> {

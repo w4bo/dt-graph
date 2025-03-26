@@ -1,11 +1,10 @@
 outputs/*.csv
 results/dummy.pdf
 metastore_db/
-testdb*
 db_*
-db_ts
 *.log
 *.dat
+.kotlin/
 
 # These are useless since we use gradle import
 .idea/

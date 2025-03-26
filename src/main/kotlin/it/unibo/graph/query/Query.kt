@@ -7,12 +7,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 @JvmName("query")
-fun query(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
     return query(g, listOf(match), where, by, from, to, timeaware)
 }
 
 @JvmName("queryJoin")
-fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = listOf(), by: List<Aggregate> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -60,7 +60,7 @@ private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinF
                         val cAlias = if (step.alias != curJoinFilter.a) curJoinFilter.a else curJoinFilter.b // take the alias of the step in the previous pattern; e.g. "a"
                         val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
                         props.forEach { p -> // explode each property
-                            rec(curMatch + Step(step.type, step.properties + Triple(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
+                            rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
                         }
                     } else {
                         rec(curMatch + step, index + 1, from, to)
@@ -72,7 +72,7 @@ private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinF
                 acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
             }
         }
-        rec(listOf(), 0, from, to)
+        rec(emptyList(), 0, from, to)
         acc
     }
 
@@ -147,7 +147,7 @@ private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: L
                 acc.add(curRow)
             }
         }
-        rec(listOf(), 0, from, to)
+        rec(emptyList(), 0, from, to)
         acc
     } else {
         listOf(row)
@@ -205,50 +205,31 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
         row[alias.second + (if (alias.first == 1) match[0].size else 0)]
     }
 
-fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
     val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.a, it.b) }.toSet()}.maxByOrNull { it.value }?.key!!}
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
-        fun whereClause(
-            e: ElemP,
-            path: List<ElemP>,
-            alias: String,
-            mapWhere: Map<String, Compare>,
-            c: Compare,
-            timeaware: Boolean
-        ): Boolean {
-            if (mapWhere[alias]?.a == alias) {
-                return c.isOk(e, path[mapAlias[c.b]!!], timeaware)
-            } else if(mapWhere[alias]?.b == alias){
-                return c.isOk(path[mapAlias[c.a]!!], e, timeaware)
-            }else{
-                return false
+        fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean): Boolean {
+            return when (alias) {
+                mapWhere[alias]?.a -> c.isOk(e, path[mapAlias[c.b]!!], timeaware)
+                mapWhere[alias]?.b -> c.isOk(path[mapAlias[c.a]!!], e, timeaware)
+                else -> false
             }
         }
         val alias: String? = match[index]?.alias
         val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
                     (match[index]!!.type == null || match[index]!!.type == e.label)  // filter on label
-                            && match[index]!!.properties.all { f ->
-                        e.getProps(
-                            name = f.first,
-                            fromTimestamp = from,
-                            toTimestamp = to,
-                            timeaware = timeaware
-                        ).any { p -> Compare.apply(f.third, p.value, f.second) }
-                    })) // filter on properties
-            && e.timeOverlap(timeaware, from, to) // check time overlap
-            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
+                            && match[index]!!.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
+                            && e.timeOverlap(timeaware, from, to) // check time overlap
+                            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
         ) {
-            val curPath = path + listOf(e)
+            val curPath = path + e
             if (curPath.size == match.size) {
                 acc.add(Path(curPath, from, to))
             } else {
-//                if (visited.contains(e.id)) {
-//                    return
-//                }
                 val from = max(e.fromTimestamp, from)
                 val to = min(e.toTimestamp, to)
                 if (index % 2 == 0) { // is node
@@ -262,7 +243,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = listOf(), from: 
                     if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
-                            .getValues()
+                            .getValues(emptyList(), emptyList())
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to, visited)
                             }

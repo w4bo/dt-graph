@@ -5,6 +5,7 @@ import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.timeOverlap
+import it.unibo.graph.query.Filter
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
@@ -152,7 +153,7 @@ class TestTemporal {
             Step(HasTS),
             Step(Measurement),
             Step(HasOwner),
-            Step(Person, listOf(Triple("name", Operators.EQ, "Alice")))
+            Step(Person, listOf(Filter("name", Operators.EQ, "Alice")))
         )
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
@@ -162,7 +163,7 @@ class TestTemporal {
     fun testSearch6() {
         val g = setup()
         val steps = listOf(
-            Step(Person, listOf(Triple("name", Operators.EQ, "Alice"), Triple("address", Operators.EQ, "Foo")))
+            Step(Person, listOf(Filter("name", Operators.EQ, "Alice"), Filter("address", Operators.EQ, "Foo")))
         )
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
@@ -176,7 +177,7 @@ class TestTemporal {
         var steps = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel))
         kotlin.test.assertEquals(2, search(g, steps, timeaware = false).size)
 
-        steps = listOf(Step(AgriFarm), Step(HasParcel, listOf(Triple("dateChanged", Operators.EQ, "today"))), Step(AgriParcel))
+        steps = listOf(Step(AgriFarm), Step(HasParcel, listOf(Filter("dateChanged", Operators.EQ, "today"))), Step(AgriParcel))
         kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
         kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         kotlin.test.assertEquals(0, search(g, steps, timeaware = true, from = 2).size)

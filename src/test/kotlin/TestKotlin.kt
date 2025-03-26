@@ -294,7 +294,7 @@ class TestKotlin {
     fun testSearch1bis() {
         matrix { g ->
             assertEquals(6, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement))).size)
-            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Triple("unit", Operators.EQ, "Celsius"))))).size)
+            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Filter("unit", Operators.EQ, "Celsius"))))).size)
         }
     }
 
