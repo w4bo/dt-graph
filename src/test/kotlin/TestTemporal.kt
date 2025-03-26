@@ -86,7 +86,7 @@ class TestTemporal {
     fun testSearch1() {
         val g = setup()
         kotlin.test.assertEquals(
-            4,
+            2,
             search(g, 
                 listOf(
                     Step(Device),
@@ -196,6 +196,9 @@ class TestTemporal {
         assertTrue(timeOverlap(Long.MIN_VALUE, Long.MAX_VALUE, 0, 1)) // [-inf, +inf) and [0, 1)
         assertTrue(timeOverlap(0, 1, Long.MIN_VALUE, Long.MAX_VALUE)) // [0, 1) and [-inf, +inf)
         assertTrue(timeOverlap(Long.MIN_VALUE, Long.MAX_VALUE, 0, 0)) // [-inf, +inf) and [0, 0)
+        assertFalse(timeOverlap(0, 2, 2, 2))
+        assertFalse(timeOverlap(2, 2, 0, 2))
+        assertTrue(timeOverlap(0, 2, 0, 0))
         assertTrue(timeOverlap(0, 0, Long.MIN_VALUE, Long.MAX_VALUE)) // [0, 0) and [-inf, +inf)
     }
 }

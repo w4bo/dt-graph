@@ -74,6 +74,9 @@ open class P(
                         String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)
                     }
                 }
+                PropType.GEOMETRY -> {
+                    String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)
+                }
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
             val next = buffer.int.let { if (it == Int.MIN_VALUE) null else it }

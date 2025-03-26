@@ -32,7 +32,7 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = listOf(), b
         }
         .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
         .groupBy { row -> groupBy(by, mapAliases, row, match) }
-        .mapValues { aggregate(by, it, mapAliases) }
+        .mapValues { aggregate(by, it, mapAliases, match) }
         .map { wrapResult(by, it) }
         .flatten()
     return result
@@ -175,7 +175,7 @@ private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>)
 /**
  * Aggregate the result of group by
  */
-private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>) =
+private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>, match: List<List<Step?>>) =
     if (!by.any { it.operator != null }) {
         // no aggregation operator has been specified
         // E.g., MATCH (n) RETURN n.name => [a, b, ...]
@@ -184,7 +184,12 @@ private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List
         // some aggregation operator has been specified
         // E.g., MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
         // TODO apply different aggregation operators, and possibly multiple aggregation operators
-        val value: Double = group.value.map { row -> (row[mapAliases[by.first { it.operator != null }.n]!!.second] as Number).toDouble() }.mean(true)
+        val value: Double = group.value
+            .map { row ->
+                val alias = mapAliases[by.first { it.operator != null }.n]!!
+                (row[alias.second + (if (alias.first == 1) match[0].size else 0)] as Number).toDouble()
+            }
+            .mean(true)
         listOf(value) // E.g., [12.5]
     }
 
