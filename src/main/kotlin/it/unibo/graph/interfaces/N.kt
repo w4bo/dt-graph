@@ -94,10 +94,10 @@ open class N(
 
     override fun equals(other: Any?): Boolean {
         if (other !is N) return false
-        return id == other.id && label == other.label
+        return id == other.id && label == other.label && nextRel == other.nextRel && nextProp == other.nextProp && value == other.value
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(id, label)
+        return Objects.hash(id, label, nextRel, nextProp, value)
     }
 }
