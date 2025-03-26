@@ -13,7 +13,7 @@ class RocksDBTS(override val g: Graph, val id: Long, val db: RocksDB) : TS {
     override fun getTSId(): Long = id
 
     override fun add(n: N): N {
-        db.put("$id|${n.timestamp}".toByteArray(), serialize(n))
+        db.put("$id|${n.fromTimestamp}".toByteArray(), serialize(n))
         return n
     }
 

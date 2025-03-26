@@ -14,7 +14,7 @@ interface TS : Serializable {
     fun getTSId(): Long
     fun add(label: Label, timestamp: Long, value: Long, location: String?): N {
         val nodeId = encodeBitwise(getTSId(), timestamp)
-        val newTSNode = N(nodeId, label, timestamp = timestamp, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
+        val newTSNode = N(nodeId, label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
         newTSNode.properties.add(P(DUMMY_ID, nodeId, NODE, LOCATION, location!!, PropType.GEOMETRY, g = g))
         return add(newTSNode)
     }

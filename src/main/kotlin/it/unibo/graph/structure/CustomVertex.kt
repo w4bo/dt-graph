@@ -12,11 +12,10 @@ class CustomVertex(
     id: Long,
     type: Label,
     value: Long? = null,
-    timestamp: Long? = null,
     fromTimestamp: Long,
     toTimestamp: Long,
     g: it.unibo.graph.interfaces.Graph
-) : Vertex, N(id, type, value = value, timestamp = timestamp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g) {
+) : Vertex, N(id, type, value = value, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g) {
 
     override fun id(): Any {
         return id

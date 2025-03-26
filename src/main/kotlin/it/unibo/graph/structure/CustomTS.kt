@@ -11,7 +11,6 @@ class CustomTS(ts: TS) : TS by ts {
             CustomVertex(
                 encodeBitwise(getTSId(), timestamp),
                 label,
-                timestamp = timestamp,
                 value = value,
                 fromTimestamp = timestamp,
                 toTimestamp = timestamp,

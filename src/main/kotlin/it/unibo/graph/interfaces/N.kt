@@ -8,7 +8,7 @@ import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
 import java.util.*
 
-val NODE_SIZE: Int = 52
+val NODE_SIZE: Int = 48
 
 open class N(
     final override val id: Long, // node id
@@ -16,15 +16,12 @@ open class N(
     var nextRel: Int? = null, // if graph node, link to the next relationship
     final override var nextProp: Int? = null, // if graph node, link to the next property
     val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: pointer to the id of the TS
-    val timestamp: Long? = null, // if TS snapshot: timestamp of the measurement
     @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
     @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     @Transient final override var g: Graph
 ) : ElemP {
-
-    @Transient var sum: Double? = null
 
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): N {
@@ -37,8 +34,7 @@ open class N(
             val nextProp = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
             val nextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
             val value = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
-            val timestamp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
-            return N(id, label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, timestamp = timestamp, value = value, g = g)
+            return N(id, label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, value = value, g = g)
         }
     }
 
@@ -51,8 +47,7 @@ open class N(
         buffer.putInt(nextProp?: Int.MIN_VALUE)     // 4 bytes
         buffer.putInt(nextRel?: Int.MIN_VALUE)      // 4 bytes
         buffer.putLong(value?: Long.MIN_VALUE)      // 8 bytes
-        buffer.putLong(timestamp?: Long.MIN_VALUE)  // 8 bytes
-        return buffer.array()                             // Total: 52 bytes
+        return buffer.array()                             // Total: 48 bytes
     }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
@@ -72,13 +67,13 @@ open class N(
         return if (label == HasTS) { // Jump to the time series
             listOf(R(DUMMY_ID, HasTS, id, value!!, g = g))
         } else { // Iterate within the graph
-            if (timestamp != null) { // If TS snapshot
+            if (relationships != null && relationships.isNotEmpty()) { // If TS snapshot
                 when (direction) {
                     Direction.IN -> throw NotImplementedException()
                     else -> relationships.filter { label == null || it.label == label }.toList()
                 }
             } else { // Graph node
-                if (next == null) return if(includeHasTs && value != null) listOf(R(DUMMY_ID, HasTS, id, value, g = g)) else emptyList()
+                if (next == null) return if (includeHasTs && value != null) listOf(R(DUMMY_ID, HasTS, id, value, g = g)) else emptyList()
                 val r = g.getEdge(next)
                 if (label == null || r.label == label) {
                     when (direction) {

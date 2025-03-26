@@ -23,8 +23,8 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         val insertQuery = """
             USE $dataverse;
             UPSERT INTO $dataset ([{
-                "id": "$id|${n.timestamp}",
-                "timestamp": datetime("${convertTimestampToISO8601(n.timestamp!!)}"),
+                "id": "$id|${n.fromTimestamp}",
+                "timestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
                 ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
                 ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
                 "property": "${n.label}",
@@ -136,7 +136,6 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
 
                             val entity = CustomVertex(
                                 id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
-                                timestamp = dateToTimestamp(jsonEntity.getString("timestamp")),
                                 type = labelFromString(jsonEntity.getString("property")),
                                 fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
                                 toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
