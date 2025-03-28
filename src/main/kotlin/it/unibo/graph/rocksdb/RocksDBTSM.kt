@@ -20,11 +20,11 @@ class RocksDBTSM(override val g: Graph): TSManager {
     }
 
     override fun getTS(id: Long): TS {
-        return CustomTS(RocksDBTS(g, id, db))
+        return CustomTS(RocksDBTS(g, id, db), g)
     }
 
     override fun addTS(): TS {
-        return CustomTS(RocksDBTS(g, nextTSId(), db))
+        return CustomTS(RocksDBTS(g, nextTSId(), db), g)
     }
 
     override fun nextTSId(): Long = id++.toLong()

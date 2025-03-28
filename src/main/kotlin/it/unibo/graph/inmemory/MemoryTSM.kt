@@ -13,7 +13,7 @@ class MemoryTSM(override val g: Graph): TSManager {
     }
 
     override fun addTS(): TS {
-        val ts = CustomTS(MemoryTS(g, nextTSId()))
+        val ts = CustomTS(MemoryTS(g, nextTSId()), g)
         tss += ts
         return ts
     }

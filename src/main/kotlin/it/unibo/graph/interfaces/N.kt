@@ -8,7 +8,7 @@ import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
 import java.util.*
 
-val NODE_SIZE: Int = 48
+const val NODE_SIZE: Int = 48
 
 open class N(
     final override val id: Long, // node id

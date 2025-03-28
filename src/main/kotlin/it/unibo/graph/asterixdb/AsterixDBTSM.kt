@@ -25,13 +25,13 @@ class AsterixDBTSM private constructor(
     }
 
     override fun addTS(): TS {
-        return CustomTS(AsterixDBTS(g, nextTSId(), dbHost, dataverse, dataset))
+        return CustomTS(AsterixDBTS(g, nextTSId(), dbHost, dataverse, dataset), g)
     }
 
     override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
-        return CustomTS(AsterixDBTS(g, id, dbHost, dataverse, dataset))
+        return CustomTS(AsterixDBTS(g, id, dbHost, dataverse, dataset), g)
     }
 
     override fun clear() {

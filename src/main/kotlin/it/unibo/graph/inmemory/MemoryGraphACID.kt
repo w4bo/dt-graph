@@ -9,9 +9,6 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
 const val PATH = "db_graphm"
@@ -24,7 +21,7 @@ class MemoryGraphACID(val wal: WriteAheadLog = WriteAheadLog(), path: String = P
     private val nodeChannel: FileChannel = FileChannel.open(File("$PATH/$nodeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val edgeChannel: FileChannel = FileChannel.open(File("$PATH/$edgeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val propertyChannel: FileChannel = FileChannel.open(File("$PATH/$propertyFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
-    private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
+    // private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
     init {
         if (!Files.exists(Paths.get(path))) {
@@ -56,10 +53,12 @@ class MemoryGraphACID(val wal: WriteAheadLog = WriteAheadLog(), path: String = P
 
     override fun clear() {
         super.clear()
-        nodeChannel.truncate(0)
-        edgeChannel.truncate(0)
-        propertyChannel.truncate(0)
-        scheduler.shutdownNow()
+        listOf(nodeChannel, edgeChannel, propertyChannel).forEach {
+            it.truncate(0)
+            it.position(0)
+        }
+        wal.clear()
+        // scheduler.shutdownNow()
     }
 
     @Throws(IOException::class)
@@ -153,5 +152,12 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
 
     fun setFlushable(memoryGraphACID: Flushable) {
         flushable = memoryGraphACID
+    }
+
+    fun clear() {
+        i = 0
+        toWrite.clear()
+        logChannel.truncate(0)
+        logChannel.position(0)
     }
 }

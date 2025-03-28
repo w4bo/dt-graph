@@ -1,7 +1,6 @@
 package it.unibo.graph.inmemory
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.utils.DUMMY_ID
 
 open class MemoryGraph: Graph {
     override var tsm: TSManager? = null
@@ -10,9 +9,7 @@ open class MemoryGraph: Graph {
     private val props: MutableList<P> = ArrayList()
 
     override fun clear() {
-        nodes.clear()
-        rels.clear()
-        props.clear()
+        listOf(nodes, rels, props).forEach { it.clear() }
     }
 
     override fun nextNodeId(): Long = nodes.size.toLong()

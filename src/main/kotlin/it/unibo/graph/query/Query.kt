@@ -22,8 +22,8 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
                     .associate { it.second?.alias!! to Pair(patternIndex, it.first) } // Pair(patternIndex, stepIndex)
             }
             .reduce { acc, map -> acc + map }
-    val joinFilters = where.filter { mapAliases[it.a]!!.first != mapAliases[it.b]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
-    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.a]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
+    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
     val result =
         if (match.size == 1) {
             pattern1
@@ -53,11 +53,11 @@ private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinF
                 val step = match[1][index] // Get the current step
                 if (step != null) { // If the step has some filters
                     if (joinFilters.size > 1) throw IllegalArgumentException("Too many joining filters")
-                    val curJoinFilters = joinFilters.filter { step.alias == it.a || step.alias == it.b } // Check if the step contains a node to join
+                    val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second } // Check if the step contains a node to join
                     if (curJoinFilters.isNotEmpty()) { // ... if so
                         if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step")
                         val curJoinFilter = curJoinFilters.first() // Take the filter condition. TODO I assume that there is a single joining filter on a step
-                        val cAlias = if (step.alias != curJoinFilter.a) curJoinFilter.a else curJoinFilter.b // take the alias of the step in the previous pattern; e.g. "a"
+                        val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
                         val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
                         props.forEach { p -> // explode each property
                             rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
@@ -69,7 +69,7 @@ private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinF
                     rec(curMatch + step, index + 1, from, to)
                 }
             } else {
-                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.a]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
+                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
             }
         }
         rec(emptyList(), 0, from, to)
@@ -208,13 +208,33 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
 fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
-    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.a, it.b) }.toSet()}.maxByOrNull { it.value }?.key!!}
+    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
+
+    fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long): List<Filter> {
+        if (index + 1 < match.size) { // If there is another step
+            val nextMatch = match[index + 1] ?: return emptyList() // select it
+            val nextAlias = nextMatch.alias // and its alias (if any)
+            return (if (nextAlias != null) { // If the alias is available
+                val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
+                if (c != null) { // if so...
+                    val tmp = if (c.first == nextAlias) c.second else c.first // take the other element
+                    // ... and push down a new filter based on the property values
+                    val values = curPath[mapAlias[tmp]!!].getProps(name = c.property, fromTimestamp = from, toTimestamp = to)
+                    if (values.size > 1) throw IllegalArgumentException("Too many property values in the same temporal range")
+                    listOf(Filter(c.property, c.operator, values.first().value)) // TODO should run for each property
+                } else {
+                    emptyList()
+                }
+            } else emptyList()) + nextMatch.properties
+        }
+        return emptyList() // push down the filters from the next step
+    }
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
         fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean): Boolean {
             return when (alias) {
-                mapWhere[alias]?.a -> c.isOk(e, path[mapAlias[c.b]!!], timeaware)
-                mapWhere[alias]?.b -> c.isOk(path[mapAlias[c.a]!!], e, timeaware)
+                mapWhere[alias]?.first -> c.isOk(e, path[mapAlias[c.second]!!], timeaware)
+                mapWhere[alias]?.second -> c.isOk(path[mapAlias[c.first]!!], e, timeaware)
                 else -> false
             }
         }
@@ -224,7 +244,8 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     (match[index]!!.type == null || match[index]!!.type == e.label)  // filter on label
                             && match[index]!!.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
                             && e.timeOverlap(timeaware, from, to) // check time overlap
-                            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
+                            && (c == null ||
+                    whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
         ) {
             val curPath = path + e
             if (curPath.size == match.size) {
@@ -243,7 +264,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
-                            .getValues(emptyList(), emptyList())
+                            .getValues(emptyList(), pushDownFilters(index, curPath, from, to)) // push down the filters from the next step
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to, visited)
                             }

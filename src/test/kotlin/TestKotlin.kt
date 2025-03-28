@@ -1,6 +1,7 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
+import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.query.*
@@ -12,21 +13,23 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-
 class TestKotlin {
 
     fun matrix(f: (Graph) -> Unit) {
         listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
-            .map { setup(it) }
-            .forEach {
-                f(it)
-                it.close()
+            .forEach { g ->
+                listOf(AsterixDBTSM.createDefault(g), MemoryTSM(g))
+                    .forEach { tsm ->
+                        val g: CustomGraph = setup(g, tsm)
+                        f(g)
+                        g.close()
+                    }
             }
     }
 
-    fun setup(g: Graph): CustomGraph {
+    fun setup(g: Graph, tsm: TSManager): CustomGraph {
         val g = CustomGraph(g)
-        g.tsm = AsterixDBTSM.createDefault(g)
+        g.tsm = tsm
         g.clear()
         g.getTSM().clear()
 
@@ -59,14 +62,15 @@ class TestKotlin {
         var timestamp = 0L
 
         val ts1: TS = g.getTSM().addTS()
-        val m1 = ts1.add(Measurement, timestamp = timestamp++, value = 10)
+        val m1 = ts1.add(Measurement, timestamp = timestamp, value = 10)
+        g.addProperty(m1.id, "unit", "Celsius", PropType.STRING, id = DUMMY_ID, from = timestamp, to = timestamp)
+        timestamp += 1
         ts1.add(Measurement, timestamp = timestamp++, value = 11)
         ts1.add(Measurement, timestamp = timestamp++, value = 12)
         val n6 = g.addNode(Humidity, value = ts1.getTSId())
         g.addEdge(HasHumidity, n3.id, n6.id)
         g.addEdge(HasOwner, m1.id, n4.id, id = DUMMY_ID)
         g.addEdge(HasManutentor, m1.id, n4.id, id = DUMMY_ID)
-        g.addProperty(m1.id, "unit", "Celsius", PropType.STRING, id = DUMMY_ID)
 
         val ts2 = g.getTSM().addTS()
         ts2.add(Measurement, timestamp = timestamp++, value = 10)
@@ -143,11 +147,12 @@ class TestKotlin {
 
     @Test
     fun `test size`() {
-        // println(ClassLayout.parseClass(N::class.java).toPrintable())
-        // println(ClassLayout.parseClass(R::class.java).toPrintable())
-        // println(ClassLayout.parseClass(P::class.java).toPrintable())
-        val g = setup(MemoryGraph())
-        assertEquals(52, g.getNode(N0).serialize().size)
+        var g = MemoryGraph()
+        val tsm = MemoryTSM(g)
+        setup(g, tsm)
+        assertEquals(NODE_SIZE, g.getNode(N0).serialize().size)
+        assertEquals(EDGE_SIZE, g.getEdge(N0.toInt()).serialize().size)
+        assertEquals(PROPERTY_SIZE, g.getProp(N0.toInt()).serialize().size)
     }
 
     @Test
@@ -285,7 +290,7 @@ class TestKotlin {
     @Test
     fun testSearchTS() {
         matrix { g ->
-            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
+            var pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
             assertEquals(3, search(g, pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
         }
     }
@@ -434,8 +439,38 @@ class TestKotlin {
         assertEquals(g.getNode(N0), g.getNodeFromDisk(N0))
         assertEquals(n1, g.getNodeFromDisk(N1))
         assertEquals(e1, g.getEdgeFromDisk(e1.id.toLong()))
-        listOf(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10).forEach {
-            assertEquals(it, g.getPropertyFromDisk(it.id.toLong()))
+        listOf(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10).forEachIndexed {
+            i, p -> assertEquals(p, g.getPropertyFromDisk(p.id.toLong()), "p${i + 1}")
+        }
+    }
+
+    @Test
+    fun `compare order`() {
+        matrix { g ->
+            g.clear()
+            g.getTSM().clear()
+
+            val n10 = g.addNode(A)
+            val n11 = g.addNode(B)
+            g.addProperty(n10.id, "location", POINT_IN_T0, PropType.GEOMETRY)
+            g.addProperty(n11.id, "location", T0_LOCATION, PropType.GEOMETRY)
+            g.addEdge(Foo, n10.id, n11.id)
+
+            val w1 = listOf(Compare("b", "a", "location", Operators.ST_CONTAINS))
+            val w2 = listOf(Compare("a", "b", "location", Operators.ST_CONTAINS))
+            assertEquals(1, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w1).size)
+            assertEquals(0, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w2).size)
+            assertEquals(0, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w1).size)
+            assertEquals(1, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w2).size)
+
+            val ts = g.getTSM().addTS()
+            ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
+            g.addEdge(Foo, n11.id, g.addNode(C, value = ts.getTSId()).id)
+
+            assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
+            assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
+            assertEquals(1, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w1).size)
+            assertEquals(0, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w2).size)
         }
     }
 }

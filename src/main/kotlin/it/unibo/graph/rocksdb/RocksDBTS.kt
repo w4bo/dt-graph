@@ -17,7 +17,7 @@ class RocksDBTS(override val g: Graph, val id: Long, val db: RocksDB) : TS {
         return n
     }
 
-    override fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N> {
+    override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
         val acc: MutableList<N> = mutableListOf()
         val iterator = db.newIterator()
         iterator.seek("$id|".toByteArray())

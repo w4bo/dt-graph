@@ -47,7 +47,7 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         return n
     }
 
-    override fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N> {
+    override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
         val selectQuery = """
         USE $dataverse;
         SELECT * FROM $dataset

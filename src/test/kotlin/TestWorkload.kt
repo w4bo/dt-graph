@@ -6,10 +6,11 @@ import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import it.unibo.graph.structure.CustomGraph
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.TestFactory
-import kotlin.math.truncate
 import kotlin.test.Test
 
+
+const val T0_LOCATION = "{\"coordinates\":[[[11.798775,44.235004],[11.799136,44.235376],[11.800661,44.234333],[11.800189,44.234023],[11.798775,44.235004]]],\"type\":\"Polygon\"}"
+const val POINT_IN_T0 = "{\"coordinates\":[11.798998,44.235024],\"type\":\"Point\"}"
 
 /**
  * Problemi:
@@ -481,7 +482,7 @@ class TestWorkload{
 
         // Adding a new parcel that should not be considered
         val erranoT0 = g.addNode(AgriParcel)
-        g.addProperty(erranoT0.id, "location","{\"coordinates\":[[[11.798775,44.235004],[11.799136,44.235376],[11.800661,44.234333],[11.800189,44.234023],[11.798775,44.235004]]],\"type\":\"Polygon\"}", PropType.GEOMETRY)
+        g.addProperty(erranoT0.id, "location", T0_LOCATION, PropType.GEOMETRY)
         val t0Device = g.addNode(Device)
         g.addEdge(HasDevice,erranoT0.id,t0Device.id)
 

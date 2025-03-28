@@ -1,7 +1,5 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.rocksdb.RocksDBGraph
-import it.unibo.graph.rocksdb.RocksDBGraph.Companion
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.GRAPH_SOURCE
 import it.unibo.graph.utils.NODE
@@ -27,20 +25,18 @@ open class P(
     var next: Int? = null,
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
-    @Transient final override var g: Graph
+    @Transient final override var g: Graph,
+    @Transient val fromDisk: Boolean = false
 ) : Elem {
 
     companion object {
-
         private val db: RocksDB
         private val DB_NAME = "db_properties"
         init {
             val options: DBOptions = DBOptions()
             options.setCreateIfMissing(true)
             options.setCreateMissingColumnFamilies(true)
-            val cfDescriptors = listOf(
-                ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
-            )
+            val cfDescriptors = listOf(ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()))
             val cfHandles: List<ColumnFamilyHandle> = ArrayList()
             db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
         }
@@ -80,7 +76,7 @@ open class P(
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
             val next = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
-            return P(id, sourceId, sourceType, key, value, type, next, fromTimestamp, toTimestamp, g = g)
+            return P(id, sourceId, sourceType, key, value, type, next, fromTimestamp, toTimestamp, g = g, fromDisk = true)
         }
     }
 
@@ -127,8 +123,9 @@ open class P(
     }
 
     init {
-        if (decodeBitwiseSource(sourceId) == GRAPH_SOURCE && id != DUMMY_ID) { // If the source is the graph and the property is not created at runtime
+        if (!fromDisk && id != DUMMY_ID && decodeBitwiseSource(sourceId) == GRAPH_SOURCE) { // If the source is the graph and the property is not created at runtime
             val elem: ElemP = if (sourceType == NODE) g.getNode(sourceId) else g.getEdge(sourceId.toInt()) // get the source of the property (either an edge or a node)
+            assert(elem.fromTimestamp <= fromTimestamp && toTimestamp <= elem.toTimestamp) { "${elem}\n${toString()}" }
             if (elem.nextProp == null) elem.nextProp = id // if the element already has no properties, do nothing
             else {
                 // TODO we only update the `toTimestamp` of properties of elements of the graph (and not of the TS)
@@ -141,10 +138,6 @@ open class P(
                 next = elem.nextProp  // update the next pointer of the node
                 elem.nextProp = id
             }
-            // if (elem is N && key == LOCATION) {
-            //     elem.location = GeoJsonReader().read(value.toString())
-            //     elem.locationTimestamp = fromTimestamp
-            // }
             if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again
         }
     }
@@ -155,10 +148,10 @@ open class P(
 
     override fun equals(other: Any?): Boolean {
         if (other !is P) return false
-        return id == other.id && key == other.key && value == other.value && sourceId == other.sourceId && type == other.type
+        return id == other.id && key == other.key && value == other.value && sourceId == other.sourceId && type == other.type && fromTimestamp == other.fromTimestamp && toTimestamp == other.toTimestamp
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(id, key, value, sourceId, type)
+        return Objects.hash(id, key, value, sourceId, type, fromTimestamp, toTimestamp)
     }
 }

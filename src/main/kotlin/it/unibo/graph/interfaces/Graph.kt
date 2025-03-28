@@ -37,6 +37,7 @@ interface Graph {
         if (p.sourceType == NODE) {
             val ts = tsm!!.getTS(tsId)
             val n = ts.get(key)
+            assert(n.fromTimestamp >= p.fromTimestamp && p.toTimestamp <= n.toTimestamp) { p.toString() }
             n.properties += p
             ts.add(n)
             return p

@@ -12,16 +12,18 @@ interface TS : Serializable {
     val g: Graph
 
     fun getTSId(): Long
-    fun add(label: Label, timestamp: Long, value: Long, location: String?): N {
-        val nodeId = encodeBitwise(getTSId(), timestamp)
-        val newTSNode = N(nodeId, label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
-        newTSNode.properties.add(P(DUMMY_ID, nodeId, NODE, LOCATION, location!!, PropType.GEOMETRY, g = g))
-        return add(newTSNode)
+
+    fun createNode(label: Label, timestamp: Long, value: Long): N = N(encodeBitwise(getTSId(), timestamp), label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
+
+    fun add(label: Label, timestamp: Long, value: Long, location: String): N {
+        val n = createNode(label, timestamp, value)
+        n.properties.add(P(DUMMY_ID, n.id, NODE, LOCATION, location, PropType.GEOMETRY, fromTimestamp = timestamp, toTimestamp = timestamp, g = g))
+        return add(n)
     }
 
-    fun add(label: Label, timestamp: Long, value: Long) = add(label, timestamp, value, null)
+    fun add(label: Label, timestamp: Long, value: Long) = add(createNode(label, timestamp, value))
 
     fun add(n: N): N
-    fun getValues(by: List<Aggregate>, filter: List<Filter>): List<N>
+    fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N>
     fun get(id: Long): N
 }

@@ -6,7 +6,7 @@ import org.locationtech.jts.io.geojson.GeoJsonReader
 
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
 
-class Compare(val a: Any, val b: Any, val property: String, val operator: Operators) {
+class Compare(val first: Any, val second: Any, val property: String, val operator: Operators) {
 
     companion object {
         fun apply(a: Any, b: Any, operator: Operators): Boolean {

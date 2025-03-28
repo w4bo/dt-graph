@@ -43,7 +43,7 @@ class TestTemporal {
         g.addEdge(HasDevice, p2.id, d1.id, from = 2, to = 4)
         g.addEdge(HasManutentor, d1.id, h1.id, from = 0, to = 2)
         g.addEdge(HasManutentor, d1.id, h2.id, from = 2, to = 4)
-        g.addProperty(h1.id, "name", "Alice", PropType.STRING)
+        g.addProperty(h1.id, "name", "Alice", PropType.STRING, from = 0)
         g.addProperty(h1.id, "address", "Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(h1.id, "address", "Bar", PropType.STRING, from = 2)
 
