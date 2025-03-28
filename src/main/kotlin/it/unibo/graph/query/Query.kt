@@ -227,7 +227,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     // ... and push down a new filter based on the property values
                     val values = curPath[mapAlias[tmp]!!].getProps(name = c.property, fromTimestamp = from, toTimestamp = to)
                     if (values.size > 1) throw IllegalArgumentException("Too many property values in the same temporal range")
-                    filters += Filter(c.property, c.operator, values.first().value) // TODO should run for each property
+                    filters += Filter(c.property, c.operator, values.first().value, nextAlias == c.first) // TODO should run for each property
                 }
             }
         }

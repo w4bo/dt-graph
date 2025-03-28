@@ -18,7 +18,7 @@ class TestKotlin {
     fun matrix(f: (Graph) -> Unit) {
         listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
             .forEach { g ->
-                listOf(/*AsterixDBTSM.createDefault(g),*/ MemoryTSM(g))
+                listOf(AsterixDBTSM.createDefault(g), MemoryTSM(g))
                     .forEach { tsm ->
                         val g: CustomGraph = setup(g, tsm)
                         f(g)
