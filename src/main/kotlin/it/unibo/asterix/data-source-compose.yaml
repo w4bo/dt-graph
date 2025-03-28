@@ -1,0 +1,79 @@
+services:
+  datasource-common:
+    &datasource-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      INGESTION_LATENCY: 100
+      ASTERIX_IP: asterixdb
+      ASTERIX_PORT: 10001
+      MAX_ITERATION: 500
+      TEST_ID: 0
+      ASTERIX_MACHINES_COUNT: 1
+      DATASOURCES_NUMBER: 4
+    volumes:
+      - asterix_test_results:/asterix_statistics/
+      - datasource_jar:/
+    command:
+      - /bin/bash
+      - -c
+      - |
+        sleep 200
+        java -jar /STS-Graph-all.jar
+    deploy:
+      placement:
+        constraints:
+          - node.hostname != CB-Mass-Node1
+    networks:
+      - asterix-network
+
+  dataSource_1:
+    <<: *datasource-common
+    environment:
+      TS_ID: 1
+  dataSource_2:
+    <<: *datasource-common
+    environment:
+      TS_ID: 2
+  dataSource_3:
+    <<: *datasource-common
+    environment:
+      TS_ID: 3
+  dataSource_4:
+    <<: *datasource-common
+    environment:
+      TS_ID: 4
+
+  asterixdb:
+    image: mp4sini/asterixdb:latest
+    command:
+      - /bin/bash
+      - -c
+      - |
+        opt/local/bin/start-sample-cluster.sh
+        tail -f /dev/null
+    ports:
+      - 19006:19006
+      - 19002:19002
+      - 10001:10001
+
+volumes:
+  asterix_test_results:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=${NFSADDRESS},rw,nfsvers=4,nolock,hard
+      device: ":${NFSPATH}/asterixdb/results/"
+
+  datasource_jar:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=${NFSADDRESS},rw,nfsvers=4,nolock,hard
+      device: ":${NFSPATH}/asterixdb/jar/"
+
+
+networks:
+  asterix-network:
+    external: true
