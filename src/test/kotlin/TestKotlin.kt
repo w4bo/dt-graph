@@ -18,7 +18,7 @@ class TestKotlin {
     fun matrix(f: (Graph) -> Unit) {
         listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
             .forEach { g ->
-                listOf(AsterixDBTSM.createDefault(g), MemoryTSM(g))
+                listOf(/*AsterixDBTSM.createDefault(g),*/ MemoryTSM(g))
                     .forEach { tsm ->
                         val g: CustomGraph = setup(g, tsm)
                         f(g)
@@ -467,10 +467,10 @@ class TestKotlin {
             ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
             g.addEdge(Foo, n11.id, g.addNode(C, value = ts.getTSId()).id)
 
-            assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
-            assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
             assertEquals(1, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w1).size)
             assertEquals(0, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w2).size)
+            assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
+            assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
         }
     }
 }

@@ -23,7 +23,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
             filters.all { filter -> // the node must fulfill all filters
                 node.getProps(name = filter.property).any { // get the properties of the node
                     assert(it.fromTimestamp == it.toTimestamp){ it.toString() } // TODO: we consider the properties in a measurement to be instantaneous
-                    Compare.apply(filter.value, it.value, filter.operator) // check that the node is ok
+                    Compare.apply(it.value, filter.value, filter.operator) // check that the node is ok
                 }
             }
         }
