@@ -2,6 +2,8 @@ package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.HasTS
+import it.unibo.graph.utils.FROM_TIMESTAMP
+import it.unibo.graph.utils.TO_TIMESTAMP
 import org.jetbrains.kotlinx.dataframe.math.mean
 import kotlin.math.max
 import kotlin.math.min
@@ -211,10 +213,14 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
     val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
 
     fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long): List<Filter> {
+        val filters = mutableListOf<Filter>()
+        filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
+        filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
         if (index + 1 < match.size) { // If there is another step
-            val nextMatch = match[index + 1] ?: return emptyList() // select it
+            val nextMatch = match[index + 1] ?: return filters // select it
             val nextAlias = nextMatch.alias // and its alias (if any)
-            return (if (nextAlias != null) { // If the alias is available
+            filters += nextMatch.properties
+            if (nextAlias != null) { // If the alias is available
                 val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
                 if (c != null) { // if so...
                     val tmp = if (c.first == nextAlias) c.second else c.first // take the other element
@@ -222,12 +228,10 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     val values = curPath[mapAlias[tmp]!!].getProps(name = c.property, fromTimestamp = from, toTimestamp = to)
                     if (values.size > 1) throw IllegalArgumentException("Too many property values in the same temporal range")
                     listOf(Filter(c.property, c.operator, values.first().value)) // TODO should run for each property
-                } else {
-                    emptyList()
                 }
-            } else emptyList()) + nextMatch.properties
+            }
         }
-        return emptyList() // push down the filters from the next step
+        return filters // push down the filters from the next step
     }
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {

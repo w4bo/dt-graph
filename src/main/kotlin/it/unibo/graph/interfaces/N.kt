@@ -1,9 +1,7 @@
 package it.unibo.graph.interfaces
 
 import it.unibo.graph.interfaces.Labels.HasTS
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.VALUE
+import it.unibo.graph.utils.*
 import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
 import java.util.*
@@ -52,10 +50,10 @@ open class N(
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
         return when (name) {
-            VALUE -> if (value != null) listOf(P(DUMMY_ID, id, NODE, VALUE, value, PropType.DOUBLE, g = g)) else emptyList()
-            else -> {
-                super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
-            }
+            FROM_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, FROM_TIMESTAMP, this.fromTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
+            TO_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, TO_TIMESTAMP, this.toTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
+            VALUE -> value?.let { listOf(P(DUMMY_ID, id, NODE, VALUE, it, PropType.DOUBLE, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp)) } ?: emptyList()
+            else -> super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
         }
     }
 

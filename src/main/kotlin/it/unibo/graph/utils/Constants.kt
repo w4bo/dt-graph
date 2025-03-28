@@ -1,5 +1,7 @@
 package it.unibo.graph.utils
 
+const val FROM_TIMESTAMP = "fromTimestamp"
+const val TO_TIMESTAMP = "toTimestamp"
 const val VALUE = "value"
 const val GRAPH_SOURCE = 0L
 const val LOCATION = "location"
