@@ -1,33 +1,36 @@
-services:
-  datasource-common:
-    &datasource-common
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      INGESTION_LATENCY: 100
-      ASTERIX_IP: asterixdb
-      ASTERIX_PORT: 10001
-      MAX_ITERATION: 500
-      TEST_ID: 0
-      ASTERIX_MACHINES_COUNT: 1
-      DATASOURCES_NUMBER: 4
-    volumes:
-      - asterix_test_results:/asterix_statistics/
-      - datasource_jar:/
-    command:
-      - /bin/bash
-      - -c
-      - |
-        sleep 200
-        java -jar /STS-Graph-all.jar
-    deploy:
-      placement:
-        constraints:
-          - node.hostname != CB-Mass-Node1
-    networks:
-      - asterix-network
+version: "3.9"
 
+x-datasource-common:
+  &datasource-common
+  image: mp4sini/myjavaimage
+  environment:
+    INGESTION_LATENCY: 0
+    ASTERIX_IP: asterixdb
+    ASTERIX_PORT: 10001
+    MAX_ITERATION: 50000
+    TEST_ID: 0
+    ASTERIX_MACHINES_COUNT: 1
+    DATASOURCES_NUMBER: 4
+    NFSADDRESS:
+    NFSPATH: /nfsshare
+
+  volumes:
+    - asterix_test_results:/asterix_statistics/
+    - datasource_jar:/asterix/
+  command:
+    - /bin/bash
+    - -c
+    - |
+      sleep 200
+      java -jar /asterix/STS-Graph-all.jar
+  deploy:
+    placement:
+      constraints:
+        - node.hostname != CB-Mass-Node1
+  networks:
+    - asterix-network
+
+services:
   dataSource_1:
     <<: *datasource-common
     environment:
@@ -57,21 +60,23 @@ services:
       - 19006:19006
       - 19002:19002
       - 10001:10001
+    networks:
+      - asterix-network
 
 volumes:
   asterix_test_results:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=${NFSADDRESS},rw,nfsvers=4,nolock,hard
-      device: ":${NFSPATH}/asterixdb/results/"
+      o: addr=137.204.70.156,rw,nfsvers=4,nolock,hard
+      device: ":/nfsshare/asterixdb/results/"
 
   datasource_jar:
     driver: local
     driver_opts:
       type: nfs
-      o: addr=${NFSADDRESS},rw,nfsvers=4,nolock,hard
-      device: ":${NFSPATH}/asterixdb/jar/"
+      o: addr=137.204.70.156,rw,nfsvers=4,nolock,hard
+      device: ":/nfsshare/asterixdb/jar/"
 
 
 networks:
