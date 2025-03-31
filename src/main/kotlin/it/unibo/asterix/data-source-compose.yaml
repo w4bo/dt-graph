@@ -6,17 +6,7 @@ x-datasource-common:
   volumes:
     - asterix_test_results:/asterix_statistics/
     - datasource_jar:/asterix/
-  command:
-    - /bin/bash
-    - -c
-    - |
-      export ASTERIX_PORT=$((10000 + $TS_ID))
-      curl -X POST "http://asterixdb:10002/query/service" \
-      -H "Content-Type: application/x-www-form-urlencoded" \
-      --data-urlencode "statement=CREATE feed MeasurementsFeed_${TS_ID} WITH { \"adapter-name\": \"socket_adapter\", \"sockets\": \"127.0.0.1:${ASTERIX_PORT}\", \"address-type\": \"IP\", \"type-name\": \"Measurement\", \"format\": \"adm\" }; CONNECT FEED MeasurementsFeed_${TS_ID} TO DATASET OpenMeasurements; start feed MeasurementsFeed_${TS_ID};" \
-      --data-urlencode "pretty=true" \
-      --data-urlencode "mode=immediate"
-      java -jar /asterix/STS-Graph-all.jar
+  command: ["/asterix/startup.sh"]
   deploy:
     placement:
       constraints:
@@ -63,6 +53,9 @@ services:
       - 49006:19006
       - 19002:19002
       - 10001:10001
+      - 10002:10002
+      - 10003:10003
+      - 10004:10004
     networks:
       - asterix-network
     command:
@@ -79,7 +72,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.hostname != CB-Mass-Node1
+          - node.hostname == ISI-BIGCLUSTER-PNRR06
 
 volumes:
   asterix_test_results:
