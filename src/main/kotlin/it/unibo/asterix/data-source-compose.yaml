@@ -60,7 +60,11 @@ services:
       - -c
       - |
         opt/local/bin/start-sample-cluster.sh
-        cat /asterix/setup.aql | nc localhost 19002
+        curl -X POST "http://localhost:19002/query/service" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        --data-urlencode "statement=$(cat /asterix/setup.txt)" \
+        --data-urlencode "pretty=true" \
+        --data-urlencode "mode=immediate" \
         tail -f /dev/null
     deploy:
       placement:

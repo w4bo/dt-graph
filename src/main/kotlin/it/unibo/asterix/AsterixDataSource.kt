@@ -97,8 +97,6 @@ class AsterixDataSource(
 
     fun pushToAsterix(outputPath:String) {
         val writer = PrintWriter(outputStream, true)
-        //val ts1 = AsterixDBTSM.createDefault(MemoryGraph())
-
         val result = measureTimeMillis {
             for (iteration in 0..<maxIteration) {
                 println("Running iteration $iteration")
@@ -149,14 +147,14 @@ class AsterixDataSource(
             print("Status code: $statusCode")
             when {
                 statusCode in 200..299 -> {
-                    print("Select complete")
+                    print("\nSelect complete")
                 }
                 else -> throw UnsupportedOperationException()
             }
         }
 
-        print("Insertion time: $result")
-        print("Selection time $selectResult")
+        print("\nInsertion time: $result")
+        print("\nSelection time $selectResult")
     }
 
     companion object {
@@ -188,7 +186,7 @@ class AsterixDataSource(
             )
 
             val dataSource = AsterixDataSource(ingestionLatency,asterixIP,asterixPort,maxIteration, measurementsPolygon, tsId, testId, dataSourcesNumber, asterixClusterMachines )
-            val outputPath = "/asterix_statistics/testId${testId}_tsId_${tsId}_maxIterations${maxIteration}.csv"
+            val outputPath = "/asterix_statistics/testId${testId}_tsId_${tsId}_maxIterations${maxIteration}_date${System.currentTimeMillis()}.csv"
 
             dataSource.pushToAsterix(outputPath)
         }
