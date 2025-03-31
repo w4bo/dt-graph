@@ -1,3 +1,6 @@
+import it.unibo.graph.asterixdb.AsterixDBTSM
+import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.interfaces.TSManager
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.jetbrains.kotlinx.dataframe.AnyFrame
@@ -13,12 +16,16 @@ import kotlin.random.Random
 import org.jetbrains.kotlinx.dataframe.api.*
 import org.jetbrains.kotlinx.dataframe.io.writeCSV
 import java.io.*
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import kotlin.system.measureTimeMillis
 
 class AsterixDataSource(
     val ingestionLatency: Int,
-    asterixIP: String,
-    asterixPort: Int,
+    val asterixIP: String,
+    val asterixPort: Int,
     val maxIteration: Int,
     val measurementsPolygon: Geometry? = null,
     val tsId: Long,
@@ -57,12 +64,11 @@ class AsterixDataSource(
         }
     private fun appendRowToCSV(outputPath: String, row: Map<String, Any>, isFirstRow: Boolean = false) {
         val file = File(outputPath)
-        file.parentFile?.mkdirs() // Crea la cartella se non esiste
+        file.parentFile?.mkdirs()
 
-        // Usa `FileWriter` con `append = true` per aggiungere senza sovrascrivere
         BufferedWriter(FileWriter(file, true)).use { writer ->
             val csvFormat = if (isFirstRow) {
-                CSVFormat.DEFAULT.withHeader(*row.keys.toTypedArray()) // Scrive l'header solo se il file è nuovo
+                CSVFormat.DEFAULT.withHeader(*row.keys.toTypedArray())
             } else {
                 CSVFormat.DEFAULT
             }
@@ -91,6 +97,7 @@ class AsterixDataSource(
 
     fun pushToAsterix(outputPath:String) {
         val writer = PrintWriter(outputStream, true)
+        //val ts1 = AsterixDBTSM.createDefault(MemoryGraph())
 
         val result = measureTimeMillis {
             for (iteration in 0..<maxIteration) {
@@ -118,7 +125,38 @@ class AsterixDataSource(
             }
             writer.close()
         }
+
+        val selectResult = measureTimeMillis {
+            val connection = URL("http://$asterixIP:19002/query/service").openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            connection.doOutput = true
+
+            val params = mapOf(
+                "statement" to "SELECT COUNT(*) FROM OpenMeasurements",
+                "pretty" to "true",
+                "mode" to "immediate",
+                "dataverse" to "Measurements_Dataverse"
+            )
+
+            val postData = params.entries.joinToString("&") {
+                "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
+            }
+
+            connection.outputStream.use { it.write(postData.toByteArray()) }
+
+            val statusCode = connection.responseCode
+            print("Status code: $statusCode")
+            when {
+                statusCode in 200..299 -> {
+                    print("Select complete")
+                }
+                else -> throw UnsupportedOperationException()
+            }
+        }
+
         print("Insertion time: $result")
+        print("Selection time $selectResult")
     }
 
     companion object {
@@ -128,8 +166,8 @@ class AsterixDataSource(
             val ingestionLatency = System.getenv("INGESTION_LATENCY")?.toIntOrNull() ?: 0
             val asterixIP = System.getenv("ASTERIX_IP") ?: "127.0.0.1"
             val asterixPort = System.getenv("ASTERIX_PORT")?.toIntOrNull() ?: 10001
-            val maxIteration = System.getenv("MAX_ITERATION")?.toIntOrNull() ?: 10000
-            val tsId = System.getenv("TS_ID")?.toLongOrNull() ?: 15L
+            val maxIteration = System.getenv("MAX_ITERATION")?.toIntOrNull() ?: 500000
+            val tsId = System.getenv("TS_ID")?.toLongOrNull() ?: 2L
             val testId = System.getenv("TEST_ID")?.toIntOrNull() ?: 0
             val dataSourcesNumber = System.getenv("DATASOURCES_NUMBER")?.toIntOrNull() ?: 1
             val asterixClusterMachines = System.getenv("ASTERIX_MACHINES_COUNT")?.toIntOrNull() ?: 1

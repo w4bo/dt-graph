@@ -11,9 +11,6 @@ x-datasource-common:
     TEST_ID: 0
     ASTERIX_MACHINES_COUNT: 1
     DATASOURCES_NUMBER: 4
-    NFSADDRESS:
-    NFSPATH: /nfsshare
-
   volumes:
     - asterix_test_results:/asterix_statistics/
     - datasource_jar:/asterix/
@@ -21,7 +18,7 @@ x-datasource-common:
     - /bin/bash
     - -c
     - |
-      sleep 200
+      sleep 400
       java -jar /asterix/STS-Graph-all.jar
   deploy:
     placement:
@@ -50,18 +47,25 @@ services:
 
   asterixdb:
     image: mp4sini/asterixdb:latest
+    volumes:
+      - datasource_jar:/asterix/
+    ports:
+      - 49006:19006
+      - 19002:19002
+      - 10001:10001
+    networks:
+      - asterix-network
     command:
       - /bin/bash
       - -c
       - |
         opt/local/bin/start-sample-cluster.sh
+        cat /asterix/setup.aql | nc localhost 19002
         tail -f /dev/null
-    ports:
-      - 19006:19006
-      - 19002:19002
-      - 10001:10001
-    networks:
-      - asterix-network
+    deploy:
+      placement:
+        constraints:
+          - node.hostname != CB-Mass-Node1
 
 volumes:
   asterix_test_results:
