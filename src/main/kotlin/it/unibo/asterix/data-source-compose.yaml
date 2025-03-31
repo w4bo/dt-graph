@@ -18,8 +18,8 @@ x-datasource-common:
   networks:
     - asterix-network
 
-  &common-environment:
-  environment:
+x-environment-common:
+  &common-environment
     INGESTION_LATENCY: 0
     ASTERIX_IP: asterixdb
     ASTERIX_PORT: 10001
