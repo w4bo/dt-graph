@@ -10,6 +10,12 @@ x-datasource-common:
     - /bin/bash
     - -c
     - |
+      export ASTERIX_PORT=$((10000 + $TS_ID))
+      curl -X POST "http://asterixdb:10002/query/service" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      --data-urlencode "statement=CREATE feed MeasurementsFeed_${TS_ID} WITH { \"adapter-name\": \"socket_adapter\", \"sockets\": \"127.0.0.1:${ASTERIX_PORT}\", \"address-type\": \"IP\", \"type-name\": \"Measurement\", \"format\": \"adm\" }; CONNECT FEED MeasurementsFeed_${TS_ID} TO DATASET OpenMeasurements; start feed MeasurementsFeed_${TS_ID};" \
+      --data-urlencode "pretty=true" \
+      --data-urlencode "mode=immediate"
       java -jar /asterix/STS-Graph-all.jar
   deploy:
     placement:
@@ -22,7 +28,6 @@ x-datasource-common:
   environment:
     INGESTION_LATENCY: 0
     ASTERIX_IP: asterixdb
-    ASTERIX_PORT: 10001
     MAX_ITERATION: 50000
     TEST_ID: 0
     ASTERIX_MACHINES_COUNT: 1
@@ -34,18 +39,21 @@ services:
     environment:
       <<: *common-environment
       TS_ID: 1
-#  dataSource_2:
-#    <<: *datasource-common
-#    environment:
-#      TS_ID: 2
-#  dataSource_3:
-#    <<: *datasource-common
-#    environment:
-#      TS_ID: 3
-#  dataSource_4:
-#    <<: *datasource-common
-#    environment:
-#      TS_ID: 4
+  dataSource_2:
+    <<: *datasource-common
+    environment:
+      <<: *common-environment
+      TS_ID: 2
+  dataSource_3:
+    <<: *datasource-common
+    environment:
+      <<: *common-environment
+      TS_ID: 3
+  dataSource_4:
+    <<: *datasource-common
+    environment:
+      <<: *common-environment
+      TS_ID: 4
 
   asterixdb:
     image: mp4sini/asterixdb:latest
