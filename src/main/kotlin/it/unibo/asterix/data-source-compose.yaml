@@ -3,14 +3,6 @@ version: "3.9"
 x-datasource-common:
   &datasource-common
   image: openjdk:21-jdk
-  environment:
-    INGESTION_LATENCY: 0
-    ASTERIX_IP: asterixdb
-    ASTERIX_PORT: 10001
-    MAX_ITERATION: 50000
-    TEST_ID: 0
-    ASTERIX_MACHINES_COUNT: 1
-    DATASOURCES_NUMBER: 4
   volumes:
     - asterix_test_results:/asterix_statistics/
     - datasource_jar:/asterix/
@@ -26,11 +18,22 @@ x-datasource-common:
   networks:
     - asterix-network
 
+  &common-environment:
+  environment:
+    INGESTION_LATENCY: 0
+    ASTERIX_IP: asterixdb
+    ASTERIX_PORT: 10001
+    MAX_ITERATION: 50000
+    TEST_ID: 0
+    ASTERIX_MACHINES_COUNT: 1
+    DATASOURCES_NUMBER: 4
+
 services:
-#  dataSource_1:
-#    <<: *datasource-common
-#    environment:
-#      TS_ID: 1
+  dataSource_1:
+    <<: *datasource-common
+    environment:
+      <<: *common-environment
+      TS_ID: 1
 #  dataSource_2:
 #    <<: *datasource-common
 #    environment:
@@ -61,9 +64,9 @@ services:
         opt/local/bin/start-sample-cluster.sh
         curl -X POST "http://localhost:19002/query/service" \
         -H "Content-Type: application/x-www-form-urlencoded" \
-        --data-urlencode "statement=$(cat /asterixsetup/setup.txt)" \
+        --data-urlencode "statement=$$(cat /asterixsetup/setup.txt)" \
         --data-urlencode "pretty=true" \
-        --data-urlencode "mode=immediate" \
+        --data-urlencode "mode=immediate"
         tail -f /dev/null
     deploy:
       placement:
