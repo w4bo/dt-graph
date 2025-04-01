@@ -17,7 +17,6 @@ services:
 
         tail -f /dev/null
     volumes:
-      - "./asterixdb:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/logs"
       - "./asterixdbconf:/asterixsetup/"
     ports:
       - 19006:19006

@@ -1,49 +1,29 @@
 version: "3.9"
 
-x-datasource-common:
-  &datasource-common
-  image: openjdk:21-jdk
-  volumes:
-    - asterix_test_results:/asterix_statistics/
-    - datasource_jar:/asterix/
-  command: ["/asterix/startup.sh"]
-  deploy:
-    placement:
-      constraints:
-        - node.hostname != CB-Mass-Node1
-  networks:
-    - asterix-network
-
-x-environment-common:
-  &common-environment
-    INGESTION_LATENCY: 0
-    ASTERIX_IP: asterixdb
-    MAX_ITERATION: 50000
-    TEST_ID: 0
-    ASTERIX_MACHINES_COUNT: 1
-    DATASOURCES_NUMBER: 4
-
 services:
-  dataSource_1:
-    <<: *datasource-common
+  dataSources:
+    image: openjdk:21-jdk
+    volumes:
+      - asterix_test_results:/asterix_statistics/
+      - datasource_jar:/asterix/
+    command: ["/asterix/startup.sh"]
+    deploy:
+      restart_policy:
+        condition: none
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname != CB-Mass-Node1
+          - node.hostname != ISI-BIGCLUSTER-PNRR06
+    networks:
+      - asterix-network
     environment:
-      <<: *common-environment
-      TS_ID: 1
-  dataSource_2:
-    <<: *datasource-common
-    environment:
-      <<: *common-environment
-      TS_ID: 2
-  dataSource_3:
-    <<: *datasource-common
-    environment:
-      <<: *common-environment
-      TS_ID: 3
-  dataSource_4:
-    <<: *datasource-common
-    environment:
-      <<: *common-environment
-      TS_ID: 4
+      INGESTION_LATENCY: 0
+      ASTERIX_IP: asterixdb
+      MAX_ITERATION: 5000
+      TEST_ID: 0
+      ASTERIX_MACHINES_COUNT: 1
+      DATASOURCES_NUMBER: 4
 
   asterixdb:
     image: mp4sini/asterixdb:latest

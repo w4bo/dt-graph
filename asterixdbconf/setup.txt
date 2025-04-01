@@ -45,7 +45,9 @@ CREATE feed MeasurementsFeed WITH {
   "sockets": "127.0.0.1:10001",
   "address-type": "IP",
   "type-name": "Measurement",
-  "format": "adm"
+  "format": "adm",
+  "policy": "Spill"
 };
+
 CONNECT FEED MeasurementsFeed TO DATASET OpenMeasurements;
 start feed MeasurementsFeed;
