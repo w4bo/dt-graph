@@ -25,6 +25,7 @@ check_service_status() {
 run_workload() {
   local compose_file=$1
   local replicas=$2
+  local machines=$3
 
   echo "Modifying replicas value to: $replicas and DATASOURCES_NUMBER to $replicas"
 
@@ -35,6 +36,7 @@ run_workload() {
   sed -i "s/replicas: [0-9]*/replicas: $replicas/" "$compose_file"
   sed -i "s/DATASOURCES_NUMBER: [0-9]*/DATASOURCES_NUMBER: $replicas/" "$compose_file"
   sed -i "s/TEST_ID: [0-9]*/TEST_ID: $TEST_ID/" "$compose_file"
+  sed -i "s/ASTERIX_MACHINES_COUNT: [0-9]*/ASTERIX_MACHINES_COUNT: machines/" "$compose_file"
 
   # Deploy the stack with the modified YAML file
   echo "Running docker stack deploy with replicas=$replicas and TEST_ID=$TEST_ID"
@@ -83,7 +85,7 @@ for c in "${cluster_machines[@]}"; do
   # Iterate over the values in the "n" array (for different replicas)
   for replicas in "${n[@]}"; do
     # Run the workload for the selected compose file and replica value
-    run_workload "$compose_file" "$replicas"
+    run_workload "$compose_file" "$replicas" "$c"
   done
 
   echo "Completed all tests for cluster size: $c machines"
