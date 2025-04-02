@@ -3,22 +3,32 @@
 # Define the arrays for "replicas" and "cluster_machines"
 n=(8 16 32 64 128)
 cluster_machines=(1 2 4)
-SERVICE_NAME="asterixStack_datasources"
+SERVICE_NAME="asterixStack_dataSources"
 TEST_ID=0  # Initialize the TEST_ID
 
 # Function to check the status of the service
 check_service_status() {
-    # Get the current state of the service
-    state=$(docker service ps $SERVICE_NAME --format "{{.CurrentState}}")
-    echo "Service state: $SERVICE_NAME: $state"
+    # Ottieni lo stato di tutti i task associati al servizio
+        # Ottieni lo stato di tutti i task associati al servizio
+    states=$(docker service ps $SERVICE_NAME --format "{{.CurrentState}}")
 
-    # If the service state contains 'Shutdown', return 0 (indicating shutdown)
-    if [[ "$state" == *"Shutdown"* ]]; then
-        return 0  # Service in shutdown state
+    all_completed=true  # Flag per verificare se tutti i task sono completati
+
+    while IFS= read -r state; do
+        echo "$state"
+        if ! [[ "$state" =~ Complete || "$state" =~ Failed ]]; then
+            all_completed=false  # Se almeno un task non è "Complete", segnalo che non è ancora finito
+        fi
+    done <<< "$states"
+
+    if $all_completed; then
+        return 0  # Tutti i task sono "Completed"
+    else
+        return 1  # Almeno uno non è ancora "Completed"
     fi
 
-    # Otherwise, return 1 (service is not in shutdown state)
-    return 1  # Service not in shutdown state
+
+    return 0  # Tutti i task sono "Completed", ritorna 0 (servizio completato)
 }
 
 # Function to execute the workload for a specific compose file and replicas value
@@ -36,7 +46,7 @@ run_workload() {
   sed -i "s/replicas: [0-9]*/replicas: $replicas/" "$compose_file"
   sed -i "s/DATASOURCES_NUMBER: [0-9]*/DATASOURCES_NUMBER: $replicas/" "$compose_file"
   sed -i "s/TEST_ID: [0-9]*/TEST_ID: $TEST_ID/" "$compose_file"
-  sed -i "s/ASTERIX_MACHINES_COUNT: [0-9]*/ASTERIX_MACHINES_COUNT: machines/" "$compose_file"
+  sed -i "s/ASTERIX_MACHINES_COUNT: [0-9]*/ASTERIX_MACHINES_COUNT: $machines/" "$compose_file"
 
   # Deploy the stack with the modified YAML file
   echo "Running docker stack deploy with replicas=$replicas and TEST_ID=$TEST_ID"
@@ -55,7 +65,7 @@ run_workload() {
           break  # Exit the loop after completing the test
       else
           echo "The service $SERVICE_NAME is not yet terminated. Waiting..."
-          sleep 10  # Pause for 10 seconds before checking again
+          sleep 5  # Pause for 10 seconds before checking again
       fi
   done
 

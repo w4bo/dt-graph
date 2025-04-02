@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   dataSources:
-    image: openjdk:21-jdk
+    image: openjdk:21-jdk-slim
     volumes:
       - asterix_test_results:/asterix_statistics/
       - datasource_jar:/asterix/
@@ -10,7 +10,7 @@ services:
     deploy:
       restart_policy:
         condition: none
-      replicas: 1
+      replicas: 128
       placement:
         constraints:
           - node.hostname != CB-Mass-Node1
@@ -20,10 +20,13 @@ services:
     environment:
       INGESTION_LATENCY: 0
       ASTERIX_IP: asterixdb
-      MAX_ITERATION: 5000
-      TEST_ID: 0
+      MAX_ITERATION: 500
+      TEST_ID: 1
       ASTERIX_MACHINES_COUNT: 1
-      DATASOURCES_NUMBER: 4
+      DATASOURCES_NUMBER: 128
+      REDIS_HOST: redis
+      LOCK_NAME: datafeed_lock
+      BARRIER_NAME: ingestion_barrier
 
   asterixdb:
     image: mp4sini/asterixdb:latest
@@ -53,6 +56,19 @@ services:
       placement:
         constraints:
           - node.hostname == ISI-BIGCLUSTER-PNRR06
+
+  redis:
+    image: redis:latest
+    command: /bin/sh -c "redis-server --appendonly yes & sleep 5 && redis-cli SET sync_barrier 0 && wait"
+    deploy:
+      restart_policy:
+        condition: none
+      placement:
+        constraints:
+          - node.hostname != CB-Mass-Node1
+
+    networks:
+      - asterix-network
 
 volumes:
   asterix_test_results:
