@@ -50,6 +50,7 @@ services:
       placement:
         constraints:
           - node.hostname != CB-Mass-Node1
+          - node.hostname == ISI-BIGCLUSTER-PNRR05
     networks:
       - BIG-dataplatform-network
 
@@ -70,6 +71,7 @@ services:
       placement:
         constraints:
           - node.hostname != CB-Mass-Node1
+          - node.hostname == ISI-BIGCLUSTER-PNRR04
     networks:
       - BIG-dataplatform-network
 
