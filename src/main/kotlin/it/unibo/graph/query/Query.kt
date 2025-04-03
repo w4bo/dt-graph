@@ -25,16 +25,16 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
             }
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
-    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
     val result =
         if (match.size == 1) {
             pattern1
         } else {
-            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware)
+            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by)
         }
         .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
         .groupBy { row -> groupBy(by, mapAliases, row, match) }
-        .mapValues { aggregate(by, it, mapAliases, match) }
+        .mapValues { rowGroup -> aggregate(by, rowGroup, mapAliases, match) }
         .map { wrapResult(by, it) }
         .flatten()
     return result
@@ -43,7 +43,18 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
 /**
  * Join two patterns
  */
-private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinFilters: List<Compare>, mapAliases: Map<String, Pair<Int, Int>>, where: List<Compare>, from: Long, to: Long, timeaware: Boolean) =
+private fun join(
+    g: Graph,
+    pattern1: List<Path>,
+    match: List<List<Step?>>,
+    joinFilters: List<Compare>,
+    mapAliases: Map<String, Pair<Int, Int>>,
+    where: List<Compare>,
+    from: Long,
+    to: Long,
+    timeaware: Boolean,
+    by: List<Aggregate>
+) =
     pattern1.flatMap { row -> // for each result (i.e., path) of the first pattern
         // Restrict the temporal interval
         val from = max(from, row.from)
@@ -71,7 +82,7 @@ private fun join(g: Graph, pattern1: List<Path>, match: List<List<Step?>>, joinF
                     rec(curMatch + step, index + 1, from, to)
                 }
             } else {
-                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware).map { Path(row + it.result, it.from, it.to) }
+                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware, by = by).map { Path(row + it.result, it.from, it.to) }
             }
         }
         rec(emptyList(), 0, from, to)
@@ -162,7 +173,11 @@ private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: L
 private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>) =
     if (by.isNotEmpty()) {
         if (by.any { it.operator != null }) {
-            it.key + it.value // MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
+            if (by.size == 1) {
+                it.key + it.value // MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
+            } else {
+                listOf(it.key + it.value)
+            }
         } else {
             if (by.size == 1) {
                 it.key // MATCH (n) RETURN n.name => [a, b, ...]
@@ -174,31 +189,67 @@ private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>)
         it.value
     }
 
+fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastAggregation: Boolean): Any {
+    if (numbers.first() is Number) {
+        val cNumbers = numbers.map { (it as Number).toDouble() }
+        return when (aggregationOperator) {
+            AggOperator.SUM -> cNumbers.sum()
+            AggOperator.COUNT -> cNumbers.count()
+            AggOperator.MAX -> cNumbers.max()
+            AggOperator.MIN -> cNumbers.min()
+            AggOperator.AVG -> {
+                val v =
+                    cNumbers.fold(0.0 to 0) { (sum, count), num ->
+                        (sum + num) to (count + 1)
+                    }
+                if (lastAggregation) v.first / v.second else v
+            }
+            else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
+        }
+    } else if (numbers.first() is Pair<*, *>) {
+        val cNumbers = numbers.map { it as Pair<Double, Int> }
+        return when (aggregationOperator) {
+            AggOperator.AVG -> {
+                val v = cNumbers.fold(0.0 to 0) { (sum, count), num ->
+                    (sum + num.first) to (count + num.second)
+                }
+                if (lastAggregation) v.first / v.second else v
+            }
+
+            else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
+        }
+    } else {
+        throw IllegalArgumentException("Unsupported aggregation operator")
+    }
+}
+
 /**
  * Aggregate the result of group by
  */
-private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>, match: List<List<Step?>>) =
-    if (!by.any { it.operator != null }) {
+private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>, match: List<List<Step?>>): List<Any> {
+    val aggregationOperators = by.filter { it.operator != null }
+    if (aggregationOperators.isEmpty()) {
         // no aggregation operator has been specified
         // E.g., MATCH (n) RETURN n.name => [a, b, ...]
-        group.value
+        return group.value
     } else {
         // some aggregation operator has been specified
         // E.g., MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
-        // TODO apply different aggregation operators, and possibly multiple aggregation operators
-        val value: Double = group.value
+        val values: List<Any> = group.value
             .map { row ->
                 val alias = mapAliases[by.first { it.operator != null }.n]!!
-                (row[alias.second + (if (alias.first == 1) match[0].size else 0)] as Number).toDouble()
+                row[alias.second + (if (alias.first == 1) match[0].size else 0)]
             }
-            .mean(true)
-        listOf(value) // E.g., [12.5]
+        if (aggregationOperators.size > 1) throw IllegalArgumentException("More than one aggregation operator")
+        val value = aggregateNumbers(values, aggregationOperators.first().operator!!, lastAggregation = true)
+        return listOf(value) // E.g., [12.5]
     }
+}
 
 /**
  * Group several rows by key
  */
-private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: List<Any>, match: List<List<Step?>>) =
+private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: List<Any>, match: List<List<Step?>>): List<Any> =
     // group by all elements that are not aggregation operator
     // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
@@ -207,32 +258,44 @@ private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>
         row[alias.second + (if (alias.first == 1) match[0].size else 0)]
     }
 
-fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false): List<Path> {
+fun pushDownBy(index: Int, by: List<Aggregate>, match: List<Step?>): List<Aggregate> {
+    val cby = mutableListOf<Aggregate>()
+    if (index + 1 < match.size) { // If there is another step
+        val nextMatch = match[index + 1] ?: return cby // select it
+        val nextAlias = nextMatch.alias // and its alias (if any)
+        if (nextAlias != null) { // If the alias is available
+            cby += by.filter { it.n == nextAlias }
+        }
+    }
+    return cby
+}
+
+fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long, match: List<Step?>, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>): List<Filter> {
+    val filters = mutableListOf<Filter>()
+    filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
+    filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
+    if (index + 1 < match.size) { // If there is another step
+        val nextMatch = match[index + 1] ?: return filters // select it
+        val nextAlias = nextMatch.alias // and its alias (if any)
+        filters += nextMatch.properties
+        if (nextAlias != null) { // If the alias is available
+            val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
+            if (c != null) { // if so...
+                val tmp = if (c.first == nextAlias) c.second else c.first // take the other element
+                // ... and push down a new filter based on the property values
+                val values = curPath[mapAlias[tmp]!!].getProps(name = c.property, fromTimestamp = from, toTimestamp = to)
+                if (values.size > 1) throw IllegalArgumentException("Too many property values in the same temporal range")
+                filters += Filter(c.property, c.operator, values.first().value, nextAlias == c.first) // TODO should run for each property
+            }
+        }
+    }
+    return filters // push down the filters from the next step
+}
+
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
     val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
-
-    fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long): List<Filter> {
-        val filters = mutableListOf<Filter>()
-        filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
-        filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
-        if (index + 1 < match.size) { // If there is another step
-            val nextMatch = match[index + 1] ?: return filters // select it
-            val nextAlias = nextMatch.alias // and its alias (if any)
-            filters += nextMatch.properties
-            if (nextAlias != null) { // If the alias is available
-                val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
-                if (c != null) { // if so...
-                    val tmp = if (c.first == nextAlias) c.second else c.first // take the other element
-                    // ... and push down a new filter based on the property values
-                    val values = curPath[mapAlias[tmp]!!].getProps(name = c.property, fromTimestamp = from, toTimestamp = to)
-                    if (values.size > 1) throw IllegalArgumentException("Too many property values in the same temporal range")
-                    filters += Filter(c.property, c.operator, values.first().value, nextAlias == c.first) // TODO should run for each property
-                }
-            }
-        }
-        return filters // push down the filters from the next step
-    }
 
     fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
         fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean): Boolean {
@@ -268,7 +331,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
-                            .getValues(emptyList(), pushDownFilters(index, curPath, from, to)) // push down the filters from the next step
+                            .getValues(pushDownBy(index, by, match), pushDownFilters(index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to, visited)
                             }

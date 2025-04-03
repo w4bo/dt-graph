@@ -287,22 +287,21 @@ class TestWorkload{
             )
         )
 
-        val query = query(g, pattern, by = listOf(Aggregate("dev","name"), Aggregate("env","name"), Aggregate("meas", "value", AggOperator.AVG)), from = 0, to = 5).chunked(3).map{Triple(it[0],it[1],it[2])}
+        val query = query(g, pattern, by = listOf(Aggregate("dev","name"), Aggregate("env","name"), Aggregate("meas", "value", AggOperator.AVG)), from = 0, to = 5)//.chunked(3).map{Triple(it[0],it[1],it[2])}
 
         val spatialQuery = query(g, spatialPattern,
             where = listOf(Compare("env","meas","location",Operators.ST_CONTAINS)),
             by = listOf(Aggregate("dev","name"), Aggregate("env","name"), Aggregate("meas", "value", AggOperator.AVG)),
-            from = 0, to = 5).chunked(3).map{Triple(it[0],it[1],it[2])}
+            from = 0, to = 5)
 
         agents.forEach{ elem ->
-            val queryResult = query.findLast{ it.first == elem.second && it.second == elem.third }
-            val spatialQueryResult = spatialQuery.findLast{ it.first == elem.second && it.second == elem.third }
+            val queryResult = query.map { it as List<Any> }.findLast{ it[0] == elem.second && it[1] == elem.third }
+            val spatialQueryResult = spatialQuery.map { it as List<Any> }.findLast{ it[0] == elem.second && it[1] == elem.third }
             if (queryResult != null && spatialQueryResult != null) {
-                kotlin.test.assertEquals(queryResult.third, elem.first)
-                kotlin.test.assertEquals(spatialQueryResult.third, elem.first)
+                kotlin.test.assertEquals(queryResult[2], elem.first)
+                kotlin.test.assertEquals(spatialQueryResult[2], elem.first)
             }
         }
-
     }
 
 

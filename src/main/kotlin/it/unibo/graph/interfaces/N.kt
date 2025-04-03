@@ -1,5 +1,6 @@
 package it.unibo.graph.interfaces
 
+import groovyjarjarasm.asm.Type
 import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.utils.*
 import org.apache.commons.lang3.NotImplementedException
@@ -49,12 +50,13 @@ open class N(
     }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
-        return when (name) {
+        val p = when (name) {
             FROM_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, FROM_TIMESTAMP, this.fromTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
             TO_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, TO_TIMESTAMP, this.toTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
             VALUE -> value?.let { listOf(P(DUMMY_ID, id, NODE, VALUE, it, PropType.DOUBLE, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp)) } ?: emptyList()
-            else -> super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
+            else -> emptyList()
         }
+        return if (p.isNotEmpty()) return p else super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
     }
 
     fun getTS(): List<N> {
@@ -99,3 +101,28 @@ open class N(
         return Objects.hash(id, label, nextRel, nextProp, value)
     }
 }
+
+class AggN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph) : N(
+    DUMMY_ID.toLong(),
+    label,
+    null,
+    null,
+    null,
+    mutableListOf(),
+    mutableListOf(
+        P(
+            DUMMY_ID,
+            DUMMY_ID.toLong(),
+            NODE,
+            key = VALUE,
+            value = aggregatedValue,
+            type = PropType.DOUBLE,
+            fromTimestamp = fromTimestamp,
+            toTimestamp = toTimestamp,
+            g = g
+        )
+    ),
+    fromTimestamp,
+    toTimestamp,
+    g
+)

@@ -473,4 +473,51 @@ class TestKotlin {
             assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
         }
     }
+
+    @Test
+    fun `push down aggregate`() {
+        matrix { g ->
+            g.clear()
+            g.getTSM().clear()
+
+            val ts1 = g.getTSM().addTS()
+            var timestamp = 0L
+            ts1.add(C, timestamp = timestamp++, value = 1, location = POINT_IN_T0)
+            ts1.add(C, timestamp = timestamp++, value = 2, location = POINT_IN_T0)
+            ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0)
+
+            val ts2 = g.getTSM().addTS()
+            timestamp = 0L
+            ts2.add(C, timestamp = timestamp++, value = 10, location = POINT_IN_T0)
+            ts2.add(C, timestamp = timestamp++, value = 20, location = POINT_IN_T0)
+            ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0)
+
+            val a1 = g.addNode(A)
+            g.addProperty(a1.id, "name", "a", PropType.STRING)
+            val b1 = g.addNode(B, value = ts1.getTSId())
+            g.addProperty(b1.id, "name", "foo", PropType.STRING)
+            g.addProperty(b1.id, "lastname", "b", PropType.STRING)
+            val b2 = g.addNode(B, value = ts2.getTSId())
+            g.addProperty(b2.id, "name", "foo", PropType.STRING)
+            g.addProperty(b2.id, "lastname", "c", PropType.STRING)
+            g.addEdge(Foo, a1.id, b1.id)
+            g.addEdge(Foo, a1.id, b2.id)
+
+            val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
+
+            val gb1 = listOf(Aggregate("c", property = "value", operator = AggOperator.SUM))
+            assertEquals(listOf(66.0), query(g, pattern1, by=gb1))
+            val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            assertEquals(listOf(listOf("foo", 66.0)), query(g, pattern1, by=gb2))
+            val gb3 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            assertEquals(setOf(listOf("b", 6.0), listOf("c", 60.0)), query(g, pattern1, by=gb3).toSet())
+            val gb4 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            assertEquals(listOf(listOf("a", 66.0)), query(g, pattern1, by=gb4))
+
+            val gb5 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            assertEquals(listOf(listOf("a", 11.0)), query(g, pattern1, by=gb5))
+            val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            assertEquals(setOf(listOf("b", 2.0), listOf("c", 20.0)), query(g, pattern1, by=gb6).toSet())
+        }
+    }
 }
