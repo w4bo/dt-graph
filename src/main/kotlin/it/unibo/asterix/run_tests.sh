@@ -2,7 +2,7 @@
 
 # Define the arrays for "replicas" and "cluster_machines"
 n=(8 16 32 64 128)
-cluster_machines=(1 2 4)
+cluster_machines=(1)
 SERVICE_NAME="asterixStack_dataSources"
 TEST_ID=0  # Initialize the TEST_ID
 

@@ -6,11 +6,12 @@ services:
     volumes:
       - asterix_test_results:/asterix_statistics/
       - datasource_jar:/asterix/
+      - logs_dir:/logs_dir/
     command: ["/asterix/startup.sh"]
     deploy:
       restart_policy:
         condition: none
-      replicas: 128
+      replicas: 8
       placement:
         constraints:
           - node.hostname != CB-Mass-Node1
@@ -23,7 +24,7 @@ services:
       MAX_ITERATION: 500
       TEST_ID: 1
       ASTERIX_MACHINES_COUNT: 1
-      DATASOURCES_NUMBER: 128
+      DATASOURCES_NUMBER: 8
       REDIS_HOST: redis
       LOCK_NAME: datafeed_lock
       BARRIER_NAME: ingestion_barrier
@@ -85,6 +86,12 @@ volumes:
       o: addr=192.168.30.249,rw,nfsvers=4,nolock,hard
       device: ":/nfsshare/asterixdb/jar/"
 
+  logs_dir:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: addr=192.168.30.249,rw,nfsvers=4,nolock,hard
+      device: ":/nfsshare/asterixdb/logs_dir/"
 
 networks:
   asterix-network:
