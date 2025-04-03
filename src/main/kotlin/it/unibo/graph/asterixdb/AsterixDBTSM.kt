@@ -108,16 +108,28 @@ class AsterixDBTSM private constructor(
               id: STRING,
               timestamp: DATETIME,
               property: STRING,
-              location: geometry,
-              relationships: [NodeRelationship],
-              properties: [Property],
+              location: geometry?,
+              relationships: [NodeRelationship]?,
+              properties: [Property]?,
               fromTimestamp: DATETIME,
               toTimestamp: DATETIME,
               `value`: FLOAT
           };
-
+          
           CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key id;
           create index measurement_location on $dataset(location) type rtree;
+          
+          DROP FEED MeasurementsFeed IF EXISTS;
+          CREATE feed MeasurementsFeed WITH {
+              "adapter-name": "socket_adapter",
+              "sockets": "127.0.0.1:10001",
+              "address-type": "IP",
+              "type-name": "Measurement",
+              "format": "adm"
+          };
+          CONNECT FEED MeasurementsFeed TO DATASET OpenMeasurements;
+        
+          start feed MeasurementsFeed;
             """.trimIndent()
         if (! queryAsterixDB(dbHost, creationQuery)){
             println("Something went wrong while creating dataset $dataset")

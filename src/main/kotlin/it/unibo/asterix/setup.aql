@@ -1,0 +1,58 @@
+DROP dataverse Measurements_Dataverse IF EXISTS;
+CREATE DATAVERSE Measurements_Dataverse;
+USE Measurements_Dataverse;
+
+CREATE TYPE PropertyValue AS OPEN {
+  stringValue: string?,
+  doubleValue: double?,
+  intValue: int?,
+  geometryValue: string?
+};
+
+CREATE TYPE Property AS CLOSED {
+  id: int,
+  sourceId: bigint,
+  sourceType: Boolean,
+  `key`: string,
+  `value`: PropertyValue,
+  `type`: int,
+  fromTimestamp: DATETIME?,
+  toTimestamp: DATETIME?
+};
+
+CREATE TYPE NodeRelationship AS CLOSED {
+  id: int,
+  `type`: string,
+  fromN: bigint,
+  toN: bigint,
+  fromTimestamp: DATETIME?,
+  toTimestamp: DATETIME?,
+  properties: [Property]?
+};
+
+CREATE TYPE Measurement AS OPEN {
+  id: STRING,
+  timestamp: DATETIME,
+  property: STRING,
+  location: geometry?,
+  relationships: [NodeRelationship]?,
+  properties: [Property]?,
+  fromTimestamp: DATETIME,
+  toTimestamp: DATETIME,
+  `value`: FLOAT
+};
+
+CREATE DATASET OpenMeasurements(Measurement)IF NOT EXISTS primary key id;
+create index measurement_location on OpenMeasurements(location) type rtree;
+
+DROP FEED MeasurementsFeed IF EXISTS;
+CREATE feed MeasurementsFeed WITH {
+  "adapter-name": "socket_adapter",
+  "sockets": "127.0.0.1:10001",
+  "address-type": "IP",
+  "type-name": "Measurement",
+  "format": "adm"
+};
+CONNECT FEED MeasurementsFeed TO DATASET OpenMeasurements;
+
+start feed MeasurementsFeed;
