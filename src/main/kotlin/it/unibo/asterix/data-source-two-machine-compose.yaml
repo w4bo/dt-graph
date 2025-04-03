@@ -19,6 +19,7 @@ services:
       - |
         sleep 20
         bin/asterixcc -config-file opt/local/conf/cc.conf > cc.log 2>&1 &
+        sleep 10
         curl -X POST "http://localhost:19002/query/service" \
         -H "Content-Type: application/x-www-form-urlencoded" \
         --data-urlencode "statement=$$(cat /asterixsetup/setup.txt)" \
@@ -34,11 +35,17 @@ services:
 
   asterix_nc1:
     image: mp4sini/asterixdb:latest
-    volumes:
-      - asterix_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
-    command: red-service.log 2>&1 &
-    depends_on:
-      - asterix_cc
+    ports:
+      - 1099:1099
+      - 9090:9090
+#    volumes:
+#      - asterix_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
+    command:
+      - /bin/bash
+      - -c
+      - |
+        bin/asterixncservice > asterix_nc1.log 2>&1 &
+        tail -f /dev/null
     deploy:
       placement:
         constraints:
@@ -48,11 +55,17 @@ services:
 
   asterix_nc2:
     image: mp4sini/asterixdb:latest
-    volumes:
-      - asterix_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
-    command: tail -f /dev/null
-    depends_on:
-      - asterix_cc
+    ports:
+      - 1099:1099
+      - 9090:9090
+#    volumes:
+#      - asterix_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
+    command:
+      - /bin/bash
+      - -c
+      - |
+        bin/asterixncservice > asterix_nc1.log 2>&1 &
+        tail -f /dev/null
     deploy:
       placement:
         constraints:
@@ -89,7 +102,7 @@ volumes:
     driver_opts:
       type: nfs
       o: addr=192.168.30.249,rw,nfsvers=4,nolock,hard
-      device: ":/nfsshare/asterixdb/conf/"
+      device: ":/nfsshare/asterixdb/conf/cc_conf/"
 
   datasource_jar:
     driver: local
