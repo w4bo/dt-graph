@@ -35,6 +35,10 @@ open class N(
             val value = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             return N(id, label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, value = value, g = g)
         }
+
+        fun createVirtualN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph, properties: List<P> = emptyList()) = createVirtualN(label, mutableListOf(P(DUMMY_ID, DUMMY_ID.toLong(), NODE, key = VALUE, value = aggregatedValue, type = PropType.DOUBLE, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)) + properties, fromTimestamp, toTimestamp, g)
+
+        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(DUMMY_ID.toLong(), label, null, null, null, mutableListOf(), properties.toMutableList(), fromTimestamp, toTimestamp, g)
     }
 
     fun serialize(): ByteArray {
@@ -101,28 +105,3 @@ open class N(
         return Objects.hash(id, label, nextRel, nextProp, value)
     }
 }
-
-class AggN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph) : N(
-    DUMMY_ID.toLong(),
-    label,
-    null,
-    null,
-    null,
-    mutableListOf(),
-    mutableListOf(
-        P(
-            DUMMY_ID,
-            DUMMY_ID.toLong(),
-            NODE,
-            key = VALUE,
-            value = aggregatedValue,
-            type = PropType.DOUBLE,
-            fromTimestamp = fromTimestamp,
-            toTimestamp = toTimestamp,
-            g = g
-        )
-    ),
-    fromTimestamp,
-    toTimestamp,
-    g
-)

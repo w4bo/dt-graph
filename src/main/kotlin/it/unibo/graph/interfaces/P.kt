@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-enum class PropType { INT, LONG, DOUBLE, STRING, GEOMETRY }
+enum class PropType { INT, LONG, DOUBLE, STRING, GEOMETRY, NULL }
 
 const val MAX_LENGTH_KEY = 24
 const val MAX_LENGTH_VALUE = 8

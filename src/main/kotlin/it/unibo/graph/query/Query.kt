@@ -2,9 +2,7 @@ package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.HasTS
-import it.unibo.graph.utils.FROM_TIMESTAMP
-import it.unibo.graph.utils.TO_TIMESTAMP
-import org.jetbrains.kotlinx.dataframe.math.mean
+import it.unibo.graph.utils.*
 import kotlin.math.max
 import kotlin.math.min
 
@@ -89,10 +87,89 @@ private fun join(
         acc
     }
 
+fun fullOuterJoinOnInterval(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean): List<Pair<Elem?, Elem?>> {
+    val result = mutableListOf<Pair<Elem?, Elem?>>()
+    val matchedA = mutableSetOf<Elem>()
+    val matchedB = mutableSetOf<Elem>()
+    for (a in listA) {
+        val overlaps = listB.filter { b ->
+            a.timeOverlap(timeaware, b.fromTimestamp, b.toTimestamp)
+        }
+        if (overlaps.isNotEmpty()) {
+            overlaps.forEach { b ->
+                result.add(a to b)
+                matchedB.add(b)
+            }
+            matchedA.add(a)
+        } else {
+            result.add(a to null)
+        }
+    }
+    for (b in listB) {
+        if (b !in matchedB) {
+            result.add(null to b)
+        }
+    }
+    return result
+}
+
+fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean): Set<Pair<Elem?, Elem?>> {
+    // val timePoints = (
+    //         listA.flatMap { listOf(it.fromTimestamp, it.toTimestamp) } +
+    //         listB.flatMap { listOf(it.fromTimestamp, it.toTimestamp) }
+    //     )
+    //     .toSortedSet()
+    //     .toList()
+    // val result = mutableListOf<Pair<Elem?, Elem?>>()
+    // for (i in 0 until timePoints.size) {
+    //     val start = timePoints[i]
+    //     val end = if (i + 1 < timePoints.size) timePoints[i + 1] else start
+    //     val a = listA.find { it.timeOverlap(timeaware, start, end) }
+    //     val b = listB.find { it.timeOverlap(timeaware, start, end) }
+    //     result.add(a to b)
+    // }
+    // return result
+
+    val boundaries = (listA.flatMap { listOf(it.fromTimestamp, it.toTimestamp) } +
+            listB.flatMap { listOf(it.fromTimestamp, it.toTimestamp) })
+        .toSortedSet()
+        .toList()
+
+    val slices = mutableSetOf<Pair<Elem?, Elem?>>()
+
+    // 2. Slice the timeline
+    for (i in 0 until boundaries.size - 1) {
+        val start = boundaries[i]
+        val end = boundaries[i + 1]
+        val activeA = listA.find { it.timeOverlap(timeaware, start, end) }
+        val activeB = listB.find { it.timeOverlap(timeaware, start, end) }
+        slices.add(Pair(activeA, activeB))
+    }
+
+    // 3. Handle exact point intervals (from == to)
+    val pointEvents = boundaries.filter { b ->
+        listA.any { it.fromTimestamp == b && it.toTimestamp == b } ||
+        listB.any { it.fromTimestamp == b && it.toTimestamp == b }
+    }
+
+    for (point in pointEvents) {
+        val a = listA.find { it.timeOverlap(timeaware, point, point) }
+        val b = listB.find { it.timeOverlap(timeaware, point, point) }
+
+        // Avoid duplicate (e.g., already part of a longer interval slice)
+        if (a != null || b != null) {
+            slices.add(Pair(a, b))
+        }
+    }
+
+    // 4. Sort slices again to preserve order
+    return slices
+}
+
 /**
  * Replace properties if necessary
  */
-private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long, timeaware: Boolean): List<List<Any>> {
+fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, from: Long, to: Long, timeaware: Boolean): List<Path> {
     // Restrict the temporal interval
     val from = max(from, row.from)
     val to = min(to, row.to)
@@ -100,26 +177,53 @@ private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: L
     // Find the nodes that should be replaced by their properties
     // MATCH (n)-->(m) RETURN n.name, m => only n
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => n and m
-    val toReplace = by.filter { it.property != null }.associateBy {
+    val toReplace: Map<Int, List<Aggregate>> = by.filter { it.property != null }.groupBy {
         val alias = mapAliases[it.n] ?: throw IllegalArgumentException("Alias `${it.n}` is not defined")
         alias.second + (if (alias.first == 1) match[0].size else 0)
     } // find its index in the path
-    val acc: MutableList<List<Any>> = mutableListOf() // accumulator of rows
+    val acc: MutableList<Path> = mutableListOf() // accumulator of rows
+    fun createVirtual(replace: List<Pair<Aggregate, P?>>, from: Long, to: Long, elem: ElemP): ElemP {
+        val virtualP: List<P> = replace.map { pair->
+            val p = pair.second
+            p?: P(DUMMY_ID, sourceType = NODE, key = pair.first.property!!, value = "null", type = PropType.NULL, fromTimestamp = from, toTimestamp = to, sourceId = DUMMY_ID.toLong(), g = elem.g)
+        }
+        val maxFrom = max(from, virtualP.maxOf { it.fromTimestamp })
+        val minTo = min(to, virtualP.minOf { it.toTimestamp })
+        val virtual =
+            if (elem is N) {
+                N.createVirtualN(elem.label, virtualP, maxFrom, minTo, elem.g)
+            } else {
+                R.createVirtualR(elem.label, virtualP, maxFrom, minTo, elem.g)
+            }
+        return virtual
+    }
+
     return if (toReplace.isNotEmpty()) { // if I need to replace at least one element
-        fun rec(curRow: List<Any>, index: Int, from: Long, to: Long) { // recursive function
+        fun rec(curRow: List<ElemP>, index: Int, from: Long, to: Long) { // recursive function
             if (index < row.size) { // iterate until all elements have been checked
-                val replace = toReplace[index] // find the next item to replace
+                val replace: List<Aggregate>? = toReplace[index] // find the next item to replace
+                val elem: ElemP = row[index]
                 if (replace == null) {  // if I don't need to replace this item... continue the recursion but compute the reduced from/to timestamps
-                    val elem = row[index]
                     if (timeOverlap(from, to, elem.fromTimestamp, elem.toTimestamp, timeaware)) { // this node/edge is still valid (i.e., it overlaps with the time span of the property)
                         val newFrom = max(from, elem.fromTimestamp)
                         val newTo = min(to, elem.toTimestamp)
-                        rec(curRow + row[index], index + 1, newFrom, newTo) // continue the recursion
+                        rec(curRow + elem, index + 1, newFrom, newTo) // continue the recursion
                     }
                 } else { // else, I need to replace these items
-                    val props = row[index].getProps(name = replace.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // find the properties to replace
-                    if (props.isEmpty()) { // if they are empty, add the null value as a return
-                        rec(curRow + "null", index + 1, from, to) // ... and continue the recursion
+                    val props: List<Pair<Aggregate, List<P>>> = replace.map { it to elem.getProps(name = it.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) } // For each aggregate, I can have multiple historical properties
+                    if (props.size > 2) throw IllegalArgumentException("Too many props: $props")
+                    val replacements: List<ElemP> =
+                        if (props.size == 2) {
+                            intervalOuterJoin(props[0].second, props[1].second, timeaware)
+                                .map { listOf(Pair(props[0].first, it.first as P?), Pair(props[1].first, it.second as P?)) }
+                                .map { createVirtual(it, from, to, elem) }
+                        } else {
+                            props
+                                .flatMap { group -> group.second.map { Pair(group.first, it) } }
+                                .map { replacement -> createVirtual(listOf(replacement), from, to, elem) }
+                        }
+                    if (replacements.isEmpty()) { // if they are empty, add the null value as a return
+                        rec(curRow + createVirtual(props.map { Pair(it.first, null) }, from, to, elem), index + 1, from, to) // ... and continue the recursion
                     } else {
                         /* I cannot simply iterate over the properties to start the recursion, for instance let's consider
                          * (a)---[0, 0)--->(b1)
@@ -141,29 +245,27 @@ private fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: L
                          */
                         if (index + 1 < row.size) { // if this element is not the last
                             val nextElem = row[index + 1] // look ahead the next element
-                            val overlappingProperties = props.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
-                            if (overlappingProperties.isEmpty()) { // if there is no overlapping, push null down to the recursion
-                                rec(curRow + "null", index + 1, from, to)
+                            val overlappingReplacements = replacements.filter { p -> !(p.fromTimestamp > nextElem.toTimestamp || p.toTimestamp < nextElem.fromTimestamp) } // find the overlapping properties
+                            if (overlappingReplacements.isEmpty()) { // if there is no overlapping, push null down to the recursion
+                                rec(curRow + createVirtual(props.map { Pair(it.first, null) }, from, to, elem), index + 1, from, to)
                             } else {
-                                overlappingProperties.forEach { p ->  // if an overlapping property exists
-                                    rec(curRow + p.value, index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
+                                overlappingReplacements.forEach { p ->  // if an overlapping element exists
+                                    rec(curRow + p, index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the element values
                                 }
                             }
                         } else { // If this is the last element, simply iterate over the existing properties
-                            props.forEach { p ->  // if a property exists
-                                rec(curRow + p.value, index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // continue the recursion by further reducing the interval with the property values
-                            }
+                            replacements.forEach { rec(curRow + it, index + 1, max(from, it.fromTimestamp), min(to, it.toTimestamp)) } // continue the recursion by further reducing the interval with the element values
                         }
                     }
                 }
             } else {
-                acc.add(curRow)
+                acc.add(Path(curRow, from, to))
             }
         }
         rec(emptyList(), 0, from, to)
         acc
     } else {
-        listOf(row)
+        listOf(Path(row, from, to))
     }
 }
 
@@ -190,6 +292,7 @@ private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>)
     }
 
 fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastAggregation: Boolean): Any {
+    // val numbers = numbers.filter { it != null && it != "null" } // TODO: this is necessary to handle data grouped by in TS
     if (numbers.first() is Number) {
         val cNumbers = numbers.map { (it as Number).toDouble() }
         return when (aggregationOperator) {
@@ -219,14 +322,14 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
-        throw IllegalArgumentException("Unsupported aggregation operator")
+        throw IllegalArgumentException("Unsupported type of: ${numbers.first()}")
     }
 }
 
 /**
  * Aggregate the result of group by
  */
-private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List<Any>>>, mapAliases: Map<String, Pair<Int, Int>>, match: List<List<Step?>>): List<Any> {
+private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<Path>>, mapAliases: Map<String, Pair<Int, Int>>, match: List<List<Step?>>): List<Any> {
     val aggregationOperators = by.filter { it.operator != null }
     if (aggregationOperators.isEmpty()) {
         // no aggregation operator has been specified
@@ -238,9 +341,13 @@ private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List
         val values: List<Any> = group.value
             .map { row ->
                 val alias = mapAliases[by.first { it.operator != null }.n]!!
-                row[alias.second + (if (alias.first == 1) match[0].size else 0)]
+                val properties = row.result[alias.second + (if (alias.first == 1) match[0].size else 0)].getProps(name = VALUE)
+                if (properties.size != 1) {
+                    throw IllegalArgumentException("Properties should be 1: $properties")
+                }
+                properties.first().value
             }
-        if (aggregationOperators.size > 1) throw IllegalArgumentException("More than one aggregation operator")
+        if (aggregationOperators.filter { it.operator != null }.size > 1) throw IllegalArgumentException("More than one aggregation operator")
         val value = aggregateNumbers(values, aggregationOperators.first().operator!!, lastAggregation = true)
         return listOf(value) // E.g., [12.5]
     }
@@ -249,13 +356,18 @@ private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<List
 /**
  * Group several rows by key
  */
-private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: List<Any>, match: List<List<Step?>>): List<Any> =
+private fun groupBy(by: List<Aggregate>, mapAliases: Map<String, Pair<Int, Int>>, row: Path, match: List<List<Step?>>): List<Any> =
     // group by all elements that are not aggregation operator
     // MATCH (n)-->(m) RETURN n.name, m.name => group by n and m
     // MATCH (n)-->(m) RETURN n.name, avg(m.value) => group by only on n
     by.filter { it.operator == null }.map {
         val alias = mapAliases[it.n]!!
-        row[alias.second + (if (alias.first == 1) match[0].size else 0)]
+        // row[alias.second + (if (alias.first == 1) match[0].size else 0)]
+        val properties = row.result[alias.second + (if (alias.first == 1) match[0].size else 0)].getProps(name = it.property)
+        if (properties.size != 1) {
+            throw IllegalArgumentException("Properties should be 1: $properties")
+        }
+        properties.first().value
     }
 
 fun pushDownBy(index: Int, by: List<Aggregate>, match: List<Step?>): List<Aggregate> {

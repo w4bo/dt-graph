@@ -475,7 +475,7 @@ class TestKotlin {
     }
 
     @Test
-    fun `push down aggregate`() {
+    fun `push down external group by`() {
         matrix { g ->
             g.clear()
             g.getTSM().clear()
@@ -518,6 +518,62 @@ class TestKotlin {
             assertEquals(listOf(listOf("a", 11.0)), query(g, pattern1, by=gb5))
             val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = "value", operator = AggOperator.AVG))
             assertEquals(setOf(listOf("b", 2.0), listOf("c", 20.0)), query(g, pattern1, by=gb6).toSet())
+        }
+    }
+
+    @Test
+    fun `push down internal group by`() {
+        matrix { g ->
+            g.clear()
+            g.getTSM().clear()
+
+            val ts1 = g.getTSM().addTS()
+            var timestamp = 0L
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 1, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 2, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
+
+            val ts2 = g.getTSM().addTS()
+            timestamp = 0L
+            g.addProperty(ts2.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts2.add(C, timestamp = timestamp, value = 20, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
+
+            val a1 = g.addNode(A)
+            val b1 = g.addNode(B, value = ts1.getTSId())
+            val b2 = g.addNode(B, value = ts2.getTSId())
+            g.addEdge(Foo, a1.id, b1.id)
+            g.addEdge(Foo, a1.id, b2.id)
+
+            val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
+
+            val gb1 = listOf(Aggregate("c", property = "name"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            assertEquals(setOf(listOf("a", 8.0), listOf("b", 14.0)), query(g, pattern1, by=gb1).toSet())
+        }
+    }
+
+    @Test
+    fun `return multiple properties`() {
+        matrix { g ->
+            g.clear()
+            g.getTSM().clear()
+
+            val a1 = g.addNode(A)
+            g.addProperty(a1.id, "name", "a", PropType.STRING, from = 0, to = 2)
+            g.addProperty(a1.id, "lastname", "b", PropType.STRING, from = 1, to = 3)
+            val b1 = g.addNode(B)
+            g.addProperty(b1.id, "name", "c", PropType.STRING)
+            g.addEdge(Foo, a1.id, b1.id)
+
+            val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"))
+            val gb1 = listOf(Aggregate("a", property = "name"), Aggregate("a", property = "lastname"), Aggregate("b", property = "name"))
+
+            assertEquals(setOf(listOf("a", "null", "c"), listOf("a", "b", "c"), listOf("null", "b", "c")), query(g, pattern1, by=gb1, timeaware = true).toSet())
+            assertEquals(setOf(listOf("a", "b", "c")), query(g, pattern1, by=gb1, timeaware = false).toSet())
         }
     }
 }

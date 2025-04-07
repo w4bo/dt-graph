@@ -38,6 +38,8 @@ open class R(
             val toNextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
             return R(id, label, fromN, toN, fromNextRel, toNextRel, fromTimestamp, toTimestamp, nextProp, g = g, fromDisk = true)
         }
+
+        fun createVirtualR(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = R(DUMMY_ID, label, DUMMY_ID.toLong(), DUMMY_ID.toLong(), null, null, fromTimestamp, toTimestamp, null, properties.toMutableList(), g)
     }
 
     fun serialize(): ByteArray {
