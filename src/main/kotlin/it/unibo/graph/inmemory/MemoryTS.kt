@@ -32,51 +32,52 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                 }
             }
         }
-        if (by.isEmpty()) {
+        if (by.isEmpty()) { // If no "by" clause is provided, simply return the filtered values
             return filteredValues
         } else {
-            val aggregationOperators = by.filter { it.operator != null }
+            val aggregationOperators = by.filter { it.operator != null } // Extract aggregation operators (those with an operator defined)
             if (aggregationOperators.size > 1) throw IllegalArgumentException("More than one aggregation operator: $aggregationOperators")
             val aggregationOperator = aggregationOperators.first()
-            val groupby = by.filter { it.operator == null }
+            val groupby = by.filter { it.operator == null } // Extract group-by attributes (those without an operator)
             if (groupby.size > 1) throw IllegalArgumentException("More than one attribute to group by: $groupby")
             return filteredValues
-                .map { n -> Path(listOf(n), n.fromTimestamp, n.toTimestamp) }
-                .flatMap { row ->
+                .map { n -> Path(listOf(n), n.fromTimestamp, n.toTimestamp) }  // Convert each node into a Path object containing the node and its time range
+                .flatMap { row -> // Expand temporal properties
                     replaceTemporalProperties(row, emptyList(), by, mapOf(by.first().n to Pair(0, 0)), from = row.from, to = row.to, timeaware = true)
                 }
-                .groupBy { row ->
+                .groupBy { row -> // Group the paths by the values of the group-by attribute
                     groupby.map {
                         val properties = row.result[0].getProps(name = it.property, fromTimestamp = row.from, toTimestamp = row.to)
                         if (properties.size > 1) throw IllegalArgumentException("More than one property: $properties")
-                        properties.first().value
+                        properties.first().value // Use the property value as the group key
                     }
                 }
-                .map {
+                .map { // For each group, perform aggregation
                     val values = it.value.map { path ->
                         if (path.result.size > 1) { throw IllegalArgumentException("Too many nodes: $path") }
                         val n = path.result[0]
-                        (n.getProps(name = aggregationOperator.property!!, fromTimestamp = path.from, toTimestamp = path.to).first().value as Number).toDouble()
+                        (n.getProps(name = aggregationOperator.property!!, fromTimestamp = path.from, toTimestamp = path.to).first().value as Number).toDouble() // Extract the value to aggregate
                     }
-                    val value = aggregateNumbers(values, aggregationOperator.operator!!, lastAggregation = false)
+                    val value = aggregateNumbers(values, aggregationOperator.operator!!, lastAggregation = false) // Aggregate the values using the specified operator
                     val g = filteredValues.first().g
                     val fromTimestamp = filteredValues.minOfOrNull { it.fromTimestamp }!!
                     val toTimestamp = filteredValues.maxOfOrNull { it.toTimestamp }!!
-                    N.createVirtualN(
+                    N.createVirtualN( // Create a virtual node to represent the result of the aggregation
                         filteredValues.first().label,
                         value,
                         fromTimestamp = fromTimestamp,
                         toTimestamp = toTimestamp,
                         g,
-                        groupby
+                        groupby // Add properties for each group-by key and their corresponding value
                             .zip(it.key)
                             .map {
                                 P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = it.first.property!!, value = it.second, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
-                            } + (if (aggregationOperator.property != VALUE) {
-                            listOf(
-                                P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = aggregationOperator.property!!, value = value, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
+                            } + (
+                                if (aggregationOperator.property != VALUE) // Add a property for the aggregation value if it's not the default property "VALUE"
+                                    listOf(P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = aggregationOperator.property!!, value = value, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp))
+                                else
+                                    emptyList()
                             )
-                        } else emptyList())
                     )
                 }
         }
