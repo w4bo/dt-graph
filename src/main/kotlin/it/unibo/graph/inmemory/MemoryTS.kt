@@ -36,6 +36,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
         } else {
             val aggregationOperators = by.filter { it.operator != null }
             if (aggregationOperators.size > 1) throw IllegalArgumentException("More than one aggregation operator: $aggregationOperators")
+            val aggregationOperator = aggregationOperators.first()
             val groupby = by.filter { it.operator == null }
             if (groupby.size > 1) throw IllegalArgumentException("More than one attribute to group by: $groupby")
             return filteredValues
@@ -54,9 +55,9 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                     val values = it.value.map { path ->
                         if (path.result.size > 1) { throw IllegalArgumentException("Too many nodes: $path") }
                         val n = path.result[0]
-                        (n.getProps(name = VALUE, fromTimestamp = path.from, toTimestamp = path.to).first().value as Number).toDouble()
+                        (n.getProps(name = aggregationOperator.property!!, fromTimestamp = path.from, toTimestamp = path.to).first().value as Number).toDouble()
                     }
-                    val value = aggregateNumbers(values, aggregationOperators.first().operator!!, lastAggregation = false)
+                    val value = aggregateNumbers(values, aggregationOperator.operator!!, lastAggregation = false)
                     val g = filteredValues.first().g
                     val fromTimestamp = filteredValues.minOfOrNull { it.fromTimestamp }!!
                     val toTimestamp = filteredValues.maxOfOrNull { it.toTimestamp }!!

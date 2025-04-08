@@ -34,3 +34,7 @@ fun decodeBitwise(z: Long, offset: Int = 44, mask: Long = 0xFFFFFFFFFFF): Pair<L
 fun decodeBitwiseSource(z: Long, offset: Int = 44): Long {
     return z shr offset
 }
+
+fun <A, B> cartesianProduct(list1: List<A>, list2: List<B>): Set<Pair<A, B>> {
+    return list1.flatMap { a -> list2.map { b -> a to b } }.toSet()
+}

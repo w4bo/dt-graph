@@ -130,14 +130,21 @@ fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean):
     // }
     // return result
 
-    val boundaries = (listA.flatMap { listOf(it.fromTimestamp, it.toTimestamp) } +
-            listB.flatMap { listOf(it.fromTimestamp, it.toTimestamp) })
+    if (!timeaware) {
+        return cartesianProduct(listA, listB)
+    }
+
+    val boundaries =
+        (
+            listA.flatMap { listOf(it.fromTimestamp, it.toTimestamp) } +
+            listB.flatMap { listOf(it.fromTimestamp, it.toTimestamp) }
+        )
         .toSortedSet()
         .toList()
 
     val slices = mutableSetOf<Pair<Elem?, Elem?>>()
 
-    // 2. Slice the timeline
+    // Slice the timeline
     for (i in 0 until boundaries.size - 1) {
         val start = boundaries[i]
         val end = boundaries[i + 1]
@@ -146,7 +153,7 @@ fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean):
         slices.add(Pair(activeA, activeB))
     }
 
-    // 3. Handle exact point intervals (from == to)
+    // Handle exact point intervals (from == to)
     val pointEvents = boundaries.filter { b ->
         listA.any { it.fromTimestamp == b && it.toTimestamp == b } ||
         listB.any { it.fromTimestamp == b && it.toTimestamp == b }
@@ -155,14 +162,11 @@ fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean):
     for (point in pointEvents) {
         val a = listA.find { it.timeOverlap(timeaware, point, point) }
         val b = listB.find { it.timeOverlap(timeaware, point, point) }
-
         // Avoid duplicate (e.g., already part of a longer interval slice)
         if (a != null || b != null) {
             slices.add(Pair(a, b))
         }
     }
-
-    // 4. Sort slices again to preserve order
     return slices
 }
 
@@ -292,7 +296,7 @@ private fun wrapResult(by: List<Aggregate>, it: Map.Entry<List<Any>, List<Any>>)
     }
 
 fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastAggregation: Boolean): Any {
-    // val numbers = numbers.filter { it != null && it != "null" } // TODO: this is necessary to handle data grouped by in TS
+    val numbers = numbers.filter { it != null && it != "null" } // TODO: this is necessary to handle data grouped by in TS
     if (numbers.first() is Number) {
         val cNumbers = numbers.map { (it as Number).toDouble() }
         return when (aggregationOperator) {
@@ -337,18 +341,19 @@ private fun aggregate(by: List<Aggregate>, group: Map.Entry<List<Any>, List<Path
         return group.value
     } else {
         // some aggregation operator has been specified
+        if (aggregationOperators.filter { it.operator != null }.size > 1) throw IllegalArgumentException("More than one aggregation operator")
+        val aggregationOperator = aggregationOperators.first()
         // E.g., MATCH (n)-->(m) RETURN n.name, avg(m.value) => [[a, 12.5], [b, 13.0], ...]
         val values: List<Any> = group.value
             .map { row ->
                 val alias = mapAliases[by.first { it.operator != null }.n]!!
-                val properties = row.result[alias.second + (if (alias.first == 1) match[0].size else 0)].getProps(name = VALUE)
+                val properties = row.result[alias.second + (if (alias.first == 1) match[0].size else 0)].getProps(name = aggregationOperator.property!!)
                 if (properties.size != 1) {
                     throw IllegalArgumentException("Properties should be 1: $properties")
                 }
                 properties.first().value
             }
-        if (aggregationOperators.filter { it.operator != null }.size > 1) throw IllegalArgumentException("More than one aggregation operator")
-        val value = aggregateNumbers(values, aggregationOperators.first().operator!!, lastAggregation = true)
+        val value = aggregateNumbers(values, aggregationOperator.operator!!, lastAggregation = true)
         return listOf(value) // E.g., [12.5]
     }
 }
