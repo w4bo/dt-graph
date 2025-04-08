@@ -582,14 +582,30 @@ class TestKotlin {
         matrix { g ->
             g.clear()
             g.getTSM().clear()
-            val a1 = g.addNode(A)
-            g.addProperty(a1.id, "name", "a", PropType.STRING, from = 0, to = 2)
-            g.addProperty(a1.id, "v", 1, PropType.INT, from = 1, to = 3)
-            g.addProperty(a1.id, "v", 2, PropType.INT, from = 3, to = 4)
-            val pattern1 = listOf(Step(A, alias = "a"))
-            val gb1 = listOf(Aggregate("a", property = "name"), Aggregate("a", property = "v", operator = AggOperator.AVG))
-            assertEquals(setOf(listOf("a", 1.0), listOf("null", 1.5)), query(g, pattern1, by=gb1, timeaware = true).toSet())
-            assertEquals(setOf(listOf("a", 1.5)), query(g, pattern1, by=gb1, timeaware = false).toSet())
+             val a1 = g.addNode(A)
+             g.addProperty(a1.id, "name", "a", PropType.STRING, from = 0, to = 2)
+             g.addProperty(a1.id, "v", 1, PropType.INT, from = 1, to = 3)
+             g.addProperty(a1.id, "v", 2, PropType.INT, from = 3, to = 4)
+             val pattern1 = listOf(Step(A, alias = "a"))
+             val gb1 = listOf(Aggregate("a", property = "name"), Aggregate("a", property = "v", operator = AggOperator.AVG))
+             assertEquals(setOf(listOf("a", 1.0), listOf("null", 1.5)), query(g, pattern1, by=gb1, timeaware = true).toSet())
+             assertEquals(setOf(listOf("a", 1.5)), query(g, pattern1, by=gb1, timeaware = false).toSet())
+
+            val ts1 = g.getTSM().addTS()
+            var timestamp = 0L
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id, "v", 2, PropType.INT, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 20, location = POINT_IN_T0).id, "v", 20, PropType.INT, from = timestamp, to = timestamp)
+            timestamp++
+            g.addProperty(ts1.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id, "v", 20, PropType.INT, from = timestamp, to = timestamp)
+            val b1 = g.addNode(B, value = ts1.getTSId())
+            g.addProperty(b1.id, "name", "foo", PropType.STRING, from = 0, to = 4)
+
+            val pattern2 = listOf(Step(B, alias = "b"), null, Step(C, alias = "c"))
+            val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = "v", operator = AggOperator.AVG))
+            assertEquals(setOf(listOf("foo", 14.0)), query(g, pattern2, by=gb2, timeaware = true).toSet())
+            val gb3 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
+            assertEquals(setOf(listOf("foo", 20.0)), query(g, pattern2, by=gb3, timeaware = true).toSet())
         }
     }
 }

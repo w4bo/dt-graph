@@ -18,15 +18,16 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
     }
 
     override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
-        val filteredValues = values.values.filter { node -> // for each node
-            filters.all { filter -> // the node must fulfill all filters
-                node.getProps(name = filter.property).any { // get the properties of the node
-                    assert(it.fromTimestamp == it.toTimestamp) { it.toString() }
+        // Filtered list of nodes based on the provided filters
+        val filteredValues = values.values.filter { node ->
+            filters.all { filter -> // For each node, check that it satisfies *all* filters
+                node.getProps(name = filter.property).any { property -> // Get all properties of the node with the name specified by the filter
                     // TODO: we assume the properties in a measurement to be only instantaneous
-                    if (filter.attrFirst) {
-                        Compare.apply(it.value, filter.value, filter.operator) // check that the node is ok
+                    assert(property.fromTimestamp == property.toTimestamp) { property.toString() } // Ensure the property is instantaneous (start and end timestamps are equal)
+                    if (filter.attrFirst) { // Depending on the direction of the comparison, apply the operator
+                        Compare.apply(property.value, filter.value, filter.operator) // Compare property value to filter value
                     } else {
-                        Compare.apply(filter.value, it.value, filter.operator)
+                        Compare.apply(filter.value, property.value, filter.operator) // Compare filter value to property value
                     }
                 }
             }
@@ -61,12 +62,25 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                     val g = filteredValues.first().g
                     val fromTimestamp = filteredValues.minOfOrNull { it.fromTimestamp }!!
                     val toTimestamp = filteredValues.maxOfOrNull { it.toTimestamp }!!
-                    N.createVirtualN(filteredValues.first().label, value, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g,
-                        groupby.zip(it.key).map {
-                            P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = it.first.property!!, value = it.second, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
-                        })
+                    N.createVirtualN(
+                        filteredValues.first().label,
+                        value,
+                        fromTimestamp = fromTimestamp,
+                        toTimestamp = toTimestamp,
+                        g,
+                        groupby
+                            .zip(it.key)
+                            .map {
+                                P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = it.first.property!!, value = it.second, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
+                            } + (if (aggregationOperator.property != VALUE) {
+                            listOf(
+                                P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = aggregationOperator.property!!, value = value, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
+                            )
+                        } else emptyList())
+                    )
                 }
         }
     }
+
     override fun get(id: Long): N = values[decodeBitwise(id).second]!!
 }
