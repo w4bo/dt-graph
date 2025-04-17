@@ -1,3 +1,19 @@
+## [1.2.1](https://github.com/w4bo/dt-graph/compare/1.2.0...1.2.1) (2025-04-17)
+
+### Dependency updates
+
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.1.20 ([#51](https://github.com/w4bo/dt-graph/issues/51)) ([fdaf9f0](https://github.com/w4bo/dt-graph/commit/fdaf9f041593c9706a3aab14f30da3191bcdd088))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10 ([#54](https://github.com/w4bo/dt-graph/issues/54)) ([ece3a58](https://github.com/w4bo/dt-graph/commit/ece3a58426dbf76f9bcc1d675561db56bce85340))
+
+### Build and continuous integration
+
+* **deps:** update actions/setup-java action to v4.7.1 ([#52](https://github.com/w4bo/dt-graph/issues/52)) ([51d26d2](https://github.com/w4bo/dt-graph/commit/51d26d2629250f8f38ec8fd84310c6e4149e9330))
+* **deps:** update actions/setup-node action to v4.3.0 ([#50](https://github.com/w4bo/dt-graph/issues/50)) ([71f4be3](https://github.com/w4bo/dt-graph/commit/71f4be304b7082c32e84d3b8cb6007fedcae4d57))
+* **deps:** update actions/setup-node action to v4.4.0 ([#53](https://github.com/w4bo/dt-graph/issues/53)) ([3b134f2](https://github.com/w4bo/dt-graph/commit/3b134f26d2b3758634886cc77b6744ab51981d9f))
+
 ## [1.2.0](https://github.com/w4bo/dt-graph/compare/1.1.1...1.2.0) (2025-03-10)
 
 ### Features
