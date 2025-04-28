@@ -15,7 +15,7 @@ class CustomTS(val ts: TS, override val g: Graph) : TS {
         return CustomVertex(encodeBitwise(getTSId(), timestamp), label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
     }
 
-    override fun add(n: N) = ts.add(n)
+    override fun add(n: N, isUpdate: Boolean) = ts.add(n, isUpdate)
 
     override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> = ts.getValues(by, filters)
 

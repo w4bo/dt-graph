@@ -24,18 +24,19 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
     val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
-    val result =
+    var result =
         if (match.size == 1) {
             pattern1
         } else {
             join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by)
         }
-        .flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
-        .groupBy { row -> groupBy(by, mapAliases, row, match) }
-        .mapValues { rowGroup -> aggregate(by, rowGroup, mapAliases, match) }
-        .map { wrapResult(by, it) }
-        .flatten()
-    return result
+
+    result = result.flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
+    val result2 = result.groupBy { row -> groupBy(by, mapAliases, row, match) }
+    val result3 = result2.mapValues { rowGroup -> aggregate(by, rowGroup, mapAliases, match) }
+    val result4 = result3.map { wrapResult(by, it) }
+    val result5 = result4.flatten()
+    return result5
 }
 
 /**
@@ -322,7 +323,9 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 }
                 if (lastAggregation) v.first / v.second else v
             }
-
+            AggOperator.SUM -> {
+                cNumbers.map{it.first}.sum()
+            }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
@@ -426,6 +429,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
         val c: Compare? = if (alias != null) mapWhere[alias] else null
         if ((match[index] == null || ( // no filter
                     (match[index]!!.type == null || match[index]!!.type == e.label)  // filter on label
+                            // Questo è davvero un ALL o dovrebbe essere un ANY?
                             && match[index]!!.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
                             && e.timeOverlap(timeaware, from, to) // check time overlap
                             && (c == null ||
@@ -448,6 +452,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
+
                             .getValues(pushDownBy(index, by, match), pushDownFilters(index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to, visited)

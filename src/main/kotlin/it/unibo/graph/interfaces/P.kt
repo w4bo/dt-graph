@@ -1,9 +1,9 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.GRAPH_SOURCE
-import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.decodeBitwiseSource
+import it.unibo.graph.structure.CustomProperty
+import it.unibo.graph.utils.*
+import org.locationtech.jts.io.WKTReader
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -71,7 +71,7 @@ open class P(
                     }
                 }
                 PropType.GEOMETRY -> {
-                    String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)
+                    WKTReader().read(String(db.get("$id|$key".toByteArray()), Charsets.UTF_8))
                 }
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
@@ -113,7 +113,7 @@ open class P(
                 }
             }
             PropType.GEOMETRY -> {
-                val value = value as String
+                val value = value.toString()
                 db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
             }
             else -> throw IllegalArgumentException("Unsupported type: $type")

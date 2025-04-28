@@ -1,35 +1,41 @@
 #!/bin/bash
 
 # Define the arrays for "replicas" and "cluster_machines"
-n=(8 16 32 64 128)
-cluster_machines=(1)
+n=(256)
+cluster_machines=(4)
 SERVICE_NAME="asterixStack_dataSources"
 TEST_ID=0  # Initialize the TEST_ID
 
-# Function to check the status of the service
 check_service_status() {
-    # Ottieni lo stato di tutti i task associati al servizio
-        # Ottieni lo stato di tutti i task associati al servizio
-    states=$(docker service ps $SERVICE_NAME --format "{{.CurrentState}}")
+    local DATASOURCES_NUMBER="$1"
+    local REDIS_HOST="localhost"  # Change to the Redis server address
+    local REDIS_PORT="6379"          # Redis port
+    local COMPLETED_KEY="RUN_COMPLETED"
+    local FAILED_KEY="RUN_FAILED"
 
-    all_completed=true  # Flag per verificare se tutti i task sono completati
+    # Perform GET requests to Redis
+    RUN_OK_VALUE=$(redis-cli -h "$REDIS_HOST" GET "$COMPLETED_KEY")
+    RUN_FAIL_VALUE=$(redis-cli -h "$REDIS_HOST" GET "$FAILED_KEY")
 
-    while IFS= read -r state; do
-        echo "$state"
-        if ! [[ "$state" =~ Complete || "$state" =~ Failed ]]; then
-            all_completed=false  # Se almeno un task non è "Complete", segnalo che non è ancora finito
-        fi
-    done <<< "$states"
+    # If the variables are empty, assign 0
+    RUN_OK_VALUE=${RUN_OK_VALUE:-0}
+    RUN_FAIL_VALUE=${RUN_FAIL_VALUE:-0}
 
-    if $all_completed; then
-        return 0  # Tutti i task sono "Completed"
+    # Validate that the values are numbers (avoid errors in arithmetic operations)
+    if ! [[ "$RUN_OK_VALUE" =~ ^[0-9]+$ ]]; then RUN_OK_VALUE=0; fi
+    if ! [[ "$RUN_FAIL_VALUE" =~ ^[0-9]+$ ]]; then RUN_FAIL_VALUE=0; fi
+    echo "Number of succeded runs: $RUN_OK_VALUE"
+    echo "Number of failed runs: $RUN_FAIL_VALUE"
+    # Sum the values and compare with DATASOURCES_NUMBER
+    local TOTAL=$((RUN_OK_VALUE + RUN_FAIL_VALUE))
+
+    if [[ "$TOTAL" -eq "$DATASOURCES_NUMBER" ]]; then
+        return 0  # Success
     else
-        return 1  # Almeno uno non è ancora "Completed"
+        return 1  # Failure
     fi
-
-
-    return 0  # Tutti i task sono "Completed", ritorna 0 (servizio completato)
 }
+
 
 # Function to execute the workload for a specific compose file and replicas value
 run_workload() {
@@ -57,7 +63,7 @@ run_workload() {
   # Loop to wait for the service to finish
   while true; do
       # Check if the service is in shutdown state
-      if check_service_status; then
+      if check_service_status $replicas; then
           echo "The service $SERVICE_NAME has terminated, proceeding to the next test..."
 
           # Remove the stack after the service finishes
@@ -82,11 +88,11 @@ for c in "${cluster_machines[@]}"; do
 
   # Determine the appropriate Docker Compose file based on the value of c
   if [ "$c" -eq 1 ]; then
-    compose_file="data-source-single-machine-compose.yaml"
+    compose_file="data-source-two-machine-compose.yaml"
   elif [ "$c" -eq 2 ]; then
     compose_file="data-source-two-machine-compose.yaml"
   elif [ "$c" -eq 4 ]; then
-    compose_file="data-source-four-machine-compose.yaml"
+    compose_file="data-source-two-machine-compose.yaml"
   else
     echo "Invalid cluster size: $c. Skipping..."
     continue
@@ -94,6 +100,18 @@ for c in "${cluster_machines[@]}"; do
 
   # Iterate over the values in the "n" array (for different replicas)
   for replicas in "${n[@]}"; do
+    curl -X POST "http://192.168.30.106:19002/query/service" \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      --data-urlencode "statement=DROP DATAVERSE Measurements_Dataverse IF EXISTS;" \
+      --data-urlencode "pretty=true" \
+      --data-urlencode "mode=immediate"
+
+    curl -X POST "http://192.168.30.106:19002/query/service" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        --data-urlencode "statement=$(cat /home/mpasini/asterixsetup/setup.txt)" \
+        --data-urlencode "pretty=true" \
+        --data-urlencode "mode=immediate"
+
     # Run the workload for the selected compose file and replica value
     run_workload "$compose_file" "$replicas" "$c"
   done

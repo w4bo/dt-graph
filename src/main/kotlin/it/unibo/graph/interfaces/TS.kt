@@ -6,6 +6,7 @@ import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.LOCATION
 import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.encodeBitwise
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import java.io.Serializable
 
 interface TS : Serializable {
@@ -15,15 +16,15 @@ interface TS : Serializable {
 
     fun createNode(label: Label, timestamp: Long, value: Long): N = N(encodeBitwise(getTSId(), timestamp), label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
 
-    fun add(label: Label, timestamp: Long, value: Long, location: String): N {
+    fun add(label: Label, timestamp: Long, value: Long, location: String, isUpdate: Boolean = false): N {
         val n = createNode(label, timestamp, value)
-        n.properties.add(P(DUMMY_ID, n.id, NODE, LOCATION, location, PropType.GEOMETRY, fromTimestamp = timestamp, toTimestamp = timestamp, g = g))
-        return add(n)
+        n.properties.add(P(DUMMY_ID, n.id, NODE, LOCATION, GeoJsonReader().read(location), PropType.GEOMETRY, fromTimestamp = timestamp, toTimestamp = timestamp, g = g))
+        return add(n, isUpdate)
     }
 
-    fun add(label: Label, timestamp: Long, value: Long) = add(createNode(label, timestamp, value))
+    fun add(label: Label, timestamp: Long, value: Long, isUpdate: Boolean = false) = add(createNode(label, timestamp, value), isUpdate)
 
-    fun add(n: N): N
+    fun add(n: N, isUpdate: Boolean): N
     fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N>
     fun get(id: Long): N
 }

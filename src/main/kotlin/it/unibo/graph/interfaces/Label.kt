@@ -12,7 +12,7 @@ interface Label
 
 @Serializable(with = LabelSerializer::class)
 enum class Labels : Label {
-    AgriFarm, AgriParcel, Device, Person, Humidity, Temperature, SolarRadiation, Measurement, A, B, C, D, E, F, G,
+    AgriFarm, AgriParcel, Device, Person, Humidity, Temperature, SolarRadiation, Measurement, Environment, A, B, C, D, E, F, G,
     HasTS, HasParcel, HasDevice, HasOwner, HasManutentor, HasFriend, HasHumidity, HasTemperature, HasSolarRadiation, Foo, TargetLocation, NDVI, HasNDVI, Drone, HasDrone
 }
 

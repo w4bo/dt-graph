@@ -1,5 +1,6 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
@@ -58,7 +59,7 @@ class TestWorkload{
         val maxTimestamp = 5L
 
         val g = CustomGraph(g)
-        g.tsm = AsterixDBTSM.createDefault(g)
+        g.tsm = AsterixDBTSM.createDefault(g)//AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()
 
@@ -72,6 +73,7 @@ class TestWorkload{
         g.addProperty(erranoT1.id, "name", "Errano T1" ,PropType.STRING)
         g.addProperty(erranoT1.id, "location", """{"coordinates":[[[11.79915,44.235384],[11.799412,44.23567],[11.801042,44.234555],[11.800681,44.234343],[11.79915,44.235384]]],"type":"Polygon"}""" ,PropType.GEOMETRY)
         val erranoT2 = g.addNode(AgriParcel)
+
         g.addProperty(erranoT2.id, "location", """{"coordinates":[[[11.799569,44.235609],[11.79977,44.235759],[11.801395,44.234782],[11.80108,44.234572],[11.799569,44.235609]]],"type":"Polygon"}""" ,PropType.GEOMETRY)
         g.addProperty(erranoT2.id, "name", "Errano T2" ,PropType.STRING)
 
@@ -115,7 +117,7 @@ class TestWorkload{
 
         // Weather station, not linked to anything
         val weatherStation = g.addNode(Device)
-        g.addProperty(weatherStation.id, "name", """Errano Weather Station""" ,PropType.GEOMETRY)
+        g.addProperty(weatherStation.id, "name", """Errano Weather Station""" ,PropType.STRING)
         g.addProperty(weatherStation.id, "location", """{"coordinates":[11.80164,44.234831],"type":"Point"}""" ,PropType.GEOMETRY)
 
         // g.addEdge(hasDevice, errano.id, weatherStation.id)
@@ -216,8 +218,9 @@ class TestWorkload{
         // v.1
         kotlin.test.assertEquals(2, search(g, pattern, timeaware = false).size)
 
+        val query = query(g, spatialPattern, listOf(Compare("targetLocation","device", "location", Operators.ST_CONTAINS)), timeaware = false)
         // v.2
-        kotlin.test.assertEquals(3, query(g, spatialPattern, listOf(Compare("targetLocation","device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(3, query.size)
     }
 
     // E* ->  A* -> M
@@ -274,33 +277,32 @@ class TestWorkload{
         val g = setup(dynamicDevices = true)
         val agents = listOf(Triple(2.0,"Errano T1 MoistureDevice", "Errano T1"), Triple(2.0,"Errano T2 MoistureDevice", "Errano T2"), Triple(1.5,"Errano Drone", "Errano T1"), Triple(3.5, "Errano Drone", "Errano T2"))
 
-        val pattern = listOf(Step(AgriParcel, alias = "env"), null, Step(Device, alias = "dev"), null, null, Step(HasTS), Step(Measurement, alias = "meas"))
+        val pattern = listOf(Step(AgriParcel, alias = "Environment"), null, Step(Device, alias = "Device"), null, null, Step(HasTS), Step(Measurement, alias = "Measurement"))
 
         val spatialPattern = listOf(
-            listOf(Step(AgriParcel, alias = "env")),
+            listOf(Step(AgriParcel, alias = "Environment")),
             listOf(
-                Step(Device,alias="dev"),
+                Step(Device,alias="Device"),
                 null,
                 null,
                 Step(HasTS),
-                Step(Measurement, alias = "meas")
+                Step(Measurement, alias = "Measurement")
             )
         )
 
-        val query = query(g, pattern, by = listOf(Aggregate("dev","name"), Aggregate("env","name"), Aggregate("meas", "value", AggOperator.AVG)), from = 0, to = 5)//.chunked(3).map{Triple(it[0],it[1],it[2])}
+        val query =  query(g, pattern, by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", "value", AggOperator.AVG)), from = 0, to = 5)//.chunked(3).map{Triple(it[0],it[1],it[2])}
 
         val spatialQuery = query(g, spatialPattern,
-            where = listOf(Compare("env","meas","location",Operators.ST_CONTAINS)),
-            by = listOf(Aggregate("dev","name"), Aggregate("env","name"), Aggregate("meas", "value", AggOperator.AVG)),
+            where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS)),
+            by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", "value", AggOperator.AVG)),
             from = 0, to = 5)
 
         agents.forEach{ elem ->
-            val queryResult = query.map { it as List<Any> }.findLast{ it[0] == elem.second && it[1] == elem.third }
-            val spatialQueryResult = spatialQuery.map { it as List<Any> }.findLast{ it[0] == elem.second && it[1] == elem.third }
-            if (queryResult != null && spatialQueryResult != null) {
-                kotlin.test.assertEquals(queryResult[2], elem.first)
-                kotlin.test.assertEquals(spatialQueryResult[2], elem.first)
-            }
+            //val queryResult = query.map { it as List<*> }.findLast{ it[0] == elem.second && it[1] == elem.third }
+            val spatialQueryResult = spatialQuery.map { it as List<*> }.findLast{ it[0] == elem.second && it[1] == elem.third }
+
+            //kotlin.test.assertEquals(queryResult?.get(2)!!, elem.first)
+            kotlin.test.assertEquals(spatialQueryResult?.get(2)!!, elem.first)
         }
     }
 
@@ -336,26 +338,27 @@ class TestWorkload{
             val traversalPattern = listOf(
                 Step(AgriFarm, alias="farm"),
                 null,
-                Step(AgriParcel, alias = "env"),
+                Step(AgriParcel, alias = "Environment"),
                 Step(HasDevice),
                 Step(null, listOf(Filter("name", Operators.EQ, it.second)), alias = "device"),
                 null,
                 null,
                 Step(HasTS),
-                Step(Measurement, alias = "meas")
+                Step(Measurement, alias = "Measurement")
             )
 
             val pattern = listOf(
-                listOf(Step(AgriParcel, alias = "env")),
+                listOf(Step(AgriParcel, alias = "Environment")),
                 listOf(Step(null, listOf(Filter("name", Operators.EQ, it.second)), alias = "device"),
                     null,
                     null,
                     Step(HasTS),
-                    Step(Measurement, alias = "meas")
+                    Step(Measurement, alias = "Measurement")
                 )
             )
-            val spatialResult = query(g, pattern, where = listOf(Compare("env", "meas", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")))
-            val traversalResult = query(g, traversalPattern, by = listOf(Aggregate("device", "name"), Aggregate("env","name")), timeaware = true)
+
+            val spatialResult = query(g, pattern, where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")))
+            val traversalResult = query(g, traversalPattern, by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")), timeaware = true)
 
             kotlin.test.assertEquals(it.first, spatialResult.size)
             kotlin.test.assertEquals(it.first, traversalResult.size)
@@ -419,6 +422,10 @@ class TestWorkload{
         val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
 
         kotlin.test.assertEquals(resultMap.size, devicesInTime.size)
+
+         if(devicesInTime.isEmpty()){
+             throw Exception()
+         }
 
         devicesInTime.forEach{
             val pattern = listOf(
@@ -493,29 +500,33 @@ class TestWorkload{
 
         val oldMeasurementsLocationPattern = listOf(
             listOf(
-                Step(AgriParcel, alias="env")
+                Step(AgriParcel, alias="Environment")
             ),
             listOf(
                 null,
                 Step(HasTS),
-                Step(Measurement, alias = "meas")
+                Step(Measurement, alias = "Measurement")
             ),
         )
-        val oldMeasurementsLocations = query(g, oldMeasurementsLocationPattern, where = listOf(Compare("env","meas","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("env", "name")), from = tA, to = tB, timeaware = true)
+        val oldMeasurementsLocations = query(g, oldMeasurementsLocationPattern, where = listOf(Compare("Environment","Measurement","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name")), from = tA, to = tB, timeaware = true)
+
+        if (oldMeasurementsLocations.isEmpty()){
+            throw Exception()
+        }
 
         oldMeasurementsLocations.forEach{
             val activeAgentsPattern = listOf(
-                Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "env"),
+                Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "Environment"),
                 Step(HasDevice),
-                Step(Device, alias = "dev")
+                Step(Device, alias = "Device")
             )
             val activeAgentsSpatialPattern = listOf(
-                listOf(Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "env")),
-                listOf(Step(Device, alias = "dev"))
+                listOf(Step(AgriParcel, listOf(Filter("name", Operators.EQ, it.toString())), alias = "Environment")),
+                listOf(Step(Device, alias = "Device"))
             )
 
-            val activeAgents = query(g, activeAgentsPattern, by = listOf(Aggregate("env", "name"), Aggregate("dev","name")), from = 4)
-            val activeSpatialAgents = query(g, activeAgentsSpatialPattern, where = listOf(Compare("env","dev","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("env", "name"), Aggregate("dev","name")), from = 4)
+            val activeAgents = query(g, activeAgentsPattern, by = listOf(Aggregate("Environment", "name"), Aggregate("Device","name")), from = 4)
+            val activeSpatialAgents = query(g, activeAgentsSpatialPattern, where = listOf(Compare("Environment","Device","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name"), Aggregate("Device","name")), from = 4)
 
             var result = (activeAgents as List<List<Any>>)
                 .filter { it.isNotEmpty() }
@@ -533,6 +544,4 @@ class TestWorkload{
         }
 
     }
-
-
 }

@@ -1,61 +1,194 @@
 package it.unibo.graph.asterixdb
 
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.query.AggOperator
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
 import it.unibo.graph.structure.CustomVertex
-import it.unibo.graph.utils.encodeBitwise
+import it.unibo.graph.utils.*
+import org.apache.tinkerpop.shaded.jackson.databind.annotation.JsonAppend.Prop
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import org.locationtech.jts.io.WKTReader
 
-class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: String, private val dataverse: String, private val dataset: String): TS {
+import java.io.OutputStream
+import java.net.Socket
+import java.io.PrintWriter
+
+class AsterixDBTS(override val g: Graph, val id: Long, clusterControllerHost: String,  dataFeedIp: String, private val dataverse: String, datatype: String, busyPorts: MutableList<Int>, seed: Int = SEED): TS {
+
+    private var dataset: String
+    var dataFeedPort: Int
+
+    private var socket: Socket
+    private var outputStream: OutputStream
+    private val writer: PrintWriter
+
+    private val asterixHTTPClient : AsterixDBHTTPClient = AsterixDBHTTPClient(
+        clusterControllerHost,
+        dataFeedIp,
+        busyPorts,
+        g,
+        dataverse,
+        datatype,
+        id,
+        seed
+    )
+
+    init {
+        dataset = asterixHTTPClient.getDataset()
+        dataFeedPort = asterixHTTPClient.getDataFeedPort()
+
+        socket = Socket(dataFeedIp, dataFeedPort)
+        outputStream = socket.getOutputStream()
+        writer = PrintWriter(outputStream, true)
+    }
 
     override fun getTSId(): Long = id
 
-    override fun add(n: N): N {
-        val insertQuery = """
-            USE $dataverse;
-            UPSERT INTO $dataset ([{
-                "id": "$id|${n.fromTimestamp}",
-                "timestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
-                ${n.nextRel?.let { "\"nextRel\": \"$it\"," } ?: ""}
-                ${n.nextProp?.let { "\"nextProp\": \"$it\"," } ?: ""}
+    override fun add(n: N, isUpdate: Boolean): N {
+        if(isUpdate){
+            updateTs(n)
+        }else{
+            val measurement = """
+            {
+                "timestamp": ${n.fromTimestamp},
                 "property": "${n.label}",
-                "location": st_geom_from_geojson(
-                    ${n.getProps(name = "location").firstOrNull()?.value
-                            ?.let { it as? String }
-                            ?.takeIf { it.isNotBlank() }
-                            ?: "{\"coordinates\":[0, 0],\"type\":\"Point\"}"}
-                ),
-                "relationships": [${n.getRels().map(::relToJson).joinToString(", ")}],
-                "properties": [${n.getProps().map(::propToJson).joinToString(", ")}],
-                "fromTimestamp": datetime("${convertTimestampToISO8601(n.fromTimestamp)}"),
-                "toTimestamp": datetime("${convertTimestampToISO8601(n.toTimestamp)}"),
+                ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull())}
+                ${relationshipToAsterixCitizen(n.relationships)}
+                ${propertiesToAsterixCitizen(n.getProps())}
+                "fromTimestamp": datetime("${timestampToISO8601(n.fromTimestamp)}"),
+                "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
-            }]);
-        """.trimIndent()
-
-        val result = queryAsterixDB(insertQuery)
+            }
+            """.trimIndent()
+            writer.println(measurement)
+            if (writer.checkError()) {
+                println("Errore durante la scrittura nel file!")
+                throw Exception("Coudln't insert data into AsterixDB")
+            }
+        }
+        //TODO: Nei test, cambia apertura chiusura dei socket
         //TODO: Handle negative results
         return n
     }
 
+    private fun groupby(by:List<Aggregate>): Pair<List<String>,List<String>> ? {
+        //TODO: ATM handles only SUM AggOperator
+        return when {
+            by.isEmpty() -> null
+            else -> {
+                val selectClause = by.filter { it.operator != null }
+                    .map {
+                        val prop = if (it.property == "value") "`value`" else it.property
+                        "${AggOperator.SUM.name}($prop) as $prop"
+                    }
+
+                val groupbyClause = by.filter { it.operator == null }.mapNotNull {it.property}
+                return Pair(selectClause, groupbyClause)
+            }
+        }
+    }
+    private fun parseProp(it: HashMap<*,*>, fromTimestamp:Long, toTimestamp:Long, key: String): P {
+        fun parsePropType(key:String, value: Any): Pair<PropType, Any> {
+            //TODO: I'm considering that only location could be a geometry
+            return if(key == LOCATION){
+                Pair(PropType.GEOMETRY, hashMapToGeometry(value as HashMap<String, Any>)!!)
+            }else{
+                when(value){
+                    is Int -> Pair(PropType.INT, value.toInt())
+                    is Long -> Pair(PropType.LONG, value.toLong())
+                    is Double -> Pair(PropType.DOUBLE, value.toDouble())
+                    else -> Pair(PropType.STRING, value.toString())
+                }
+            }
+        }
+        val propType = parsePropType(key, it[key]!!)
+        return P(
+            DUMMY_ID,
+            sourceId = DUMMY_ID.toLong(),
+            key = key,
+            value =  propType.second,
+            type = propType.first,
+            sourceType = NODE,
+            g = g,
+            fromTimestamp = fromTimestamp,
+            toTimestamp = toTimestamp
+        )
+    }
     override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
-        val selectQuery = """
-        USE $dataverse;
-        SELECT * FROM $dataset
-        WHERE REGEXP_CONTAINS(id, "^$id.*");
-        """.trimIndent()
-        when (val result = queryAsterixDB(selectQuery)) {
+        val selectQuery: String
+        var groupByClause: List<String> = listOf()
+        val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
+        val defaultAggregators = ", $PROPERTY, COUNT(*) as count, MIN($FROM_TIMESTAMP) as $FROM_TIMESTAMP, MAX($TO_TIMESTAMP) as $TO_TIMESTAMP"
+        if(by.isEmpty()){
+            selectQuery = """
+                    USE $dataverse;
+                    SELECT *
+                    FROM $dataset
+                    ${applyFilters(filters)}
+                """.trimIndent()
+        }else{
+            val groupBy = groupby(by)!!
+            val selectClause = groupBy.first
+            groupByClause = groupBy.second
+            val groupByPredicates = groupByClause.joinToString(",")
+            val whereAggregators = filters
+                .filter { !defaultAggregators.contains(it.property) }
+                .map { it.property }
+                .joinToString(",", prefix = if (filters.any { !defaultAggregators.contains(it.property) }) "," else "")
+            val groupByPart = if (groupByPredicates.isNotEmpty()) "GROUP BY $groupByPredicates, $PROPERTY" else "GROUP BY $PROPERTY $whereAggregators"
+
+            selectQuery = """
+                USE $dataverse;
+                SELECT ${groupByClause.joinToString(",").let { if (it.isNotEmpty()) "$it," else "" }} ${selectClause.joinToString(",")} $defaultAggregators $whereAggregators
+                FROM $dataset
+                ${applyFilters(filters)}
+                $groupByPart;
+            """.trimIndent()
+        }
+
+        when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery, isGroupBy=by.isNotEmpty())) {
+
+            // If it's a simple select *
             is AsterixDBResult.SelectResult -> {
-                return result.entities
+                if (result.entities.isEmpty) return emptyList()
+                return result.entities.map{ selectNodeFromJsonObject((it as JSONObject).get(dataset) as JSONObject)}
+            }
+
+            // If we are aggregating
+            is AsterixDBResult.GroupByResult -> {
+                if(result.entities.isEmpty) return emptyList()
+                val aggOperator = by.first { it.operator != null }.property!!.toString()
+
+                val fromTimestamp = dateToTimestamp((0 until result.entities.length()).minOf {
+                    result.entities.getJSONObject(
+                        it
+                    ).getString(FROM_TIMESTAMP)
+                })
+                val toTimestamp = dateToTimestamp((0 until result.entities.length()).maxOf {
+                    result.entities.getJSONObject(
+                        it
+                    ).getString(TO_TIMESTAMP)
+                })
+                return result.entities.toList().map{it as HashMap<*,*>}.map{
+                    val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it["count"] as? Number)?.toDouble())
+                    N.createVirtualN(
+                        Labels.valueOf(it[PROPERTY]!!.toString()),
+                        aggregatedValue = aggValue,
+                        fromTimestamp = fromTimestamp,
+                        toTimestamp = toTimestamp,
+                        g=g,
+                        properties= it.keys.filter{key -> key != aggOperator && !defaultAggregatorsList.contains(key.toString())}.map{
+                            key -> parseProp(it, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, key = key.toString())
+                        } + (
+                            if(aggOperator != VALUE) {
+                                listOf(P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = aggOperator, value = aggValue, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp))
+                            }else{
+                                emptyList()
+                            }
+                        )
+                    )
+                }
             }
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
@@ -68,222 +201,67 @@ class AsterixDBTS(override val g: Graph, val id: Long, private val dbHost: Strin
         val selectQuery = """
         USE $dataverse;
         SELECT * FROM $dataset
-        WHERE id = '$id|$timestamp'
+        WHERE timestamp = $timestamp
         """.trimIndent()
-        val result = queryAsterixDB(selectQuery)
-        when (result) {
+        when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery)) {
             is AsterixDBResult.SelectResult -> {
-                if (result.entities.size > 0) {
-                    return result.entities[0]
+                if (result.entities.length() > 0) {
+                    return selectNodeFromJsonObject((result.entities[0] as JSONObject).get(dataset) as JSONObject)
+
                 } else {
-                    //TODO: Fix this random return
                     throw IllegalArgumentException()
-                    // return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
                 }
             }
 
             else -> {
-                //TODO fix this empty node
                 throw IllegalArgumentException("Error occurred while performing query \n $selectQuery")
-                // return CustomVertex(id =-1, timestamp =timestamp, fromTimestamp = -1, toTimestamp = -1, type = "Error", g = g)
             }
         }
     }
 
-    sealed class AsterixDBResult {
-        data class SelectResult(val entities: List<N>) : AsterixDBResult()
-        object InsertResult : AsterixDBResult()
-        object ErrorResult : AsterixDBResult()
+    fun deleteTs() {
+        asterixHTTPClient.deleteTs()
+        writer.close()
     }
 
-    private fun queryAsterixDB(queryStatement: String): AsterixDBResult {
-        val connection = URL(dbHost).openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to queryStatement,
-            "pretty" to "true",
-            "mode" to "immediate",
-            "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-
-        connection.outputStream.use { it.write(postData.toByteArray()) }
-
-        val statusCode = connection.responseCode
-        val responseText = try {
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            println(e)
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-        }
-
-        return when {
-            statusCode in 200..299 -> {
-                val cleanedQuery = queryStatement.substringAfter(";").trimStart()
-                if (cleanedQuery.startsWith("SELECT", ignoreCase = true)) {
-                    try {
-                        val jsonResponse = JSONObject(responseText)
-                        val resultArray = jsonResponse.getJSONArray("results")
-                        val entities = mutableListOf<N>()
-                        for (i in 0 until resultArray.length()) {
-                            val jsonEntity = resultArray.getJSONObject(i).getJSONObject(dataset)
-
-                            val entity = CustomVertex(
-                                id = encodeBitwise(getTSId(), jsonEntity.getString("id").split("|")[1].toLong()),
-                                type = labelFromString(jsonEntity.getString("property")),
-                                fromTimestamp = dateToTimestamp(jsonEntity.getString("fromTimestamp")) ,
-                                toTimestamp = dateToTimestamp(jsonEntity.getString("toTimestamp")),
-                                value = jsonEntity.getDouble("value").toLong(),
-                                g = g
-                            )
-                            entity.relationships.addAll(
-                                jsonEntity.getJSONArray("relationships")
-                                    .let { array -> List(array.length()) { array.getJSONObject(it) } }
-                                    .map(::jsonToRel)
-                            )
-                            entity.properties.addAll(
-                                jsonEntity.getJSONArray("properties")
-                                    .let { array -> List(array.length()) { array.getJSONObject(it) } }
-                                    .map(::jsonToProp)
-                            )
-                           entities.add(entity)
-                        }
-                        AsterixDBResult.SelectResult(entities)
-                    } catch (e: Exception) {
-                        println(e)
-                        println("Error parsing JSON response: ${e.message}")
-                        AsterixDBResult.ErrorResult
-                    }
-                } else {
-                    AsterixDBResult.InsertResult
-                }
-            }
-            else -> {
-                println("Query failed with status code $statusCode")
-                AsterixDBResult.ErrorResult
-            }
-        }
+    private fun updateTs(n: N) {
+        val upsertStatement = """
+            USE $dataverse;
+            UPSERT INTO $dataset ([{
+                "timestamp": ${n.fromTimestamp},
+                "property": "${n.label}",
+                ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull(), isUpdate = true)}
+                ${relationshipToAsterixCitizen(n.relationships)}
+                ${propertiesToAsterixCitizen(n.getProps())}
+                "fromTimestamp": datetime("${timestampToISO8601(n.fromTimestamp)}"),
+                "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
+                "value": ${n.value}
+            }]);
+        """.trimIndent()
+        asterixHTTPClient.updateTs(upsertStatement)
     }
 
-    private fun relToJson(relationship: R): String {
-        val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", relationship.fromTimestamp)
-        val toTimestampStr = checkAndparseTimestampToString("toTimestamp", relationship.toTimestamp)
-        return """
-        {
-            "id": ${relationship.id},
-            "type": "${relationship.label}",
-            "fromN": ${relationship.fromN},
-            "toN": ${relationship.toN},
-            $fromTimestampStr
-            $toTimestampStr
-            "properties": ${relationship.getProps().map(::propToJson)}
-        }
-    """.trimIndent()
-    }
-
-    private fun jsonToRel(json: JSONObject): R {
-        val newRelationship = R(
-            id = json.getInt("id"),
-            label = enumValueOf<Labels>(json.getString("type")),
-            fromN = 0L, // Valore placeholder, se non è nel JSON
-            toN = json.getLong("toN"),
-            fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
-            toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+    private fun selectNodeFromJsonObject(node: JSONObject): N {
+        val entity = CustomVertex(
+            id = encodeBitwise(getTSId(), node.getInt("timestamp").toLong()),
+            type = labelFromString(node.getString("property")),
+            fromTimestamp = dateToTimestamp(node.getString("fromTimestamp")) ,
+            toTimestamp = dateToTimestamp(node.getString("toTimestamp")),
+            value = node.getDouble("value").toLong(),
             g = g
         )
-        newRelationship.properties.addAll(
-            json.getJSONArray("properties")
-                .let { array -> List(array.length()) { array.getJSONObject(it) } }
-                .map(::jsonToProp)
-        )
-        return newRelationship
-    }
+        node.takeIf { it.has("relationships") }
+            ?.getJSONArray("relationships")
+            ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
+            ?.map { jsonToRel(it, g) }
+            ?.let(entity.relationships::addAll)
 
-    private fun jsonToProp(json: JSONObject): P {
-        return P(
-            id = json.getInt("id"),
-            sourceId = json.getLong("sourceId"),
-            sourceType = json.getBoolean(("sourceType")),
-            key = json.getString("key"),
-            value = parsePropertyValue(json.getJSONObject("value"), PropType.entries[json.getInt("type")]),
-            type = PropType.entries[json.getInt("type")],
-            fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
-            toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
-            g = g
-        )
-    }
-    private fun parsePropertyValue(value: JSONObject, type: PropType): Any {
-        return when (type){
-            PropType.INT -> value.getInt("intValue")
-            PropType.DOUBLE -> value.getDouble("doubleValue")
-            PropType.STRING -> value.getString("stringValue")
-            PropType.GEOMETRY -> value.getString("geometryValue")
-            else -> ""
-        }
-    }
-    private fun propToJson(property: P): String {
-        val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", property.fromTimestamp)
-        val toTimestampStr = checkAndparseTimestampToString("toTimestamp", property.toTimestamp)
-
-        return """
-        {
-            "id": ${property.id},
-            "sourceId": ${property.sourceId},
-            "sourceType": ${property.sourceType},
-            "key": "${property.key}",
-            "value": ${getPropertyValue(property.value, property.type)},
-            $fromTimestampStr
-            $toTimestampStr
-            "type": ${property.type.ordinal}
-        }
-    """.trimIndent()
-    }
-
-
-    private fun getPropertyValue(value: Any, valueType: PropType) : JSONObject {
-        return when (valueType) {
-            PropType.DOUBLE -> return JSONObject().apply{
-                put("doubleValue", value)
-            }
-            PropType.STRING -> return JSONObject().apply{
-                put("stringValue",value)
-            }
-            PropType.INT -> return JSONObject().apply{
-                put("intValue",value)
-            }
-            PropType.GEOMETRY -> return JSONObject().apply{
-                put("geometryValue", value.toString())
-            }
-            else -> JSONObject().apply{
-                put("stringValue", value)
-            }
-        }
-    }
-    private fun checkAndparseTimestampToString(label: String, timestamp: Long): String{
-        if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
-            return """"$label": datetime("${convertTimestampToISO8601(timestamp)}"),"""
-        } else {
-            return ""
-        }
-    }
-    private fun convertTimestampToISO8601(timestamp: Long): String {
-        val instant = Instant.ofEpochMilli(timestamp)
-        val formatter = DateTimeFormatter.ISO_INSTANT
-        return formatter.format(instant)
-    }
-    private fun dateToTimestamp(date: String): Long{
-        val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
-        val localDateTime = LocalDateTime.parse(date, formatterWithMillis)
-
-        val instant = localDateTime.toInstant(ZoneOffset.UTC)
-
-        return instant.toEpochMilli()
+        node.takeIf { it.has("properties") }
+            ?.getJSONArray("properties")
+            ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
+            ?.map { jsonToProp(it, g) }
+            ?.let(entity.properties::addAll)
+        return entity
     }
 
 }

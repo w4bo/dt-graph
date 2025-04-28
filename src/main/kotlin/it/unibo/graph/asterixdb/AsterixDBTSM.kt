@@ -5,6 +5,7 @@ import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -14,35 +15,61 @@ class AsterixDBTSM private constructor(
     host: String,
     port: String,
     val dataverse: String,
+    nodeControllersIPs : List<String>,
     val datatype: String,
     val dataset:String
 ) : TSManager {
-    val dbHost: String = "http://$host:$port/query/service"
+    private class UniformSampler<T>(private val source: List<T>) {
+        private var pool: MutableList<T> = source.shuffled().toMutableList()
+        private var index = 0
+
+        fun next(): T {
+            if (pool.isEmpty()) throw IllegalArgumentException("Source list is empty")
+
+            // Reset and reshuffle once we've cycled through the list
+            if (index >= pool.size) {
+                pool = source.shuffled().toMutableList()
+                index = 0
+            }
+
+            return pool[index++]
+        }
+    }
+
+    private val nodeControllersPool = UniformSampler(nodeControllersIPs)
+    val clusterControllerHost: String = "http://$host:$port/query/service"
     var id = 1
+    val busyPorts: MutableList<Int> = mutableListOf()
+    val tsList : MutableMap<Long, CustomTS> = mutableMapOf()
 
     init {
         createDataset(dataset)
     }
 
     override fun addTS(): TS {
-        return CustomTS(AsterixDBTS(g, nextTSId(), dbHost, dataverse, dataset), g)
+        val tsId= nextTSId()
+        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
+        val outTS = CustomTS(newTS, g)
+        tsList.put(tsId, outTS)
+        busyPorts.add(newTS.dataFeedPort)
+        return outTS
     }
 
     override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
-        return CustomTS(AsterixDBTS(g, id, dbHost, dataverse, dataset), g)
+        return tsList.getValue(id)
     }
 
     override fun clear() {
         id = 1
-        deleteDataset(dataset)
+        tsList.values.forEach { (it.ts as AsterixDBTS).deleteTs() }
     }
 
     // Private utility functions
-    fun queryAsterixDB(host: String, query: String): Boolean {
-        val url = URL(host)
-        val connection = url.openConnection() as HttpURLConnection
+    private fun queryAsterixDB(host: String, query: String): Boolean {
+        val uri = URI(host)
+        val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
         connection.doOutput = true
@@ -60,14 +87,13 @@ class AsterixDBTSM private constructor(
 
         connection.outputStream.use { it.write(postData.toByteArray()) }
 
-        // Legge la risposta
-        val responseText = try {
+        try {
             connection.inputStream.bufferedReader().use { it.readText() }
+            return true
         } catch (e: Exception) {
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            throw UnsupportedOperationException(e)
         }
-
-        return true
     }
 
     private fun createDataset(dataset: String) {
@@ -105,8 +131,7 @@ class AsterixDBTSM private constructor(
           };
        
           CREATE TYPE Measurement AS OPEN {
-              id: STRING,
-              timestamp: DATETIME,
+              timestamp: int,
               property: STRING,
               location: geometry?,
               relationships: [NodeRelationship]?,
@@ -114,24 +139,9 @@ class AsterixDBTSM private constructor(
               fromTimestamp: DATETIME,
               toTimestamp: DATETIME,
               `value`: FLOAT
-          };
-          
-          CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key id;
-          create index measurement_location on $dataset(location) type rtree;
-          
-          DROP FEED MeasurementsFeed IF EXISTS;
-          CREATE feed MeasurementsFeed WITH {
-              "adapter-name": "socket_adapter",
-              "sockets": "127.0.0.1:10001",
-              "address-type": "IP",
-              "type-name": "Measurement",
-              "format": "adm"
-          };
-          CONNECT FEED MeasurementsFeed TO DATASET OpenMeasurements;
-        
-          start feed MeasurementsFeed;
+          };      
             """.trimIndent()
-        if (! queryAsterixDB(dbHost, creationQuery)){
+        if (! queryAsterixDB(clusterControllerHost, creationQuery)){
             println("Something went wrong while creating dataset $dataset")
         }
     }
@@ -141,7 +151,7 @@ class AsterixDBTSM private constructor(
             USE $dataverse;
             DELETE FROM $dataset
             """.trimIndent()
-        if (! queryAsterixDB(dbHost, deletionQuery)){
+        if (! queryAsterixDB(clusterControllerHost, deletionQuery)){
             println("Something went wrong while creating dataset $dataset")
         }
     }
@@ -153,6 +163,7 @@ class AsterixDBTSM private constructor(
                 "localhost",
                 "19002",
                 "Measurements_Dataverse",
+                listOf("localhost"),
                 "Measurement",
                 "OpenMeasurements"
             )

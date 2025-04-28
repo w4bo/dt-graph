@@ -1,4 +1,3 @@
-import java.time.Instant
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.locationtech.jts.geom.Coordinate
@@ -6,21 +5,26 @@ import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Point
 import org.locationtech.jts.io.geojson.GeoJsonReader
-import java.lang.Thread.sleep
-import java.net.Socket
-import kotlin.random.Random
 import java.io.*
+import java.lang.Thread.sleep
 import java.net.HttpURLConnection
+import java.net.Socket
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.time.format.DateTimeFormatter
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
+import io.lettuce.core.RedisClient
+import io.lettuce.core.api.sync.RedisCommands
 
 class AsterixDataSource(
     val ingestionLatency: Int,
     val asterixIP: String,
     val asterixPort: Int,
+    val datafeedIp: String,
+    val dataset: String,
     val maxIteration: Int,
     val measurementsPolygon: Geometry? = null,
     val tsId: Long,
@@ -35,9 +39,9 @@ class AsterixDataSource(
 
     init {
         try {
-            socket = Socket(asterixIP, asterixPort) // Usa dbHost invece di "localhost"
+            socket = Socket(datafeedIp, asterixPort)
             outputStream = socket.getOutputStream()
-            print("Just started a socket on $asterixIP:$asterixPort")
+            print("Just started a socket on $datafeedIp:$asterixPort")
         } catch (e: Exception) {
             println(e)
             e.printStackTrace()
@@ -58,19 +62,25 @@ class AsterixDataSource(
             return factory.createPoint(Coordinate(x, y))
             }
         }
-    private fun appendRowToCSV(outputPath: String, row: Map<String, Any>, isFirstRow: Boolean = false) {
+
+    private fun appendRowsToCSV(outputPath: String, rows: List<Map<String, Any>>, isFirstRow: Boolean = false) {
+        if (rows.isEmpty()) return  // niente da scrivere
+
         val file = File(outputPath)
         file.parentFile?.mkdirs()
 
         BufferedWriter(FileWriter(file, true)).use { writer ->
+            val firstRow = rows.first()
             val csvFormat = if (isFirstRow) {
-                CSVFormat.DEFAULT.withHeader(*row.keys.toTypedArray())
+                CSVFormat.DEFAULT.withHeader(*firstRow.keys.toTypedArray())
             } else {
                 CSVFormat.DEFAULT
             }
 
             CSVPrinter(writer, csvFormat).use { csvPrinter ->
-                csvPrinter.printRecord(row.values)
+                for (row in rows) {
+                    csvPrinter.printRecord(row.values)
+                }
                 csvPrinter.flush()
             }
         }
@@ -83,8 +93,7 @@ class AsterixDataSource(
         val formattedTimestamp =  formatter.format(instant)
         return """
         {
-            "id": "$tsId|$iteration",
-            "timestamp": datetime("$formattedTimestamp"),
+            "timestamp": $iteration,
             "property": "Measurement",
             "location": "${randomPointInGeometry(measurementsPolygon)}",
             "fromTimestamp": datetime("1970-01-01T00:00:00.000"),
@@ -97,17 +106,13 @@ class AsterixDataSource(
 
     fun pushToAsterix(outputPath:String) {
         val writer = PrintWriter(outputStream, true)
-        val result = measureTimeMillis {
-            for (iteration in 0..<maxIteration) {
-                println("Running iteration $iteration")
-                val measurement = generateMeasurement(iteration)
+        val measurements = (0..maxIteration).map { generateMeasurement(it) }.withIndex()
+        var rows = mutableListOf<Map<String, Any>>()
+            for ((iteration, measurement) in measurements) {
                 val insertionTimestamp = System.currentTimeMillis()
-                val insertTime = measureTimeMillis {
-                    writer.println(measurement)
-                    if (writer.checkError()) {
-                        println("Errore durante la scrittura nel file!")
-                    }
-                }
+                val start = System.nanoTime()
+                writer.println(measurement)
+                val insertTime = System.nanoTime() - start
                 val newRow = mapOf(
                     "testId" to testId,
                     "clusterMachineNumber" to clusterMachineNumber,
@@ -115,17 +120,19 @@ class AsterixDataSource(
                     "totalInsertions" to maxIteration,
                     "ingestionLatency" to ingestionLatency,
                     "dataSourceId" to tsId,
-                    "insertionId" to "$tsId|$iteration",
+                    "insertionId" to "$iteration",
                     "operation" to "INSERT",
                     "insertionTimestamp" to insertionTimestamp,
                     "elapsedTime" to insertTime
                 )
-
-                appendRowToCSV(outputPath, newRow, isFirstRow = !File(outputPath).exists())
+                rows.add(newRow)
+                if(iteration != 0 && iteration % 1000 == 0){
+                    appendRowsToCSV(outputPath, rows, isFirstRow = !File(outputPath).exists())
+                    rows = mutableListOf<Map<String, Any>>()
+                }
                 sleep(ingestionLatency.toLong())
             }
             writer.close()
-        }
 
 
             val connection = URL("http://$asterixIP:19002/query/service").openConnection() as HttpURLConnection
@@ -134,7 +141,7 @@ class AsterixDataSource(
             connection.doOutput = true
 
             val params = mapOf(
-                "statement" to "USE Measurements_Dataverse; SELECT AVG(`value`) FROM OpenMeasurements",
+                "statement" to "USE Measurements_Dataverse; SELECT AVG(`value`) FROM $dataset",
                 "pretty" to "true",
                 "mode" to "immediate",
                 "dataverse" to "Measurements_Dataverse"
@@ -157,7 +164,6 @@ class AsterixDataSource(
                 }
         }
 
-        print("\nInsertion time: $result")
         print("\nSelection time $selectResult")
 
         val newRow = mapOf(
@@ -173,7 +179,7 @@ class AsterixDataSource(
             "elapsedTime" to selectResult
         )
 
-        appendRowToCSV(outputPath, newRow, isFirstRow = false)
+        appendRowsToCSV(outputPath, listOf(newRow), isFirstRow = false)
 
     }
 
@@ -183,7 +189,9 @@ class AsterixDataSource(
             val randomSeed = System.getenv("SEED")?.toIntOrNull() ?: 42
             val random = Random(randomSeed)
             val ingestionLatency = System.getenv("INGESTION_LATENCY")?.toIntOrNull() ?: 0
+            val dataset : String = System.getenv("DATASET") ?: "OpenMeasurements"
             val asterixIP = System.getenv("ASTERIX_IP") ?: "127.0.0.1"
+            val datafeedIP = System.getenv("DATAFEED_IP") ?: "127.0.0.1"
             val asterixPort = System.getenv("ASTERIX_PORT")?.toIntOrNull() ?: 10001
             val maxIteration = System.getenv("MAX_ITERATION")?.toIntOrNull() ?: 500000
             val tsId = System.getenv("TS_ID")?.toLongOrNull() ?: random.nextLong(0, Long.MAX_VALUE)
@@ -191,13 +199,14 @@ class AsterixDataSource(
             val dataSourcesNumber = System.getenv("DATASOURCES_NUMBER")?.toIntOrNull() ?: 1
             val asterixClusterMachines = System.getenv("ASTERIX_MACHINES_COUNT")?.toIntOrNull() ?: 1
             val measurementsPolygon: Geometry? = System.getenv("MEASUREMENTS_POLYGON")?.let { parseGeoJson(it) }
-
+            //val pool: JedisPool = JedisPool("localhost", 6379)
             println(
                 """
                 Starting an AsterixDB data source...
                 Parameters:
                 - INGESTION_LATENCY: $ingestionLatency
                 - ASTERIX_IP: $asterixIP
+                - DATAFEED_IP: $datafeedIP
                 - ASTERIX_PORT: $asterixPort
                 - MAX_ITERATION: $maxIteration
                 - TIMESERIES_ID: $tsId
@@ -206,10 +215,25 @@ class AsterixDataSource(
                 """.trimIndent()
             )
 
-            val dataSource = AsterixDataSource(ingestionLatency,asterixIP,asterixPort,maxIteration, measurementsPolygon, tsId, testId, dataSourcesNumber, asterixClusterMachines, randomSeed)
+            val dataSource = AsterixDataSource(ingestionLatency,asterixIP, asterixPort, datafeedIP, dataset, maxIteration, measurementsPolygon, tsId, testId,asterixClusterMachines,  dataSourcesNumber, randomSeed)
             val outputPath = "/asterix_statistics/${dataSourcesNumber}dataSources_maxIterations${maxIteration}_${asterixClusterMachines}cluster/tsId${tsId}_date${System.currentTimeMillis()}.csv"
 
-            dataSource.pushToAsterix(outputPath)
+            try {
+                dataSource.pushToAsterix(outputPath)
+            }
+            catch (e: Exception) {
+                println("Something went wrong while pushing to AsterixDB")
+                val redisHost: String = System.getenv("REDIS_HOST") ?: "localhost"
+                val failedKey = System.getenv("BARRIER_FAILED_NAME") ?: "RUN_FAILED"
+
+                val redisClient = RedisClient.create("redis://$redisHost:6379")
+                val connection = redisClient.connect()
+                val syncCommands: RedisCommands<String, String> = connection.sync()
+
+                syncCommands.incr(failedKey)
+                connection.close()
+                redisClient.shutdown()
+            }
         }
 
         fun parseGeoJson(geojson: String): Geometry? {

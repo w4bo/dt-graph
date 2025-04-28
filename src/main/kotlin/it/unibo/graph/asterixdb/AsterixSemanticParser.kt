@@ -1,0 +1,248 @@
+package it.unibo.graph.asterixdb
+
+import it.unibo.graph.interfaces.*
+import it.unibo.graph.query.Filter
+import it.unibo.graph.query.Operators
+import it.unibo.graph.utils.MAX_ASTERIX_DATE
+import org.json.JSONArray
+import org.json.JSONObject
+import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.io.WKTReader
+import org.locationtech.jts.io.WKTWriter
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+
+sealed class AsterixDBResult {
+    data class SelectResult(val entities: JSONArray) : AsterixDBResult()
+    data class GroupByResult(val entities: JSONArray): AsterixDBResult()
+    object InsertResult : AsterixDBResult()
+    object ErrorResult : AsterixDBResult()
+}
+
+fun checkAndparseTimestampToString(label: String, timestamp: Long): String{
+    if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
+        return """"$label": datetime("${timestampToISO8601(timestamp)}"),"""
+    } else {
+        return ""
+    }
+}
+
+fun hashMapToGeometry(location: Map<String, Any>): Geometry? {
+    val type = location["type"] as? String ?: return null
+    val coordinates = location["coordinates"] as? List<*> ?: return null
+
+    val wkt = when (type.uppercase()) {
+        "POINT" -> {
+            val (x, y) = coordinates
+            "POINT($x $y)"
+        }
+        "POLYGON" -> {
+            val points = (coordinates[0] as List<List<Double>>)
+                .joinToString(", ") { (lon, lat) -> "$lon $lat" }
+            "POLYGON(($points))"
+        }
+        else -> return null
+    }
+
+    val reader = WKTReader()
+    return reader.read(wkt)
+}
+
+fun timestampToISO8601(timestamp: Long): String {
+    val instant = Instant.ofEpochMilli(timestamp)
+    val formatter = DateTimeFormatter.ISO_INSTANT
+    return when{
+        timestamp <= 0 -> formatter.format(Instant.ofEpochMilli(0))
+        timestamp == Long.MAX_VALUE -> formatter.format(Instant.ofEpochMilli(MAX_ASTERIX_DATE))
+        else -> formatter.format(instant)
+    }
+}
+
+fun dateToTimestamp(date: String): Long{
+    val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+    val localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+
+    val instant = localDateTime.toInstant(ZoneOffset.UTC)
+
+    return instant.toEpochMilli()
+}
+
+private fun parsePropertyValue(value: JSONObject, type: PropType): Any {
+    return when (type) {
+        PropType.INT -> value.getInt("intValue")
+        PropType.DOUBLE -> value.getDouble("doubleValue")
+        PropType.STRING -> value.getString("stringValue")
+        PropType.GEOMETRY -> WKTReader().read(value.getString("geometryValue"))
+        else -> ""
+    }
+}
+
+
+fun parseLocationToWKT(locationProp: P?, isUpdate:Boolean = false): String{
+    return when(locationProp){
+        null -> ""
+        else -> {
+            if(isUpdate)
+                """ "location": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
+            else
+                """ "location": "${WKTWriter().write((locationProp.value as Geometry))}","""
+        }
+    }
+}
+
+fun relationshipToAsterixCitizen(rels: List<R>): String{
+    return when(rels.size){
+        0 -> ""
+        else -> """ "relationships": [${rels.map(::relToJson).joinToString(", ")}],"""
+    }
+}
+fun propertiesToAsterixCitizen(props: List<P>): String{
+    return when(props.size){
+        0 -> ""
+        else -> """ "properties":  [${props.map(::propToJson).joinToString(", ")}], """ + propertyToAsterixCitizen(props)
+    }
+}
+
+fun propertyToAsterixCitizen(props: List<P>): String{
+    return when(props.size){
+        0 -> ""
+        else -> props.map{""" "${it.key}" : ${parseValue(it.key, it.value)}"""}.joinToString(",\n ").let { if (it.isNotEmpty()) "$it,\n" else "" }
+    }
+}
+
+
+
+fun relToJson(relationship: R): String {
+    val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", relationship.fromTimestamp)
+    val toTimestampStr = checkAndparseTimestampToString("toTimestamp", relationship.toTimestamp)
+    return """
+        {
+            "id": ${relationship.id},
+            "type": "${relationship.label}",
+            "fromN": ${relationship.fromN},
+            "toN": ${relationship.toN},
+            $fromTimestampStr
+            $toTimestampStr
+            "properties": ${relationship.getProps().map(::propToJson)}
+        }
+        """.trimIndent()
+}
+
+fun propToJson(property: P): String {
+    val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", property.fromTimestamp)
+    val toTimestampStr = checkAndparseTimestampToString("toTimestamp", property.toTimestamp)
+
+    return """
+        {
+            "id": ${property.id},
+            "sourceId": ${property.sourceId},
+            "sourceType": ${property.sourceType},
+            "key": "${property.key}",
+            "value": ${getPropertyValue(property.value, property.type)},
+            $fromTimestampStr
+            $toTimestampStr
+            "type": ${property.type.ordinal}
+        }
+    """.trimIndent()
+}
+fun jsonToProp(json: JSONObject, g: Graph): P {
+    return P(
+        id = json.getInt("id"),
+        sourceId = json.getLong("sourceId"),
+        sourceType = json.getBoolean(("sourceType")),
+        key = json.getString("key"),
+        value = parsePropertyValue(json.getJSONObject("value"), PropType.entries[json.getInt("type")]),
+        type = PropType.entries[json.getInt("type")],
+        fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
+        toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+        g = g
+    )
+}
+fun jsonToRel(json: JSONObject, g: Graph): R {
+    val newRelationship = R(
+        id = json.getInt("id"),
+        label = enumValueOf<Labels>(json.getString("type")),
+        fromN = 0L, // Valore placeholder, se non è nel JSON
+        toN = json.getLong("toN"),
+        fromTimestamp =  if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
+        toTimestamp =  if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+        g = g
+    )
+    newRelationship.properties.addAll(
+        json.getJSONArray("properties")
+            .let { array -> List(array.length()) { array.getJSONObject(it) } }
+            .map { jsonToProp(it, g) }
+    )
+    return newRelationship
+}
+
+fun getPropertyValue(value: Any, valueType: PropType) : JSONObject {
+    return when (valueType) {
+        PropType.DOUBLE -> return JSONObject().apply{
+            put("doubleValue", value)
+        }
+        PropType.STRING -> return JSONObject().apply{
+            put("stringValue",value)
+        }
+        PropType.INT -> return JSONObject().apply{
+            put("intValue",value)
+        }
+        PropType.GEOMETRY -> return JSONObject().apply{
+            put("geometryValue", WKTWriter().write(value as Geometry))
+        }
+        else -> JSONObject().apply{
+            put("stringValue", value)
+        }
+    }
+}
+
+fun parseValue(property: String, value: Any): String{
+    //TODO: Fix this, ci saranno altri tipi da parsare
+    return when {
+        property.lowercase().contains("timestamp") -> """datetime("${timestampToISO8601(value as Long)}")"""
+        value is Int -> value.toString()
+        else -> """ "$value" """
+    }
+}
+
+fun applyFilters(filters:List<Filter>): String {
+    return when {
+        filters.isEmpty() -> ""
+        else -> "WHERE ${filters.map(::parseFilter).joinToString(separator = "\n AND ")}"
+    }
+}
+
+private fun parseFilter(filter: Filter):String {
+    fun parseOperator(op: Operators): String {
+        return when(op){
+            Operators.EQ -> "="
+            Operators.LT -> "<"
+            Operators.GT -> ">"
+            Operators.LTE -> "<="
+            Operators.GTE -> ">="
+            Operators.ST_CONTAINS -> "st_contains"
+        }
+    }
+
+    fun normalizeWkt(wkt: String): String? {
+        val clean = wkt.trim().removeSurrounding("\"").removeSurrounding("'")
+        val wktPattern = Regex("""^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)\s*\(.*\)$""", RegexOption.IGNORE_CASE)
+        return if (wktPattern.matches(clean)) clean else null
+    }
+
+    val left = if (filter.attrFirst) filter.property else parseValue(filter.property, filter.value)
+    val right = if (filter.attrFirst) parseValue(filter.property, filter.value) else filter.property
+
+    return when (filter.operator) {
+        Operators.ST_CONTAINS -> {
+            val (arg1, arg2) = (if (filter.attrFirst) listOf(right, left) else listOf(left, right))
+                .map { normalizeWkt(it)?.let { wkt -> "st_geom_from_text('$wkt')" } ?: it }
+
+            "st_contains($arg1, $arg2)"
+        }
+        else -> "$left ${parseOperator(filter.operator)} $right"
+    }
+}

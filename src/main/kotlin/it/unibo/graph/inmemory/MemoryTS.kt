@@ -12,7 +12,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
 
     override fun getTSId(): Long = id
 
-    override fun add(n: N): N {
+    override fun add(n: N, isUpdate: Boolean): N {
         values[n.fromTimestamp] = n
         return n
     }
@@ -40,7 +40,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
             val aggregationOperator = aggregationOperators.first()
             val groupby = by.filter { it.operator == null } // Extract group-by attributes (those without an operator)
             if (groupby.size > 1) throw IllegalArgumentException("More than one attribute to group by: $groupby")
-            return filteredValues
+            val f = filteredValues
                 .map { n -> Path(listOf(n), n.fromTimestamp, n.toTimestamp) }  // Convert each node into a Path object containing the node and its time range
                 .flatMap { row -> // Expand temporal properties
                     replaceTemporalProperties(row, emptyList(), by, mapOf(by.first().n to Pair(0, 0)), from = row.from, to = row.to, timeaware = true)
@@ -80,6 +80,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                             )
                     )
                 }
+                return f
         }
     }
 

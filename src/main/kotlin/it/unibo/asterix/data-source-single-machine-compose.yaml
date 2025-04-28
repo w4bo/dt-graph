@@ -21,13 +21,16 @@ services:
     environment:
       INGESTION_LATENCY: 0
       ASTERIX_IP: asterixdb
-      MAX_ITERATION: 500
+      MAX_ITERATION: 1000000
       TEST_ID: 1
-      ASTERIX_MACHINES_COUNT: 1
-      DATASOURCES_NUMBER: 8
+      ASTERIX_MACHINES_COUNT: 4
+      DATASOURCES_NUMBER: 256
       REDIS_HOST: redis
       LOCK_NAME: datafeed_lock
-      BARRIER_NAME: ingestion_barrier
+      BARRIER_READY_NAME: INGESTION_BARRIER
+      BARRIER_COMPLETED_NAME: RUN_COMPLETED
+      BARRIER_FAILED_NAME: RUN_FAILED
+      DATAVERSE: Measurements_Dataverse
 
   asterixdb:
     image: mp4sini/asterixdb:latest
@@ -60,7 +63,9 @@ services:
 
   redis:
     image: redis:latest
-    command: /bin/sh -c "redis-server --appendonly yes & sleep 5 && redis-cli SET sync_barrier 0 && wait"
+    command: /bin/sh -c "redis-server --appendonly yes & sleep 5 && redis-cli SET sync_barrier 0 && redis-cli SET run_completed 0 && redis-cli SET run_failed 0 && wait"
+    ports:
+      - 6379:6379
     deploy:
       restart_policy:
         condition: none

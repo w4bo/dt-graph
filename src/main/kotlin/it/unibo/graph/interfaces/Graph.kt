@@ -1,9 +1,10 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.utils.GRAPH_SOURCE
-import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.decodeBitwise
-import it.unibo.graph.utils.encodeBitwise
+import it.unibo.graph.structure.CustomProperty
+import it.unibo.graph.utils.*
+import org.apache.tinkerpop.gremlin.structure.PropertyType
+import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.io.geojson.GeoJsonReader
 
 interface Graph {
     var tsm: TSManager?
@@ -16,12 +17,16 @@ interface Graph {
     fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P =
-        P(id, sourceId, sourceType, key, value, type, g = this)
+        P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextPropertyId(): Int
-    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P =
-        addProperty(
-            createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id)
-        )
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P  {
+        if(type == PropType.GEOMETRY){
+            return addProperty(createProperty(sourceId, sourceType, key,  GeoJsonReader().read(value as String), type, from = from, to = to, id = id))
+        }else{
+            return addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id))
+        }
+
+    }
 
     fun addProperty(p: P): P {
         val (source, key) = decodeBitwise(p.sourceId)
@@ -39,7 +44,7 @@ interface Graph {
             val n = ts.get(key)
             assert(n.fromTimestamp >= p.fromTimestamp && p.toTimestamp <= n.toTimestamp) { p.toString() }
             n.properties += p
-            ts.add(n)
+            ts.add(n, isUpdate = true)
             return p
         } else {
             throw IllegalArgumentException("Cannot add property to edge in TS")
@@ -62,7 +67,7 @@ interface Graph {
         val ts = tsm!!.getTS(tsId)
         val n = ts.get(key)
         n.relationships += r
-        ts.add(n)
+        ts.add(n, isUpdate = true)
         return r
     }
 
