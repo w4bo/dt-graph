@@ -115,7 +115,6 @@ class AsterixDBTSM private constructor(
           };
     
           CREATE TYPE Property AS CLOSED {
-              id: int,
               sourceId: bigint,
               sourceType: Boolean,
               `key`: string,
@@ -126,7 +125,6 @@ class AsterixDBTSM private constructor(
           };
 
           CREATE TYPE NodeRelationship AS CLOSED {
-              id: int,
               `type`: string,
               fromN: bigint,
               toN: bigint,

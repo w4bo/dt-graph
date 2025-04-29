@@ -165,7 +165,6 @@ fun relToJson(relationship: R): String {
     val toTimestampStr = checkAndparseTimestampToString("toTimestamp", relationship.toTimestamp)
     return """
         {
-            "id": ${relationship.id},
             "type": "${relationship.label}",
             "fromN": ${relationship.fromN},
             "toN": ${relationship.toN},
@@ -182,7 +181,6 @@ fun propToJson(property: P): String {
 
     return """
         {
-            "id": ${property.id},
             "sourceId": ${property.sourceId},
             "sourceType": ${property.sourceType},
             "key": "${property.key}",
@@ -196,7 +194,7 @@ fun propToJson(property: P): String {
 
 fun jsonToProp(json: JSONObject, g: Graph): P {
     return P(
-        id = json.getInt("id"),
+        id = DUMMY_ID,
         sourceId = json.getLong("sourceId"),
         sourceType = json.getBoolean(("sourceType")),
         key = json.getString("key"),
@@ -210,7 +208,7 @@ fun jsonToProp(json: JSONObject, g: Graph): P {
 
 fun jsonToRel(json: JSONObject, g: Graph): R {
     val newRelationship = R(
-        id = json.getInt("id"),
+        id = DUMMY_ID,
         label = enumValueOf<Labels>(json.getString("type")),
         fromN = 0L, // Valore placeholder, se non è nel JSON
         toN = json.getLong("toN"),
