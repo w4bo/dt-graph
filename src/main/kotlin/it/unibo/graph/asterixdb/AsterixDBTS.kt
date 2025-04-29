@@ -120,13 +120,15 @@ class AsterixDBTS(
             groupByClause = groupBy.second
             val groupByPredicates = groupByClause.joinToString(",")
             val groupByPart =
-                if (groupByPredicates.isNotEmpty()) "GROUP BY $groupByPredicates, $PROPERTY" else "GROUP BY $PROPERTY $whereAggregators"
+                if (groupByPredicates.isNotEmpty()) "GROUP BY $groupByPredicates, $PROPERTY $whereAggregators" else "GROUP BY $PROPERTY $whereAggregators"
 
             selectQuery = """
                 USE $dataverse;
                 SELECT ${
                 groupByClause.joinToString(",").let { if (it.isNotEmpty()) "$it," else "" }
-            } ${selectClause.joinToString(",")} $defaultGroupByAggregators $whereAggregators
+            } ${selectClause.joinToString(",")} 
+              $defaultGroupByAggregators 
+              $whereAggregators
                 FROM $dataset
                 ${applyFilters(filters)}
                 $groupByPart;
