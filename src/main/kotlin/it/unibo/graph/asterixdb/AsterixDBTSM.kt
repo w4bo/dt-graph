@@ -6,7 +6,6 @@ import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
 import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -15,9 +14,9 @@ class AsterixDBTSM private constructor(
     host: String,
     port: String,
     val dataverse: String,
-    nodeControllersIPs : List<String>,
+    nodeControllersIPs: List<String>,
     val datatype: String,
-    val dataset:String
+    val dataset: String
 ) : TSManager {
     private class UniformSampler<T>(private val source: List<T>) {
         private var pool: MutableList<T> = source.shuffled().toMutableList()
@@ -40,15 +39,16 @@ class AsterixDBTSM private constructor(
     val clusterControllerHost: String = "http://$host:$port/query/service"
     var id = 1
     val busyPorts: MutableList<Int> = mutableListOf()
-    val tsList : MutableMap<Long, CustomTS> = mutableMapOf()
+    val tsList: MutableMap<Long, CustomTS> = mutableMapOf()
 
     init {
         createDataset(dataset)
     }
 
     override fun addTS(): TS {
-        val tsId= nextTSId()
-        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
+        val tsId = nextTSId()
+        val newTS =
+            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
         val outTS = CustomTS(newTS, g)
         tsList.put(tsId, outTS)
         busyPorts.add(newTS.dataFeedPort)
@@ -82,7 +82,12 @@ class AsterixDBTSM private constructor(
         )
 
         val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
+            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${
+                URLEncoder.encode(
+                    it.value,
+                    StandardCharsets.UTF_8.name()
+                )
+            }"
         }
 
         connection.outputStream.use { it.write(postData.toByteArray()) }
@@ -141,7 +146,7 @@ class AsterixDBTSM private constructor(
               `value`: FLOAT
           };      
             """.trimIndent()
-        if (! queryAsterixDB(clusterControllerHost, creationQuery)){
+        if (!queryAsterixDB(clusterControllerHost, creationQuery)) {
             println("Something went wrong while creating dataset $dataset")
         }
     }
@@ -151,7 +156,7 @@ class AsterixDBTSM private constructor(
             USE $dataverse;
             DELETE FROM $dataset
             """.trimIndent()
-        if (! queryAsterixDB(clusterControllerHost, deletionQuery)){
+        if (!queryAsterixDB(clusterControllerHost, deletionQuery)) {
             println("Something went wrong while creating dataset $dataset")
         }
     }

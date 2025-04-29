@@ -1,9 +1,10 @@
 package it.unibo.graph.asterixdb;
 
-import it.unibo.graph.interfaces.*
-import it.unibo.graph.structure.CustomVertex
-import it.unibo.graph.utils.*
-import it.unibo.graph.utils.encodeBitwise
+import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.utils.DATAFEED_PREFIX
+import it.unibo.graph.utils.DATASET_PREFIX
+import it.unibo.graph.utils.MAX_TS
+import it.unibo.graph.utils.SEED
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
@@ -16,7 +17,6 @@ class AsterixDBHTTPClient(
         private val clusterControllerHost: String,
         dataFeedIp: String,
         private val busyPorts: MutableList<Int>,
-        private val g: Graph,
         private val dataverse: String,
         datatype: String,
         private val tsId: Long,
