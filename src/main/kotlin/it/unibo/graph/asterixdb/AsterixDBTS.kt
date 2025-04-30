@@ -100,13 +100,16 @@ class AsterixDBTS(
         val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
         val defaultGroupByAggregators =
             ", $PROPERTY, COUNT(*) as count, MIN($FROM_TIMESTAMP) as $FROM_TIMESTAMP, MAX($TO_TIMESTAMP) as $TO_TIMESTAMP"
+
+        // Select *each where predicate*
         var whereAggregators = filters
             .filter { !defaultAggregatorsList.contains(it.property) }.joinToString(
                 ",",
                 prefix = if (filters.any { !defaultGroupByAggregators.contains(it.property) }) "," else ""
             ) { it.property }
+
         if (by.isEmpty()) {
-            // Add mandatory attributes
+            // If not group by, add mandatory attributes for graph representation
             whereAggregators += ", `value`, timestamp, properties, relationships"
             selectQuery = """
                     USE $dataverse;
@@ -119,6 +122,8 @@ class AsterixDBTS(
             val selectClause = groupBy.first
             groupByClause = groupBy.second
             val groupByPredicates = groupByClause.joinToString(",")
+
+            // GROUP BY property + all GROUP BY predicates + WHERE predicates
             val groupByPart =
                 if (groupByPredicates.isNotEmpty()) "GROUP BY $groupByPredicates, $PROPERTY $whereAggregators" else "GROUP BY $PROPERTY $whereAggregators"
 
@@ -140,7 +145,7 @@ class AsterixDBTS(
             // If it's a simple select *
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                return result.entities.map { selectNodeFromJsonObject((it as JSONObject) as JSONObject) }
+                return result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
             }
 
             // If we are aggregating
@@ -153,6 +158,7 @@ class AsterixDBTS(
                         it
                     ).getString(FROM_TIMESTAMP)
                 })
+
                 val toTimestamp = dateToTimestamp((0 until result.entities.length()).maxOf {
                     result.entities.getJSONObject(
                         it

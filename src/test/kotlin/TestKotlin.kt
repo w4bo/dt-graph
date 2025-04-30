@@ -306,18 +306,18 @@ class TestKotlin {
     @Test
     fun testTSAsNode4() {
         matrix { g ->
-//            assertEquals(
-//                listOf(12.5),
-//                GraphTraversalSource(g as CustomGraph)
-//                    .V()
-//                    .hasLabel(Device.toString())
-//                    .out(HasHumidity.toString())
-//                    .hasLabel(Humidity.toString())
-//                    .out(HasTS.toString())
-//                    .values<Number>(VALUE)
-//                    .mean<Number>()
-//                    .toList()
-//            )
+            assertEquals(
+                listOf(12.5),
+                GraphTraversalSource(g as CustomGraph)
+                    .V()
+                    .hasLabel(Device.toString())
+                    .out(HasHumidity.toString())
+                    .hasLabel(Humidity.toString())
+                    .out(HasTS.toString())
+                    .values<Number>(VALUE)
+                    .mean<Number>()
+                    .toList()
+            )
 
             assertEquals(
                 listOf(12.5 as Any),
@@ -326,14 +326,14 @@ class TestKotlin {
                     by = listOf(Aggregate("Measurement", "value", AggOperator.AVG))
                 )
             )
-//
-//            assertEquals(
-//                listOf(15.0 as Any),
-//                query(g,
-//                    listOf(Step(AgriParcel), null, Step(Device), null, null, Step(HasTS), Step(Measurement, alias = "Measurement")),
-//                    by = listOf(Aggregate("Measurement", "value", AggOperator.AVG))
-//                )
-//            )
+
+            assertEquals(
+                listOf(15.0 as Any),
+                query(g,
+                    listOf(Step(AgriParcel), null, Step(Device), null, null, Step(HasTS), Step(Measurement, alias = "Measurement")),
+                    by = listOf(Aggregate("Measurement", "value", AggOperator.AVG))
+                )
+            )
         }
     }
 
