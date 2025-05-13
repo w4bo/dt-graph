@@ -1,3 +1,16 @@
+## [1.2.2](https://github.com/w4bo/dt-graph/compare/1.2.1...1.2.2) (2025-05-13)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v8.14 ([#57](https://github.com/w4bo/dt-graph/issues/57)) ([e8343de](https://github.com/w4bo/dt-graph/commit/e8343de4b4add9ab530b02e13cc5ca4efc3eabac))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.126 ([#56](https://github.com/w4bo/dt-graph/issues/56)) ([2cb0a13](https://github.com/w4bo/dt-graph/commit/2cb0a13fcb3ccd6569862465e099d5041e54539d))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.127 ([#58](https://github.com/w4bo/dt-graph/issues/58)) ([925d052](https://github.com/w4bo/dt-graph/commit/925d0524cf396221580211e995669698f02d3f02))
+* **deps:** update node.js to 22.15 ([#55](https://github.com/w4bo/dt-graph/issues/55)) ([b513eab](https://github.com/w4bo/dt-graph/commit/b513eabed0888f11ded44431cd6d731ee316c396))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.1.3 ([#59](https://github.com/w4bo/dt-graph/issues/59)) ([b53dca6](https://github.com/w4bo/dt-graph/commit/b53dca680526257cc172916b4808ce3d87699995))
+
 ## [1.2.1](https://github.com/w4bo/dt-graph/compare/1.2.0...1.2.1) (2025-04-17)
 
 ### Dependency updates
