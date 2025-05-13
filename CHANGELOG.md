@@ -1,3 +1,14 @@
+## [1.2.3](https://github.com/w4bo/dt-graph/compare/1.2.2...1.2.3) (2025-05-13)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.128 ([#60](https://github.com/w4bo/dt-graph/issues/60)) ([5b84aca](https://github.com/w4bo/dt-graph/commit/5b84acada7602cfe1d026e896a32cb68055ccf1b))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.1.21 ([#61](https://github.com/w4bo/dt-graph/issues/61)) ([21641a8](https://github.com/w4bo/dt-graph/commit/21641a8caf4ea3468c64012fd999776d9db91dc8))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.2.1 ([#62](https://github.com/w4bo/dt-graph/issues/62)) ([70d96b1](https://github.com/w4bo/dt-graph/commit/70d96b13457861c16e94fec24c8d452607f409d0))
+
 ## [1.2.2](https://github.com/w4bo/dt-graph/compare/1.2.1...1.2.2) (2025-05-13)
 
 ### Dependency updates
