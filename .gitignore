@@ -5,6 +5,7 @@ db_*
 *.log
 *.dat
 .kotlin/
+src/main/resources/
 
 # These are useless since we use gradle import
 .idea/

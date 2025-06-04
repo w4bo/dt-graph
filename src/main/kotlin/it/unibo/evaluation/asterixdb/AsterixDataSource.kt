@@ -199,7 +199,7 @@ class AsterixDataSource(
             val dataSourcesNumber = System.getenv("DATASOURCES_NUMBER")?.toIntOrNull() ?: 1
             val asterixClusterMachines = System.getenv("ASTERIX_MACHINES_COUNT")?.toIntOrNull() ?: 1
             val measurementsPolygon: Geometry? = System.getenv("MEASUREMENTS_POLYGON")?.let { parseGeoJson(it) }
-            //val pool: JedisPool = JedisPool("localhost", 6379)
+
             println(
                 """
                 Starting an AsterixDB data source...
@@ -221,6 +221,7 @@ class AsterixDataSource(
             try {
                 dataSource.pushToAsterix(outputPath)
             }
+
             catch (e: Exception) {
                 println("Something went wrong while pushing to AsterixDB")
                 val redisHost: String = System.getenv("REDIS_HOST") ?: "localhost"

@@ -6,10 +6,7 @@ import it.unibo.graph.utils.DATASET_PREFIX
 import it.unibo.graph.utils.MAX_TS
 import it.unibo.graph.utils.SEED
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
-import java.net.URLEncoder
+import java.net.*
 import java.nio.charset.StandardCharsets
 import kotlin.random.Random
 
@@ -58,6 +55,7 @@ class AsterixDBHTTPClient(
         val datasetSetup = queryAsterixDB(datasetSetupQuery)
         if(datasetSetup){
             var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
+
             while(!datafeedSetup){
                 busyPorts.add(dataFeedPort)
                 dataFeedPort = (0..MAX_TS).filterNot { it in busyPorts }.random()

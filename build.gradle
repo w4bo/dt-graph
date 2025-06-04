@@ -17,7 +17,7 @@ test {
         showStandardStreams = false
     }
     useJUnitPlatform()
-    maxHeapSize = '1G'
+    maxHeapSize = '10G'
 }
 
 shadowJar { zip64 = true }
@@ -53,6 +53,7 @@ dependencies {
     implementation "org.openjdk.jol:jol-core:0.16"
     testImplementation 'org.jetbrains.kotlin:kotlin-test' // :2.1.0
     implementation "io.lettuce:lettuce-core:6.3.0.RELEASE"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2"
 }
 
 if (hasProperty('buildScan')) {

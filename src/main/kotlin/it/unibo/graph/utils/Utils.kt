@@ -2,7 +2,9 @@ package it.unibo.graph.utils
 
 import it.unibo.graph.interfaces.Elem
 import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.PropType
 import java.io.*
+import java.util.HashMap
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -37,4 +39,21 @@ fun decodeBitwiseSource(z: Long, offset: Int = 44): Long {
 
 fun <A, B> cartesianProduct(list1: List<A>, list2: List<B>): Set<Pair<A, B>> {
     return list1.flatMap { a -> list2.map { b -> a to b } }.toSet()
+}
+
+fun propTypeFromValue(value: Any): PropType {
+    return when(value){
+        is Int -> PropType.INT
+        is Long -> PropType.LONG
+        is Double -> PropType.DOUBLE
+        is HashMap<*, *> -> {
+            if (value.keys.contains(listOf("type", "coordinates"))) {
+                PropType.GEOMETRY
+            } else {
+                PropType.STRING
+            }
+        }
+
+        else -> PropType.STRING
+    }
 }

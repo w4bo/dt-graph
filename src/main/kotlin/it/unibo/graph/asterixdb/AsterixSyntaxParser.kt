@@ -104,8 +104,15 @@ fun timestampToISO8601(timestamp: Long): String {
 }
 
 fun dateToTimestamp(date: String): Long {
-    val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
-    val localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+    val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss")
+    val formatterWithMillis2 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
+    var localDateTime: LocalDateTime
+    try {
+        localDateTime = LocalDateTime.parse(date, formatterWithMillis2)
+    }catch(e: Exception) {
+         localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+    }
+
 
     val instant = localDateTime.toInstant(ZoneOffset.UTC)
 
@@ -209,7 +216,7 @@ fun jsonToProp(json: JSONObject, g: Graph): P {
 fun jsonToRel(json: JSONObject, g: Graph): R {
     val newRelationship = R(
         id = DUMMY_ID,
-        label = enumValueOf<Labels>(json.getString("type")),
+        label = labelFromString(json.getString("type")),
         fromN = 0L, // Valore placeholder, se non è nel JSON
         toN = json.getLong("toN"),
         fromTimestamp = if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,

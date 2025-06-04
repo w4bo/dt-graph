@@ -1,5 +1,6 @@
 package it.unibo.graph.interfaces
 
+import it.unibo.graph.asterixdb.hashMapToGeometry
 import it.unibo.graph.structure.CustomProperty
 import it.unibo.graph.utils.*
 import org.locationtech.jts.io.WKTReader
@@ -154,4 +155,6 @@ open class P(
     override fun hashCode(): Int {
         return Objects.hash(id, key, value, sourceId, type, fromTimestamp, toTimestamp)
     }
+
+
 }

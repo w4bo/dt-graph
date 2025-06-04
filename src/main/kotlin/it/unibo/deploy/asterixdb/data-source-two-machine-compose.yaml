@@ -1,63 +1,63 @@
 version: "3.9"
 services:
-   asterix_cc:
-     image: mp4sini/asterixdb:1.0
-     ports:
-       - 49006:19006
-     volumes:
-       - asterix_cc_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
-       - datasource_jar:/asterixsetup/
-     command:
-       - /bin/bash
-       - -c
-       - |
-         sleep 10
-         bin/asterixcc -config-file /workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf/cc.conf > asterix_cc.log 2>&1 &
-         sleep 150
-         curl -X POST "http://127.0.0.1:19002/query/service" \
-         -H "Content-Type: application/x-www-form-urlencoded" \
-         --data-urlencode "statement=$$(cat /asterixsetup/setup.txt)" \
-         --data-urlencode "pretty=true" \
-         --data-urlencode "mode=immediate"
-         tail -f /dev/null
-     deploy:
-       placement:
-         constraints:
-           - node.hostname == ISI-BIGCLUSTER-PNRR06
-     networks:
-       - asterix-network
-
-   asterix_nc1:
-     image: mp4sini/asterixdb:1.0
-     command:
-       - /bin/bash
-       - -c
-       - |
-         bin/asterixncservice > asterix_nc1.log 2>&1 &
-         tail -f /dev/null
-     deploy:
-       placement:
-         constraints:
-           - node.hostname != CB-Mass-Node1
-           - node.hostname == ISI-BIGCLUSTER-PNRR05
-     networks:
-       - asterix-network
-
-   asterix_nc2:
-     image: mp4sini/asterixdb:1.0
-     command:
-       - /bin/bash
-       - -c
-       - |
-         bin/asterixncservice > asterix_nc2.log 2>&1 &
-         tail -f /dev/null
-     deploy:
-       placement:
-         constraints:
-           - node.hostname != CB-Mass-Node1
-           - node.hostname == ISI-BIGCLUSTER-PNRR04
-     networks:
-       - asterix-network
+#   asterix_cc:
+#     image: mp4sini/asterixdb:1.0
+#     ports:
+#       - 49006:19006
+#     volumes:
+#       - asterix_cc_conf:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf
+#       - datasource_jar:/asterixsetup/
+#     command:
+#       - /bin/bash
+#       - -c
+#       - |
+#         sleep 10
+#         bin/asterixcc -config-file /workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/conf/cc.conf > asterix_cc.log 2>&1 &
+#         sleep 150
+#         curl -X POST "http://127.0.0.1:19002/query/service" \
+#         -H "Content-Type: application/x-www-form-urlencoded" \
+#         --data-urlencode "statement=$$(cat /asterixsetup/setup.txt)" \
+#         --data-urlencode "pretty=true" \
+#         --data-urlencode "mode=immediate"
+#         tail -f /dev/null
+#     deploy:
+#       placement:
+#         constraints:
+#           - node.hostname == ISI-BIGCLUSTER-PNRR06
+#     networks:
+#       - asterix-network
+#
+#   asterix_nc1:
+#     image: mp4sini/asterixdb:1.0
+#     command:
+#       - /bin/bash
+#       - -c
+#       - |
+#         bin/asterixncservice > asterix_nc1.log 2>&1 &
+#         tail -f /dev/null
+#     deploy:
+#       placement:
+#         constraints:
+#           - node.hostname != CB-Mass-Node1
+#           - node.hostname == ISI-BIGCLUSTER-PNRR04
+#     networks:
+#       - asterix-network
+#
+#   asterix_nc2:
+#     image: mp4sini/asterixdb:1.0
+#     command:
+#       - /bin/bash
+#       - -c
+#       - |
+#         bin/asterixncservice > asterix_nc2.log 2>&1 &
+#         tail -f /dev/null
+#     deploy:
+#       placement:
+#         constraints:
+#           - node.hostname != CB-Mass-Node1
+#           - node.hostname == ISI-BIGCLUSTER-PNRR05
+#     networks:
+#       - asterix-network
 
    redis:
       image: redis:latest
@@ -96,14 +96,14 @@ services:
         MAX_ITERATION: 1000000
         TEST_ID: 1
         ASTERIX_MACHINES_COUNT: 4
-        DATASOURCES_NUMBER: 256
+        DATASOURCES_NUMBER: 128
         REDIS_HOST: redis
         LOCK_NAME: datafeed_lock
         BARRIER_READY_NAME: INGESTION_BARRIER
         BARRIER_COMPLETED_NAME: RUN_COMPLETED
         BARRIER_FAILED_NAME: RUN_FAILED
         DATAVERSE: Measurements_Dataverse
-  #
+
 volumes:
   asterix_cc_conf:
     driver_opts:

@@ -27,7 +27,7 @@ class AsterixDBTS(
 
     private var socket: Socket
     private var outputStream: OutputStream
-    private val writer: PrintWriter
+    private var writer: PrintWriter
 
     private val asterixHTTPClient: AsterixDBHTTPClient = AsterixDBHTTPClient(
         clusterControllerHost,
@@ -167,7 +167,7 @@ class AsterixDBTS(
                 return result.entities.toList().map { it as HashMap<*, *> }.map {
                     val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it["count"] as? Number)?.toDouble())
                     N.createVirtualN(
-                        Labels.valueOf(it[PROPERTY]!!.toString()),
+                        labelFromString(it[PROPERTY]!!.toString()),
                         aggregatedValue = aggValue,
                         fromTimestamp = fromTimestamp,
                         toTimestamp = toTimestamp,

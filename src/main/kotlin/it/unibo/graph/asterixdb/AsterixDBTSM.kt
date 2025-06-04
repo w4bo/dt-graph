@@ -16,8 +16,8 @@ class AsterixDBTSM private constructor(
     val dataverse: String,
     nodeControllersIPs: List<String>,
     val datatype: String,
-    val dataset: String
 ) : TSManager {
+
     private class UniformSampler<T>(private val source: List<T>) {
         private var pool: MutableList<T> = source.shuffled().toMutableList()
         private var index = 0
@@ -42,7 +42,7 @@ class AsterixDBTSM private constructor(
     val tsList: MutableMap<Long, CustomTS> = mutableMapOf()
 
     init {
-        createDataset(dataset)
+        createDataset()
     }
 
     override fun addTS(): TS {
@@ -101,19 +101,19 @@ class AsterixDBTSM private constructor(
         }
     }
 
-    private fun createDataset(dataset: String) {
+    private fun createDataset() {
         val creationQuery = """
           DROP dataverse $dataverse IF EXISTS;
           CREATE DATAVERSE $dataverse;
           USE $dataverse;
-          
+
            CREATE TYPE PropertyValue AS OPEN {
               stringValue: string?,
               doubleValue: double?,
               intValue: int?,
               geometryValue: string?
           };
-    
+
           CREATE TYPE Property AS CLOSED {
               sourceId: bigint,
               sourceType: Boolean,
@@ -132,7 +132,7 @@ class AsterixDBTSM private constructor(
               toTimestamp: DATETIME?,
               properties: [Property]?
           };
-       
+
           CREATE TYPE Measurement AS OPEN {
               timestamp: int,
               property: STRING,
@@ -140,12 +140,11 @@ class AsterixDBTSM private constructor(
               relationships: [NodeRelationship]?,
               properties: [Property]?,
               fromTimestamp: DATETIME,
-              toTimestamp: DATETIME,
-              `value`: FLOAT
-          };      
+              toTimestamp: DATETIME
+          };
             """.trimIndent()
         if (!queryAsterixDB(clusterControllerHost, creationQuery)) {
-            println("Something went wrong while creating dataset $dataset")
+            println("Something went wrong while creating time series environment")
         }
     }
 
@@ -168,7 +167,6 @@ class AsterixDBTSM private constructor(
                 "Measurements_Dataverse",
                 listOf("localhost"),
                 "Measurement",
-                "OpenMeasurements"
             )
         }
     }
