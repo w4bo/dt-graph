@@ -5,7 +5,8 @@ db_*
 *.log
 *.dat
 .kotlin/
-src/main/resources/
+src/main/resources/dataset/smartbench/big
+src/main/resources/dataset/smartbench/large
 
 # These are useless since we use gradle import
 .idea/

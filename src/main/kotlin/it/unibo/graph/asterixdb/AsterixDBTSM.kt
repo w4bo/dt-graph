@@ -38,7 +38,7 @@ class AsterixDBTSM private constructor(
     private val nodeControllersPool = UniformSampler(nodeControllersIPs)
     val clusterControllerHost: String = "http://$host:$port/query/service"
     var id = 1
-    val busyPorts: MutableList<Int> = mutableListOf()
+    val busyPorts: MutableSet<Int> = mutableSetOf()
     val tsList: MutableMap<Long, CustomTS> = mutableMapOf()
 
     init {

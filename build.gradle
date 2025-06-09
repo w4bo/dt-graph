@@ -63,4 +63,8 @@ if (hasProperty('buildScan')) {
     }
 }
 
+jar {
+    exclude 'dataset/**'
+}
+
 defaultTasks 'clean', 'build', 'check', 'shadowJar'

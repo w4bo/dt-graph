@@ -18,7 +18,7 @@ class AsterixDBTS(
     dataFeedIp: String,
     private val dataverse: String,
     datatype: String,
-    busyPorts: MutableList<Int>,
+    busyPorts: MutableSet<Int>,
     seed: Int = SEED
 ) : TS {
 

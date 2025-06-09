@@ -1,10 +1,7 @@
 package it.unibo.graph.asterixdb;
 
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.utils.DATAFEED_PREFIX
-import it.unibo.graph.utils.DATASET_PREFIX
-import it.unibo.graph.utils.MAX_TS
-import it.unibo.graph.utils.SEED
+import it.unibo.graph.utils.*
 import org.json.JSONObject
 import java.net.*
 import java.nio.charset.StandardCharsets
@@ -13,7 +10,7 @@ import kotlin.random.Random
 class AsterixDBHTTPClient(
         private val clusterControllerHost: String,
         dataFeedIp: String,
-        private val busyPorts: MutableList<Int>,
+        private val busyPorts: MutableSet<Int>,
         private val dataverse: String,
         datatype: String,
         private val tsId: Long,
@@ -21,7 +18,9 @@ class AsterixDBHTTPClient(
 
 ) {
     private var dataFeedPort : Int
+    private val feedName: String = "$DATAFEED_PREFIX$tsId"
     private val dataset: String
+
 
     fun getDataset() : String = dataset
     fun getDataFeedPort(): Int = dataFeedPort
@@ -30,14 +29,15 @@ class AsterixDBHTTPClient(
 
         Random(seed)
         dataset = "$DATASET_PREFIX$tsId"
-        dataFeedPort = 10000 + tsId.toInt()
-
+        dataFeedPort = FIRSTFEEDPORT + tsId.toInt()
+        if(dataset=="dataset_601"){
+            println("HELO")
+        }
         val datasetSetupQuery = """
             USE $dataverse;
             CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key timestamp;
             CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
         """.trimIndent()
-        val feedName = "$DATAFEED_PREFIX$tsId"
         var dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
@@ -54,12 +54,27 @@ class AsterixDBHTTPClient(
                 """.trimIndent()
         val datasetSetup = queryAsterixDB(datasetSetupQuery)
         if(datasetSetup){
+            var socketConnect: Boolean
             var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
 
-            while(!datafeedSetup){
+            try {
+                val testSocket = Socket(dataFeedIp, dataFeedPort)
+                socketConnect = true
+                testSocket.close()
+            }catch(e: Exception){
+                println("Failed to open a socket, stopping datafeed and will try to open a new one")
+                deleteTs(deleteDataset = false)
+                socketConnect = false
+            }
+
+            while(!datafeedSetup || !socketConnect){
                 busyPorts.add(dataFeedPort)
-                dataFeedPort = (0..MAX_TS).filterNot { it in busyPorts }.random()
+                dataFeedPort = generateSequence { (FIRSTFEEDPORT + tsId.toInt()..MAX_TS).random() }
+                    .distinct()
+                    .filterNot { it in busyPorts }
+                    .firstOrNull() ?: throw IllegalStateException("No available port found")
                 dataFeedSetupQuery = """
+                    USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
                       "adapter-name": "socket_adapter",
@@ -73,6 +88,18 @@ class AsterixDBHTTPClient(
                     START FEED $feedName;
                 """.trimIndent()
                 datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
+
+                if(datasetSetup){
+                    try {
+                        val testSocket = Socket(dataFeedIp, dataFeedPort)
+                        socketConnect = true
+                        testSocket.close()
+                    }catch(e: Exception){
+                        println("Failed to open a socket, stopping datafeed and will try to open a new one")
+                        deleteTs(deleteDataset = false)
+                        socketConnect = false
+                    }
+                }
             }
         }
     }
@@ -109,7 +136,7 @@ class AsterixDBHTTPClient(
         }
         else {
             println(responseText)
-            throw UnsupportedOperationException()
+            return false
         }
 
     }
@@ -173,13 +200,22 @@ class AsterixDBHTTPClient(
         }
     }
 
-    fun deleteTs(){
-        val sqlStatement = """
-            USE $dataverse;
-            STOP FEED MeasurementsFeed_$tsId;
-            DROP FEED MeasurementsFeed_$tsId;
-            DROP dataset $dataset;
-        """.trimIndent()
+    fun deleteTs(deleteDataset: Boolean = true){
+        val sqlStatement : String
+        if(deleteDataset) {
+            sqlStatement = """
+                USE $dataverse;
+                STOP FEED $feedName;
+                DROP FEED $feedName;
+                DROP dataset $dataset;
+            """.trimIndent()
+        }else{
+            sqlStatement = """ 
+                USE $dataverse;
+                STOP FEED $feedName;
+                DROP FEED $feedName;
+                """.trimIndent()
+        }
         queryAsterixDB(sqlStatement)
     }
 }
