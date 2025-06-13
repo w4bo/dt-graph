@@ -3,6 +3,7 @@ package it.unibo.graph.query
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.utils.*
+import org.apache.ivy.plugins.resolver.DualResolver
 import kotlin.math.max
 import kotlin.math.min
 
@@ -425,15 +426,15 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 else -> false
             }
         }
-        val alias: String? = match[index]?.alias
-        val c: Compare? = if (alias != null) mapWhere[alias] else null
-        if ((match[index] == null || ( // no filter
-                    (match[index]!!.type == null || match[index]!!.type == e.label)  // filter on label
-                            // Questo è davvero un ALL o dovrebbe essere un ANY?
-                            && match[index]!!.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
+        val step: IStep? = match[index] // get the current step
+        val alias: String? = step?.alias // get the alias (if any)
+        val c: Compare? = if (alias != null) mapWhere[alias] else null // get the comparison operator (if any)
+        if ((step == null || ( // no filter
+                    (step.type == null || step.type == e.label)  // filter on label
+                            // TODO: Questo è davvero un ALL o dovrebbe essere un ANY?
+                            && step.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
                             && e.timeOverlap(timeaware, from, to) // check time overlap
-                            && (c == null ||
-                    whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
+                            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
         ) {
             val curPath = path + e
             if (curPath.size == match.size) {
@@ -442,8 +443,9 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val from = max(e.fromTimestamp, from)
                 val to = min(e.toTimestamp, to)
                 if (index % 2 == 0) { // is node
+                    val nextStep: IStep? = if (index + 1 < match.size) match[index + 1] else null // get the next step
                     (e as N)
-                        .getRels(direction = Direction.OUT, includeHasTs = true)
+                        .getRels(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
                         .forEach {
                             dfs(it, index + 1, curPath, from, to, visited + e.id)
                         }
@@ -452,13 +454,12 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     if (e.label == HasTS) { // ... to time series
                         g.getTSM()
                             .getTS(r.toN)
-
                             .getValues(pushDownBy(index, by, match), pushDownFilters(index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
                             .forEach {
                                 dfs(it, index + 1, curPath, from, to, visited)
                             }
                     } else { // ... or to graph node
-                        val n = g.getNode(r.toN)
+                        val n = g.getNode(if (step is EdgeStep && step.direction == Direction.IN) { r.fromN } else { r.toN })
                         dfs(n, index + 1, curPath, from, to, visited)
                     }
                 }

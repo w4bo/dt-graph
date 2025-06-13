@@ -613,4 +613,34 @@ class TestKotlin {
             assertEquals(setOf(listOf("foo", 20.0)), query(g, pattern2, by=gb3, timeaware = true).toSet())
         }
     }
+
+    @Test
+    fun `double edge`() {
+        val g = CustomGraph(MemoryGraph())
+        g.tsm = MemoryTSM(g)
+        g.clear()
+        g.getTSM().clear()
+        g.clear()
+        g.getTSM().clear()
+        val a1 = g.addNode(A)
+        g.addProperty(a1.id, "name", "a", PropType.STRING, from = 0, to = 2)
+        val b1 = g.addNode(B)
+        g.addProperty(b1.id, "name", "b", PropType.STRING, from = 0, to = 2)
+        val c1 = g.addNode(C)
+        g.addProperty(c1.id, "name", "c", PropType.STRING, from = 0, to = 2)
+
+        g.addEdge(Foo, a1.id, b1.id)
+        g.addEdge(Foo, a1.id, c1.id)
+
+        val gb1 = listOf(Aggregate("n1", property = "name"), Aggregate("n2", property = "name"))
+        val pattern1 = listOf(Step(A, alias = "n1"), EdgeStep(direction = Direction.OUT), Step(B, alias = "n2"))
+        assertEquals(setOf(listOf("a", "b")), query(g, pattern1, by=gb1, timeaware = true).toSet())
+
+        val pattern2 = listOf(Step(A, alias = "n1"), EdgeStep(direction = Direction.IN), Step(B, alias = "n2"))
+        assertEquals(emptySet<Any>(), query(g, pattern2, by=gb1, timeaware = true).toSet())
+
+        val gb2 = listOf(Aggregate("n3", property = "name"), Aggregate("n1", property = "name"), Aggregate("n2", property = "name"))
+        val pattern3 = listOf(Step(C, alias = "n3"), EdgeStep(direction = Direction.IN), Step(A, alias = "n1"), EdgeStep(direction = Direction.OUT), Step(B, alias = "n2"))
+        assertEquals(setOf(listOf("c", "a", "b")), query(g, pattern3, by=gb2, timeaware = true).toSet())
+    }
 }
