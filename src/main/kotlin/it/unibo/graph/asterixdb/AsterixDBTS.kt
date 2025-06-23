@@ -7,9 +7,13 @@ import it.unibo.graph.query.Filter
 import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.*
 import org.json.JSONObject
+import java.io.File
 import java.io.OutputStream
 import java.io.PrintWriter
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.Socket
+import kotlinx.coroutines.*
 
 class AsterixDBTS(
     override val g: Graph,
@@ -19,7 +23,8 @@ class AsterixDBTS(
     private val dataverse: String,
     datatype: String,
     busyPorts: MutableSet<Int>,
-    seed: Int = SEED
+    seed: Int = SEED,
+    inputPath: String? = null
 ) : TS {
 
     private var dataset: String
@@ -28,6 +33,7 @@ class AsterixDBTS(
     private var socket: Socket
     private var outputStream: OutputStream
     private var writer: PrintWriter
+    private val mapper = ObjectMapper()
 
     private val asterixHTTPClient: AsterixDBHTTPClient = AsterixDBHTTPClient(
         clusterControllerHost,
@@ -46,8 +52,42 @@ class AsterixDBTS(
         socket = Socket(dataFeedIp, dataFeedPort)
         outputStream = socket.getOutputStream()
         writer = PrintWriter(outputStream, true)
+
+        inputPath?.let{
+            val job = GlobalScope.launch(Dispatchers.IO) {
+                try{
+                    loadInitialData(it)
+                }catch(e: Exception){
+                    println(e)
+                    e.printStackTrace()
+                }
+
+            }
+        }
+
     }
 
+    private fun loadInitialData(path: String) {
+        val resource = this::class.java.classLoader.getResource(path)
+        if (resource != null) {
+            resource.openStream().bufferedReader().useLines { lines ->
+                for (line in lines) {
+                    if (line.isNotBlank()) {
+                        val json: JsonNode = mapper.readTree(line)
+                        add(
+                            label = labelFromString(json.get("type").textValue()),
+                            timestamp = dateToTimestamp(json.get("timestamp").textValue()),
+                            location = json.get("location").textValue(),
+                            //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
+                            value = json.get("payload").get("temperature").longValue(),
+                            isUpdate = false
+
+                        )
+                    }
+                }
+            }
+        }
+    }
     override fun getTSId(): Long = id
 
     override fun add(n: N, isUpdate: Boolean): N {
@@ -103,9 +143,9 @@ class AsterixDBTS(
 
         // Select *each where predicate*
         var whereAggregators = filters
-            .filter { !defaultAggregatorsList.contains(it.property) }.joinToString(
+            .filter { !defaultAggregatorsList.contains(it.property) && it.property != VALUE }.joinToString(
                 ",",
-                prefix = if (filters.any { !defaultGroupByAggregators.contains(it.property) }) "," else ""
+                prefix = if (filters.any { !defaultGroupByAggregators.contains(it.property) && it.property != VALUE }) "," else ""
             ) { it.property }
 
         if (by.isEmpty()) {
@@ -145,6 +185,8 @@ class AsterixDBTS(
             // If it's a simple select *
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
+//                val minTimestampTo = result.entities.map{(it as JSONObject).get("toTimestamp")}
+//                val maxTimestampFrom = result.entities.map{(it as JSONObject).get("fromTimestamp")}
                 return result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
             }
 

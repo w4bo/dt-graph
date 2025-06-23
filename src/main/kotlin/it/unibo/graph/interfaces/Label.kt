@@ -14,10 +14,10 @@ interface Label
 
 //TODO: Fix this enum, should be a sealed class
 enum class Labels : Label {
-    AgriFarm, AgriParcel, Device, Person, Humidity, Temperature, SolarRadiation, Measurement, Environment, A, B, C, D, E, F, G,
+    AgriFarm, AgriParcel, Device, Person, Humidity, SolarRadiation, Measurement, Environment, A, B, C, D, E, F, G,
     HasTS, HasParcel, HasDevice, HasOwner, HasManutentor, HasFriend, HasHumidity, HasTemperature, HasSolarRadiation, Foo, TargetLocation, NDVI, HasNDVI, Drone, HasDrone, User, Infrastructure, InfrastructureType, Group,
-    Observation, Platform, PlatformType, Sensor, SensorType, hasowner, hastype_, hasinfrastructure, hassensor, hasObservation, temperature, hasgroups, hascoverage, Presence, Occupancy, SemanticObservationType, VirtualSensorType,
-    hasinputType, hassemanticObservationType, VirtualSensor, hasPresence, location, hasOccupancy, occupancy
+    Observation, Platform, PlatformType, Sensor, SensorType, hasOwner, hasType, hasInfrastructure, hasSensor, hasObservation, hasGroups, hasCoverage, Presence, Occupancy, SemanticObservationType, VirtualSensorType,
+    hasInputType, hasSemanticObservationType, VirtualSensor, hasPresence, hasLocation, location, hasOccupancy, occupancy, hasType_, hasTemperature, Temperature
 }
 
 // Custom serializer for numbers

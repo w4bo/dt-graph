@@ -41,6 +41,18 @@ fun <A, B> cartesianProduct(list1: List<A>, list2: List<B>): Set<Pair<A, B>> {
     return list1.flatMap { a -> list2.map { b -> a to b } }.toSet()
 }
 
+fun saveResults(path: String, dict: Map<String, Any>) {
+    val file = File(path)
+    val writeHeader = !file.exists()
+
+    FileWriter(file, true).use { writer ->
+        if (writeHeader) {
+            writer.appendLine(dict.keys.joinToString(","))
+        }
+        writer.appendLine(dict.values.joinToString(",") { it.toString() })
+    }
+}
+
 fun propTypeFromValue(value: Any): PropType {
     return when(value){
         is Int -> PropType.INT

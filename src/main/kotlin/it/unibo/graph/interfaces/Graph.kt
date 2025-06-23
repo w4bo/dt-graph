@@ -4,6 +4,7 @@ import it.unibo.graph.structure.CustomProperty
 import it.unibo.graph.utils.*
 import org.apache.tinkerpop.gremlin.structure.PropertyType
 import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.io.WKTReader
 import org.locationtech.jts.io.geojson.GeoJsonReader
 
 interface Graph {
@@ -21,7 +22,7 @@ interface Graph {
     fun nextPropertyId(): Int
     fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P  {
         if(type == PropType.GEOMETRY){
-            return addProperty(createProperty(sourceId, sourceType, key,  GeoJsonReader().read(value as String), type, from = from, to = to, id = id))
+            return addProperty(createProperty(sourceId, sourceType, key,  WKTReader().read(value as String), type, from = from, to = to, id = id))
         }else{
             return addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id))
         }

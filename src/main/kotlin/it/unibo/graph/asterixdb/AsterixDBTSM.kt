@@ -44,7 +44,15 @@ class AsterixDBTSM private constructor(
     init {
         createDataset()
     }
-
+    fun addTS(inputPath : String): TS {
+        val tsId = nextTSId()
+        val newTS =
+            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
+        val outTS = CustomTS(newTS, g)
+        tsList.put(tsId, outTS)
+        busyPorts.add(newTS.dataFeedPort)
+        return outTS
+    }
     override fun addTS(): TS {
         val tsId = nextTSId()
         val newTS =

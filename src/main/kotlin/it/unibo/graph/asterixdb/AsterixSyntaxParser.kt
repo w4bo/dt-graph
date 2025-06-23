@@ -39,8 +39,10 @@ fun hashMapToGeometry(location: Map<String, Any>): Geometry? {
 
     val wkt = when (type.uppercase()) {
         "POINT" -> {
-            val (x, y) = coordinates
-            "POINT($x $y)"
+            val x = coordinates[0]
+            val y = coordinates[1]
+            val z = if (coordinates.size > 2) coordinates[2] else 0
+            "POINT($x $y $z)"
         }
 
         "POLYGON" -> {
@@ -259,7 +261,8 @@ fun parseValue(property: String, value: Any): String {
     //TODO: Fix this, ci saranno altri tipi da parsare
     return when {
         property.lowercase().contains("timestamp") -> """datetime("${timestampToISO8601(value as Long)}")"""
-        value is Int -> value.toString()
+        value is Int -> "$value"
+        value is Long -> "$value"
         else -> """ "$value" """
     }
 }
@@ -280,9 +283,12 @@ private fun parseFilter(filter: Filter): String {
             Operators.LTE -> "<="
             Operators.GTE -> ">="
             Operators.ST_CONTAINS -> "st_contains"
+            Operators.ST_INTERSECTS -> "st_intersects"
         }
     }
-
+    fun escapeIdentifier(name: String): String {
+        return if (name == "value") "`value`" else name
+    }
     fun normalizeWkt(wkt: String): String? {
         val clean = wkt.trim().removeSurrounding("\"").removeSurrounding("'")
         val wktPattern = Regex(
@@ -292,8 +298,9 @@ private fun parseFilter(filter: Filter): String {
         return if (wktPattern.matches(clean)) clean else null
     }
 
-    val left = if (filter.attrFirst) filter.property else parseValue(filter.property, filter.value)
-    val right = if (filter.attrFirst) parseValue(filter.property, filter.value) else filter.property
+    val left = if (filter.attrFirst) escapeIdentifier(filter.property) else escapeIdentifier(parseValue(filter.property, filter.value))
+    val right = if (filter.attrFirst) escapeIdentifier(parseValue(filter.property, filter.value)) else escapeIdentifier(filter.property)
+
 
     return when (filter.operator) {
         Operators.ST_CONTAINS -> {
@@ -301,6 +308,12 @@ private fun parseFilter(filter: Filter): String {
                 .map { normalizeWkt(it)?.let { wkt -> "st_geom_from_text('$wkt')" } ?: it }
 
             "st_contains($arg1, $arg2)"
+        }
+        Operators.ST_INTERSECTS -> {
+            val (arg1, arg2) = (if (filter.attrFirst) listOf(right, left) else listOf(left, right))
+                .map { normalizeWkt(it)?.let { wkt -> "st_geom_from_text('$wkt')" } ?: it }
+
+            "st_intersects($arg1, $arg2)"
         }
 
         else -> "$left ${parseOperator(filter.operator)} $right"

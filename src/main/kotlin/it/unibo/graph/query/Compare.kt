@@ -2,9 +2,10 @@ package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.ElemP
 import org.locationtech.jts.geom.Geometry
+import org.locationtech.jts.io.WKTReader
 import org.locationtech.jts.io.geojson.GeoJsonReader
 
-enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS }
+enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS, ST_INTERSECTS }
 
 class Compare(val first: Any, val second: Any, val property: String, val operator: Operators) {
 
@@ -27,15 +28,17 @@ class Compare(val first: Any, val second: Any, val property: String, val operato
                 Operators.GT -> compA > compB
                 Operators.LTE -> compA <= compB
                 Operators.GTE -> compA >= compB
-                Operators.ST_CONTAINS -> geometryContains(a, b)
+                Operators.ST_CONTAINS -> geometryCheck(a, b, operator)
+                Operators.ST_INTERSECTS -> geometryCheck(a,b, operator)
+
                 else -> false
             }
         }
         return false
     }
 
-    private fun geometryContains(a: Any, b: Any): Boolean {
-        val parser = GeoJsonReader()
+    private fun geometryCheck(a: Any, b: Any, operator: Operators): Boolean {
+        val parser = WKTReader()
         if (a == "" || b == "") {
             return false
         }
@@ -49,7 +52,11 @@ class Compare(val first: Any, val second: Any, val property: String, val operato
             is String -> parser.read(b)
             else -> throw IllegalArgumentException("Invalid type for 'b': ${b::class.simpleName}")
         }
-        return geomA.contains(geomB)
+        return when(operator){
+            Operators.ST_CONTAINS -> geomA.contains(geomB)
+            Operators.ST_INTERSECTS -> geomA.intersects(geomB)
+            else -> throw IllegalArgumentException("Unsupported operator: $operator")
+        }
     }
 
     fun isOk(a: ElemP, b: ElemP, timeaware: Boolean): Boolean {

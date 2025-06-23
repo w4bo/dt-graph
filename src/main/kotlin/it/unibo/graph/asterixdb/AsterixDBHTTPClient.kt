@@ -30,9 +30,6 @@ class AsterixDBHTTPClient(
         Random(seed)
         dataset = "$DATASET_PREFIX$tsId"
         dataFeedPort = FIRSTFEEDPORT + tsId.toInt()
-        if(dataset=="dataset_601"){
-            println("HELO")
-        }
         val datasetSetupQuery = """
             USE $dataverse;
             CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key timestamp;

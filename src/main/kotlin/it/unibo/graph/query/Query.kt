@@ -327,6 +327,9 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
             AggOperator.SUM -> {
                 cNumbers.map{it.first}.sum()
             }
+            AggOperator.MAX -> {
+                cNumbers.map{it.first}.max()
+            }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {

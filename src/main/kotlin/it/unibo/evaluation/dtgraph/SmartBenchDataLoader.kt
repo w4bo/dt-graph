@@ -3,20 +3,20 @@ package it.unibo.evaluation.dtgraph
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
-import it.unibo.graph.interfaces.Label
 import it.unibo.graph.asterixdb.dateToTimestamp
-import it.unibo.graph.interfaces.TS
-import it.unibo.graph.interfaces.labelFromString
+import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.propTypeFromValue
 import java.io.File
 import java.net.URI
+import java.nio.file.Paths
+import java.util.*
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(
     private val graph: Graph = MemoryGraph(),
-    tsLabelsList: List<String> = listOf("Measurement", "Observation", "Occupancy", "Presence"),
+    tsLabelsList: List<String> = listOf("Measurement", "Observation","Temperature", "Occupancy", "Presence"),
     virtualSensorTsLabelsList: List<String> = listOf("Occupancy", "Presence")
 ) {
     private val tsLabels: Set<String> = tsLabelsList.toSet()
@@ -37,8 +37,13 @@ class SmartBenchDataLoader(
     // Label caching
     private val edgeLabelCache: MutableMap<String, Label> = mutableMapOf()
 
+
     private fun hasLabel(key: String): Label =
-        edgeLabelCache.getOrPut(key) { labelFromString("has$key") }
+        edgeLabelCache.getOrPut(key) { labelFromString("has${key.replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(
+                Locale.getDefault()
+            ) else it.toString()
+        }}") }
 
     fun loadData(dataPath: List<String>): Boolean {
             val totalTime = measureTimeMillis {
@@ -48,38 +53,46 @@ class SmartBenchDataLoader(
                     requireNotNull(resource) { "Resource not found: $file" }
 
                     var count = 0
-                    val sb = StringBuilder()
 
                     val fileTime = measureTimeMillis {
                         for (obj in loadJsonObjects(resource.toURI(), mapper)) {
                             count++
 
-                            val typeVal = obj["type"] as? String
+                            val typeVal = (obj["type"] as? String)
                                 ?: error("Missing 'type' in JSON object")
                             val entityId = obj["id"] as? String
                                 ?: error("Missing 'id' in JSON object")
-                            val nodeLabel = labelFromString(typeVal)
+                            val nodeLabel = labelFromString(typeVal.replaceFirstChar {
+                                if (it.isLowerCase()) it.titlecase(
+                                    Locale.getDefault()
+                                ) else it.toString()
+                            })
+                            if(!graphIdList.contains(entityId)) {
 
-                            // If it's a sensor
-                            if (tsLabels.contains(typeVal)) {
-                                val sensorId = if (virtualSensorTsLabels.contains(typeVal)) {
-                                    (obj["virtualSensor"] as Map<*, *>)["id"] as String
-                                } else {
-                                    (obj["sensor"] as Map<*, *>)["id"] as String
-                                }
+                                // If it's a measurement
+                                if (tsLabels.contains(typeVal)) {
+                                    val sensorId = if (virtualSensorTsLabels.contains(typeVal)) {
+                                        (obj["id"]) as String
+                                    } else {
+                                        (obj["id"]) as String
+                                    }
 
-                                // Get its TS list
-                                val sensorTSMap = tSList[sensorId]
+                                    // Get its TS list
+                                    val sensorTSMap = tSList[sensorId]
 
-                                if (sensorTSMap != null) {
-                                    val labelString = typeVal
+                                    if (sensorTSMap != null) {
+                                        val labelString = typeVal
 
-                                    // Check if a TS for this sensor and this property exists
+                                        // Check if a TS for this sensor and this property exists
                                     val ts: TS = sensorTSMap[labelString]
                                         ?: run {
                                             // If not, create it
                                             val graphSensorId = graphIdList[sensorId]
                                                 ?: error("Sensor node missing for $sensorId")
+                                            val sensorTsFilePath = "${Paths.get(file).parent?.toString()}/timeseries/$sensorId"
+                                            val sensorTSFile = this::class.java.classLoader.getResource(
+                                                sensorTsFilePath
+                                            )
                                             val newTs = tsm.addTS()
                                             val newNode = graph.addNode(nodeLabel, value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), graphSensorId, newNode.id)
@@ -87,25 +100,20 @@ class SmartBenchDataLoader(
                                             newTs
                                         }
 
-                                    // Parse measurement
+                                        // Parse measurement
                                     val payloadMap = obj["payload"] as Map<*, *>
                                     val entry = payloadMap.entries.iterator().next()
                                     val measureKey = entry.key as String
-                                    val measureLabel = labelFromString(measureKey)
+                                    val measureLabel = labelFromString(measureKey.replaceFirstChar {
+                                        if (it.isLowerCase()) it.titlecase(
+                                            Locale.getDefault()
+                                        ) else it.toString()
+                                    })
                                     val measureValue = (entry.value as Number).toLong()
                                     val tsTimestamp = dateToTimestamp(obj["timestamp"] as String)
 
                                     // Parse location
-                                    val locationJson: String? = (obj["location"] as? Map<*, *>)?.let { loc ->
-                                        sb.clear()
-                                        sb.append("{\"type\":\"Point\",\"coordinates\":[")
-                                        val itCoords = loc.values.iterator()
-                                        sb.append(itCoords.next().toString())
-                                        sb.append(',')
-                                        sb.append(itCoords.next().toString())
-                                        sb.append("]}")
-                                        sb.toString()
-                                    }
+                                    val locationJson: String? = obj["location"] as? String
 
                                     // Add measurement to TS
                                     if (locationJson != null) {
@@ -124,49 +132,74 @@ class SmartBenchDataLoader(
                                             isUpdate = false
                                         )
                                     }
-                                }
-                            }else{
-                                // Otherwise, it's a static node.
-                                val node = graph.addNode(nodeLabel)
-                                val nodeId = node.id
-                                graphIdList[entityId] = nodeId
+                                    }
+                                } else {
+                                    // Otherwise, it's a static node.
+                                    val node = graph.addNode(nodeLabel)
+                                    val nodeId = node.id
+                                    graphIdList[entityId] = nodeId
+                                    // Parse its properties
+                                    for ((key, value) in obj) {
+                                        if (key === "type" || key === "id") continue
 
-                                // Parse its properties
-                                for ((key, value) in obj) {
-                                    if (key === "type" || key === "id") continue
-
-                                    when (value) {
-                                        is Map<*, *> -> {
-                                            // if property value contains a JSON with a key "id", it's an edge
-                                            val destId = value["id"] as? String
-                                            if (destId != null) {
-                                                val edgeLabel = hasLabel(key)
-                                                val targetId = graphIdList[destId]
-                                                if (targetId != null) {
-                                                    graph.addEdge(edgeLabel, nodeId, targetId)
-                                                } else {
-                                                    leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
+                                        when (value) {
+                                            is Map<*, *> -> {
+                                                // if property value contains a JSON with a key "id", it's an edge
+                                                val destId = value["id"] as? String
+                                                if (destId != null) {
+                                                    val edgeLabel = hasLabel(key)
+                                                    val targetId = graphIdList[destId]
+                                                    if (targetId != null) {
+                                                        graph.addEdge(edgeLabel, nodeId, targetId)
+                                                    } else {
+                                                        leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
+                                                    }
                                                 }
                                             }
-                                        }
-                                        is List<*> -> {
-                                            // elif it's a list, parse each value
-                                            for (subVal in value) {
-                                                processProperty(subVal!!, key, nodeId)
+
+                                            is List<*> -> {
+                                                // elif it's a list, parse each value
+                                                for (subVal in value) {
+                                                    processProperty(subVal!!, key, nodeId)
+                                                }
+                                            }
+
+                                            else -> {
+                                                // else, it's a static property
+                                                processProperty(value, key, nodeId)
                                             }
                                         }
-                                        else -> {
-                                            // else, it's a static property
-                                            processProperty(value, key, nodeId)
-                                        }
                                     }
-                                }
 
-                                // 5) Se è nodo sensore, inizializzo mappa TS vuota
-                                if (typeVal == "Sensor" || typeVal == "VirtualSensor") {
-                                    tSList[entityId] = mutableMapOf()
+                                    if (obj["type"].toString() == Labels.Sensor.toString()) {
+                                        val sensorId = obj["id"] as String
+                                        //TODO: FIX THIS HARDCODE
+                                        val labelString = "Temperature"
+                                            ?: error("Sensor node missing for $sensorId")
+                                        val sensorTsFilePath =
+                                            "${Paths.get(file).parent?.toString()}\\timeseries\\${sensorId}.json"
+                                        val sensorTSFile = this::class.java.classLoader.getResource(
+                                            sensorTsFilePath
+                                        )
+                                        sensorTSFile?.let {
+                                            println("Found $sensorTsFilePath")
+                                            val newTs = (tsm as AsterixDBTSM).addTS(sensorTsFilePath)
+                                            val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
+                                            graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
+                                        }
+
+                                        //tSList[sensorId] = newNode
+                                    }
+                                    // 5) Se è nodo sensore, inizializzo mappa TS vuota
+                                    if (typeVal == "Sensor" || typeVal == "VirtualSensor") {
+                                        tSList[entityId] = mutableMapOf()
+                                    }
+
                                 }
                             }
+
+
+
 
                         }
                     }

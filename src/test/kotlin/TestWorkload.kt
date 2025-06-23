@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
 
 
-const val T0_LOCATION = "{\"coordinates\":[[[11.798775,44.235004],[11.799136,44.235376],[11.800661,44.234333],[11.800189,44.234023],[11.798775,44.235004]]],\"type\":\"Polygon\"}"
-const val POINT_IN_T0 = "{\"coordinates\":[11.798998,44.235024],\"type\":\"Point\"}"
+const val T0_LOCATION = "POLYGON ((11.798775 44.235004, 11.799136 44.235376, 11.800661 44.234333, 11.800189 44.234023, 11.798775 44.235004))"
+const val POINT_IN_T0 = "POINT (11.798998 44.235024)"
 
 /**
  * Problemi:
@@ -66,15 +66,15 @@ class TestWorkload{
         // Errano farm
         val errano = g.addNode(AgriFarm)
         g.addProperty(errano.id, "name", "Errano Kiwi Farm",PropType.STRING)
-        g.addProperty(errano.id, "location", """{"coordinates":[[[11.798105,44.234354],[11.801217,44.237683],[11.805286,44.235809],[11.803987,44.234851],[11.804789,44.233683],[11.80268,44.231419],[11.798105,44.234354]]],"type":"Polygon"}""", PropType.GEOMETRY)
+        g.addProperty(errano.id, "location", """POLYGON ((11.798105 44.234354, 11.801217 44.237683, 11.805286 44.235809, 11.803987 44.234851, 11.804789 44.233683, 11.80268 44.231419, 11.798105 44.234354))""", PropType.GEOMETRY)
 
         // Errano parcels
         val erranoT1 = g.addNode(AgriParcel)
         g.addProperty(erranoT1.id, "name", "Errano T1" ,PropType.STRING)
-        g.addProperty(erranoT1.id, "location", """{"coordinates":[[[11.79915,44.235384],[11.799412,44.23567],[11.801042,44.234555],[11.800681,44.234343],[11.79915,44.235384]]],"type":"Polygon"}""" ,PropType.GEOMETRY)
+        g.addProperty(erranoT1.id, "location", """POLYGON ((11.79915 44.235384, 11.799412 44.23567, 11.801042 44.234555, 11.800681 44.234343, 11.79915 44.235384))""" ,PropType.GEOMETRY)
         val erranoT2 = g.addNode(AgriParcel)
 
-        g.addProperty(erranoT2.id, "location", """{"coordinates":[[[11.799569,44.235609],[11.79977,44.235759],[11.801395,44.234782],[11.80108,44.234572],[11.799569,44.235609]]],"type":"Polygon"}""" ,PropType.GEOMETRY)
+        g.addProperty(erranoT2.id, "location", """POLYGON ((11.799569 44.235609, 11.79977 44.235759, 11.801395 44.234782, 11.80108 44.234572, 11.799569 44.235609))""" ,PropType.GEOMETRY)
         g.addProperty(erranoT2.id, "name", "Errano T2" ,PropType.STRING)
 
 
@@ -83,10 +83,10 @@ class TestWorkload{
 
         // Static devices
         val t1Moisture = g.addNode(Device)
-        g.addProperty(t1Moisture.id, "location", """{"coordinates":[11.799328,44.235394],"type":"Point"}""" ,PropType.GEOMETRY)
+        g.addProperty(t1Moisture.id, "location", """POINT (11.799328 44.235394)""" ,PropType.GEOMETRY)
         g.addProperty(t1Moisture.id, "name", "Errano T1 MoistureDevice" ,PropType.STRING)
         val t2Moisture = g.addNode(Device)
-        g.addProperty(t2Moisture.id, "location", """{"coordinates":[11.800711,44.234904],"type":"Point"}""" ,PropType.GEOMETRY)
+        g.addProperty(t2Moisture.id, "location", """POINT (11.800711 44.234904)""" ,PropType.GEOMETRY)
         g.addProperty(t2Moisture.id, "name", "Errano T2 MoistureDevice" ,PropType.STRING)
 
         if(dynamicDevices){
@@ -95,7 +95,7 @@ class TestWorkload{
             // Moving device
             val erranoDrone = g.addNode(Device)
             g.addProperty(erranoDrone.id, "name", "Errano Drone" ,PropType.STRING)
-            g.addProperty(erranoDrone.id, "location", """{"coordinates":[11.799328,44.235394],"type":"Point"}""", PropType.GEOMETRY, from = 0, to = 2)
+            g.addProperty(erranoDrone.id, "location", """POINT (11.799328 44.235394)""", PropType.GEOMETRY, from = 0, to = 2)
 
             val droneTs = g.getTSM().addTS()
             val droneNDVI = g.addNode(NDVI, value = droneTs.getTSId())
@@ -103,22 +103,22 @@ class TestWorkload{
             g.addEdge(HasDevice, erranoT1.id, erranoDrone.id, from = 0, to = 2)
             g.addEdge(HasNDVI, erranoDrone.id, droneNDVI.id)
 
-            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
-            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
+            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """POINT (11.799328 44.235394)""")
+            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """POINT (11.799328 44.235394)""")
 
             //Moving device from T1 to T2
             g.addEdge(HasDevice, erranoT2.id, erranoDrone.id, from = 2, to = 5)
-            g.addProperty(erranoDrone.id, "location", """{"coordinates":[11.800711,44.234904],"type":"Point"}""", PropType.GEOMETRY, from = 2, to = 5)
+            g.addProperty(erranoDrone.id, "location", """POINT (11.800711 44.234904)""", PropType.GEOMETRY, from = 2, to = 5)
 
-            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
-            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
+            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """POINT (11.800711 44.234904)""")
+            droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = """POINT (11.800711 44.234904)""")
 
         }
 
         // Weather station, not linked to anything
         val weatherStation = g.addNode(Device)
         g.addProperty(weatherStation.id, "name", """Errano Weather Station""" ,PropType.STRING)
-        g.addProperty(weatherStation.id, "location", """{"coordinates":[11.80164,44.234831],"type":"Point"}""" ,PropType.GEOMETRY)
+        g.addProperty(weatherStation.id, "location", """POINT (11.80164 44.234831)""" ,PropType.GEOMETRY)
 
         // g.addEdge(hasDevice, errano.id, weatherStation.id)
         g.addEdge(HasDevice, erranoT1.id, t1Moisture.id)
@@ -130,9 +130,9 @@ class TestWorkload{
         val weatherTS = g.getTSM().addTS()
 
         for (timestamp in 0L..5){
-            t1TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.799328,44.235394],"type":"Point"}""")
-            t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.800711,44.234904],"type":"Point"}""")
-            weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """{"coordinates":[11.80164,44.234831],"type":"Point"}""")
+            t1TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """POINT (11.799328 44.235394)""")
+            t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = """POINT (11.800711 44.234904)""")
+            weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = """POINT (11.80164 44.234831)""")
         }
 
         val weatherTemperature = g.addNode(Humidity, value = weatherTS.getTSId())
@@ -195,7 +195,7 @@ class TestWorkload{
     fun environmentCoverage() {
         val g = setup()
         val tau = Humidity
-        val searchLocation = """{"coordinates":[[[11.798105,44.234354],[11.801217,44.237683],[11.805286,44.235809],[11.803987,44.234851],[11.804789,44.233683],[11.80268,44.231419],[11.798105,44.234354]]],"type":"Polygon"}"""
+        val searchLocation = """POLYGON ((11.798105 44.234354, 11.801217 44.237683, 11.805286 44.235809, 11.803987 44.234851, 11.804789 44.233683, 11.80268 44.231419, 11.798105 44.234354))"""
 
         val pattern = staticDevicePattern + listOf(
             Step(HasHumidity),
@@ -493,7 +493,7 @@ class TestWorkload{
         g.addEdge(HasDevice,erranoT0.id,t0Device.id)
 
         val t0TS = g.getTSM().addTS()
-        t0TS.add(Measurement, 4,4,"{\"coordinates\":[11.798998,44.235024],\"type\":\"Point\"}")
+        t0TS.add(Measurement, 4,4,"POINT (11.798998 44.235024)")
 
         val t0Hum = g.addNode(Humidity, value = t0TS.getTSId())
         g.addEdge(HasHumidity, t0Device.id, t0Hum.id)
