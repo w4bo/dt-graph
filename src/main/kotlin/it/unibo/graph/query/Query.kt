@@ -565,7 +565,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                         .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
                                         .forEach {
                                             mutex.lock()
-                                            priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, HIGHPRIORITY))
+                                            priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY))
                                             mutex.unlock()
                                         }
                                     completed.incrementAndGet()
