@@ -62,66 +62,54 @@ private fun join(
     to: Long,
     timeaware: Boolean,
     by: List<Aggregate>
-) =
-    pattern1.flatMap { row -> // for each result (i.e., path) of the first pattern
-        // Restrict the temporal interval
-        val from = max(from, row.from)
-        val to = min(to, row.to)
-        val row = row.result
-        val acc: MutableList<Path> = mutableListOf()
-        fun rec(curMatch: List<Step?>, index: Int, from: Long, to: Long) {
-            if (index < match[1].size) { // Iterate until the last step of match[1] (i.e., the second pattern)
-                val step = match[1][index] // Get the current step
-                if (step != null) { // If the step has some filters
-                    if (joinFilters.size > 1) throw IllegalArgumentException("Too many joining filters")
-                    val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second } // Check if the step contains a node to join
-                    if (curJoinFilters.isNotEmpty()) { // ... if so
-                        if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step")
-                        val curJoinFilter = curJoinFilters.first() // Take the filter condition. TODO I assume that there is a single joining filter on a step
-                        val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
-                        val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
-                        props.forEach { p -> // explode each property
-                            rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
+): List<Path> {
+    val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
+    val mutex = Mutex()
+    val result: MutableList<Path> = mutableListOf()
+
+    runBlocking {
+        val jobs = pattern1.map { row -> // for each result (i.e., path) of the first pattern
+            launch(executor) {
+                // Restrict the temporal interval
+                val from = max(from, row.from)
+                val to = min(to, row.to)
+                val row = row.result
+                val acc: MutableList<Path> = mutableListOf()
+                fun rec(curMatch: List<Step?>, index: Int, from: Long, to: Long) {
+                    if (index < match[1].size) { // Iterate until the last step of match[1] (i.e., the second pattern)
+                        val step = match[1][index] // Get the current step
+                        if (step != null) { // If the step has some filters
+                            if (joinFilters.size > 1) throw IllegalArgumentException("Too many joining filters")
+                            val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second } // Check if the step contains a node to join
+                            if (curJoinFilters.isNotEmpty()) { // ... if so
+                                if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step")
+                                val curJoinFilter = curJoinFilters.first() // Take the filter condition. TODO I assume that there is a single joining filter on a step
+                                val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
+                                val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
+                                props.forEach { p -> // explode each property
+                                    rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
+                                }
+                            } else {
+                                rec(curMatch + step, index + 1, from, to)
+                            }
+                        } else {
+                            rec(curMatch + step, index + 1, from, to)
                         }
                     } else {
-                        rec(curMatch + step, index + 1, from, to)
+                        acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware, by = by).map { Path(row + it.result, it.from, it.to) }
                     }
-                } else {
-                    rec(curMatch + step, index + 1, from, to)
                 }
-            } else {
-                acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware, by = by).map { Path(row + it.result, it.from, it.to) }
+                rec(emptyList(), 0, from, to)
+                mutex.lock()
+                result += acc
+                mutex.unlock()
             }
         }
-        rec(emptyList(), 0, from, to)
-        acc
-    }
-
-fun fullOuterJoinOnInterval(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean): List<Pair<Elem?, Elem?>> {
-    val result = mutableListOf<Pair<Elem?, Elem?>>()
-    val matchedA = mutableSetOf<Elem>()
-    val matchedB = mutableSetOf<Elem>()
-    for (a in listA) {
-        val overlaps = listB.filter { b ->
-            a.timeOverlap(timeaware, b.fromTimestamp, b.toTimestamp)
-        }
-        if (overlaps.isNotEmpty()) {
-            overlaps.forEach { b ->
-                result.add(a to b)
-                matchedB.add(b)
-            }
-            matchedA.add(a)
-        } else {
-            result.add(a to null)
-        }
-    }
-    for (b in listB) {
-        if (b !in matchedB) {
-            result.add(null to b)
-        }
+        jobs.joinAll()
     }
     return result
 }
+
 
 fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean): Set<Pair<Elem?, Elem?>> {
     // val timePoints = (
