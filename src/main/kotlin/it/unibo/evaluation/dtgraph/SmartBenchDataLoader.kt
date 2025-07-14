@@ -5,11 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
-import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.asterixdb.dateToTimestamp
+import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.propTypeFromValue
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import java.io.File

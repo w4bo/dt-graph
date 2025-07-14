@@ -1,3 +1,5 @@
+import io.lettuce.core.RedisClient
+import io.lettuce.core.api.sync.RedisCommands
 import org.apache.commons.csv.CSVFormat
 import org.apache.commons.csv.CSVPrinter
 import org.locationtech.jts.geom.Coordinate
@@ -16,8 +18,6 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 import kotlin.system.measureTimeMillis
-import io.lettuce.core.RedisClient
-import io.lettuce.core.api.sync.RedisCommands
 
 class AsterixDataSource(
     val ingestionLatency: Int,

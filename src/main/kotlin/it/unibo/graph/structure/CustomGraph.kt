@@ -1,7 +1,6 @@
 package it.unibo.graph.structure
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.utils.LOCATION
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.lang3.NotImplementedException
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer
@@ -9,7 +8,6 @@ import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.gremlin.structure.Transaction
 import org.apache.tinkerpop.gremlin.structure.Vertex
-import org.locationtech.jts.io.geojson.GeoJsonReader
 
 class CustomGraph(val g: it.unibo.graph.interfaces.Graph) : Graph, it.unibo.graph.interfaces.Graph by g {
     override fun addVertex(vararg keyValues: Any?): Vertex {

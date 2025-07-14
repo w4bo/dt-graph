@@ -1,10 +1,10 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.asterixdb.hashMapToGeometry
-import it.unibo.graph.structure.CustomProperty
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.GRAPH_SOURCE
+import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.decodeBitwiseSource
 import org.locationtech.jts.io.WKTReader
-import org.locationtech.jts.io.geojson.GeoJsonReader
 import org.rocksdb.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets

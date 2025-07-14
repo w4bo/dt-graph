@@ -1,11 +1,10 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.structure.CustomProperty
-import it.unibo.graph.utils.*
-import org.apache.tinkerpop.gremlin.structure.PropertyType
-import org.locationtech.jts.geom.Geometry
+import it.unibo.graph.utils.GRAPH_SOURCE
+import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.decodeBitwise
+import it.unibo.graph.utils.encodeBitwise
 import org.locationtech.jts.io.WKTReader
-import org.locationtech.jts.io.geojson.GeoJsonReader
 
 interface Graph {
     var tsm: TSManager?

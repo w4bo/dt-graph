@@ -1,18 +1,18 @@
 package it.unibo.graph.asterixdb
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.AggOperator
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
 import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.*
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.io.OutputStream
 import java.io.PrintWriter
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.Socket
-import kotlinx.coroutines.*
 
 @OptIn(DelicateCoroutinesApi::class)
 class AsterixDBTS(

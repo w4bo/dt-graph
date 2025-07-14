@@ -85,7 +85,7 @@ open class R(
     }
 
     override fun toString(): String {
-        return "($fromN)-[id: $id, type: $label, from: $fromTimestamp, to: $toTimestamp}->($toN)"
+        return "($fromN)-[id: $id, type: $label, from: $fromTimestamp, to: $toTimestamp]->($toN)"
     }
 
     override fun equals(other: Any?): Boolean {

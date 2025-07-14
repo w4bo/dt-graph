@@ -1,6 +1,5 @@
 package it.unibo.graph.interfaces
 
-import groovyjarjarasm.asm.Type
 import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.utils.*
 import org.apache.commons.lang3.NotImplementedException

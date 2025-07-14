@@ -1,6 +1,5 @@
 package it.unibo.graph.asterixdb;
 
-import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.utils.*
 import org.json.JSONObject
 import java.net.*

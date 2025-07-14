@@ -3,7 +3,6 @@ package it.unibo.graph.query
 import it.unibo.graph.interfaces.ElemP
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.WKTReader
-import org.locationtech.jts.io.geojson.GeoJsonReader
 
 enum class Operators { EQ, LT, GT, LTE, GTE, ST_CONTAINS, ST_INTERSECTS }
 

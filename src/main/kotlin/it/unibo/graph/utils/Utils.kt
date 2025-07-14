@@ -4,8 +4,7 @@ import it.unibo.graph.interfaces.Elem
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import java.io.*
-import java.util.HashMap
-import java.util.Properties
+import java.util.*
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
