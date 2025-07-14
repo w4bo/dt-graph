@@ -17,7 +17,7 @@ class CustomTS(val ts: TS, override val g: Graph) : TS {
 
     override fun add(n: N, isUpdate: Boolean) = ts.add(n, isUpdate)
 
-    override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> = ts.getValues(by, filters)
+    override fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean): List<N> = ts.getValues(by, filters, isGroupBy)
 
     override fun get(id: Long): N = ts.get(id)
 }

@@ -1,0 +1,14 @@
+environmentCoverage
+//
+environmentAggregate
+small: FROM 0 TO 116945
+large: FROM 0 TO 4079722
+MaintenanceOwners
+small: FROM 24785 TO 116945
+large: FROM 0 TO 4079722
+EnvironmentOutlier:
+small FROM 0 to 8945
+large FROM 0 to 19122
+AgentOutlier
+small FROM 0 TO 209104
+large FROM 0 TO 7967723

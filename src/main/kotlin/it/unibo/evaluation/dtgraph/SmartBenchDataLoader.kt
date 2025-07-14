@@ -3,11 +3,15 @@ package it.unibo.evaluation.dtgraph
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.asterixdb.dateToTimestamp
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.propTypeFromValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.URI
 import java.nio.file.Paths
@@ -46,6 +50,7 @@ class SmartBenchDataLoader(
         }}") }
 
     fun loadData(dataPath: List<String>): Boolean {
+            val tsList : MutableList<AsterixDBTS> = mutableListOf()
             val totalTime = measureTimeMillis {
                 for (file in dataPath) {
                     println("Loading data from $file")
@@ -94,6 +99,7 @@ class SmartBenchDataLoader(
                                                 sensorTsFilePath
                                             )
                                             val newTs = tsm.addTS()
+                                            tsList.add(newTs as AsterixDBTS)
                                             val newNode = graph.addNode(nodeLabel, value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), graphSensorId, newNode.id)
                                             sensorTSMap[labelString] = newTs
@@ -213,6 +219,9 @@ class SmartBenchDataLoader(
                     }
                 }
                 println("Processed latent edges in $latentTime ms")
+                runBlocking {
+                    tsList.mapNotNull { it.job }.joinAll()
+                }
             }
         println("TOTAL ingestion time: $totalTime ms")
         return true

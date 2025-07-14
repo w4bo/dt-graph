@@ -181,7 +181,7 @@ fun relToJson(relationship: R): String {
             $toTimestampStr
             "properties": ${relationship.getProps().map(::propToJson)}
         }
-        """.trimIndent()
+        """
 }
 
 fun propToJson(property: P): String {
@@ -198,7 +198,7 @@ fun propToJson(property: P): String {
             $toTimestampStr
             "type": ${property.type.ordinal}
         }
-    """.trimIndent()
+    """
 }
 
 fun jsonToProp(json: JSONObject, g: Graph): P {
@@ -275,20 +275,18 @@ fun applyFilters(filters: List<Filter>): String {
 }
 
 private fun parseFilter(filter: Filter): String {
-    fun parseOperator(op: Operators): String {
-        return when (op) {
-            Operators.EQ -> "="
-            Operators.LT -> "<"
-            Operators.GT -> ">"
-            Operators.LTE -> "<="
-            Operators.GTE -> ">="
-            Operators.ST_CONTAINS -> "st_contains"
-            Operators.ST_INTERSECTS -> "st_intersects"
-        }
+    fun parseOperator(op: Operators): String = when (op) {
+        Operators.EQ -> "="
+        Operators.LT -> "<"
+        Operators.GT -> ">"
+        Operators.LTE -> "<="
+        Operators.GTE -> ">="
+        Operators.ST_CONTAINS -> "st_contains"
+        Operators.ST_INTERSECTS -> "st_intersects"
     }
-    fun escapeIdentifier(name: String): String {
-        return if (name == "value") "`value`" else name
-    }
+
+    fun escapeIdentifier(name: String): String = if (name == "value") "`value`" else name
+
     fun normalizeWkt(wkt: String): String? {
         val clean = wkt.trim().removeSurrounding("\"").removeSurrounding("'")
         val wktPattern = Regex(
@@ -298,22 +296,21 @@ private fun parseFilter(filter: Filter): String {
         return if (wktPattern.matches(clean)) clean else null
     }
 
-    val left = if (filter.attrFirst) escapeIdentifier(filter.property) else escapeIdentifier(parseValue(filter.property, filter.value))
-    val right = if (filter.attrFirst) escapeIdentifier(parseValue(filter.property, filter.value)) else escapeIdentifier(filter.property)
+    val property = filter.property
+    val parsedValue = parseValue(property, filter.value)
 
+    val left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
+    val right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
 
     return when (filter.operator) {
-        Operators.ST_CONTAINS -> {
-            val (arg1, arg2) = (if (filter.attrFirst) listOf(right, left) else listOf(left, right))
-                .map { normalizeWkt(it)?.let { wkt -> "st_geom_from_text('$wkt')" } ?: it }
+        Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {
+            val arg1Raw = if (filter.attrFirst) right else left
+            val arg2Raw = if (filter.attrFirst) left else right
 
-            "st_contains($arg1, $arg2)"
-        }
-        Operators.ST_INTERSECTS -> {
-            val (arg1, arg2) = (if (filter.attrFirst) listOf(right, left) else listOf(left, right))
-                .map { normalizeWkt(it)?.let { wkt -> "st_geom_from_text('$wkt')" } ?: it }
+            val arg1 = normalizeWkt(arg1Raw)?.let { "st_geom_from_text('$it')" } ?: arg1Raw
+            val arg2 = normalizeWkt(arg2Raw)?.let { "st_geom_from_text('$it')" } ?: arg2Raw
 
-            "st_intersects($arg1, $arg2)"
+            "${parseOperator(filter.operator)}($arg1, $arg2)"
         }
 
         else -> "$left ${parseOperator(filter.operator)} $right"

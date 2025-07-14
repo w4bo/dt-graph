@@ -86,7 +86,7 @@ class AsterixDBHTTPClient(
                 """.trimIndent()
                 datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
 
-                if(datasetSetup){
+                if(datafeedSetup){
                     try {
                         val testSocket = Socket(dataFeedIp, dataFeedPort)
                         socketConnect = true

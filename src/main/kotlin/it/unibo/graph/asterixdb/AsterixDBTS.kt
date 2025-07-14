@@ -7,7 +7,6 @@ import it.unibo.graph.query.Filter
 import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.*
 import org.json.JSONObject
-import java.io.File
 import java.io.OutputStream
 import java.io.PrintWriter
 import com.fasterxml.jackson.databind.JsonNode
@@ -15,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.Socket
 import kotlinx.coroutines.*
 
+@OptIn(DelicateCoroutinesApi::class)
 class AsterixDBTS(
     override val g: Graph,
     val id: Long,
@@ -24,7 +24,8 @@ class AsterixDBTS(
     datatype: String,
     busyPorts: MutableSet<Int>,
     seed: Int = SEED,
-    inputPath: String? = null
+    inputPath: String? = null,
+    var job: Job? = null
 ) : TS {
 
     private var dataset: String
@@ -34,7 +35,7 @@ class AsterixDBTS(
     private var outputStream: OutputStream
     private var writer: PrintWriter
     private val mapper = ObjectMapper()
-
+    private var lastResult : Pair<String, List<N>>
     private val asterixHTTPClient: AsterixDBHTTPClient = AsterixDBHTTPClient(
         clusterControllerHost,
         dataFeedIp,
@@ -52,9 +53,10 @@ class AsterixDBTS(
         socket = Socket(dataFeedIp, dataFeedPort)
         outputStream = socket.getOutputStream()
         writer = PrintWriter(outputStream, true)
+        lastResult = Pair("", listOf())
 
-        inputPath?.let{
-            val job = GlobalScope.launch(Dispatchers.IO) {
+        job = inputPath?.let{
+             GlobalScope.launch(Dispatchers.IO) {
                 try{
                     loadInitialData(it)
                 }catch(e: Exception){
@@ -105,7 +107,7 @@ class AsterixDBTS(
                 "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
             }
-            """.trimIndent()
+            """
             writer.println(measurement)
             if (writer.checkError()) {
                 println("Errore durante la scrittura nel file!")
@@ -134,8 +136,8 @@ class AsterixDBTS(
         }
     }
 
-    override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
-        val selectQuery: String
+    override fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean): List<N> {
+        var selectQuery: String
         val groupByClause: List<String>
         val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
         val defaultGroupByAggregators =
@@ -156,7 +158,12 @@ class AsterixDBTS(
                     SELECT ${defaultAggregatorsList.joinToString(",")} $whereAggregators
                     FROM $dataset
                     ${applyFilters(filters)}
-                """.trimIndent()
+                """
+            if(isGroupBy){
+                selectQuery = "$selectQuery LIMIT 1;"
+            }
+        //println(selectQuery)
+
         } else {
             val groupBy = groupby(by)!!
             val selectClause = groupBy.first
@@ -176,18 +183,26 @@ class AsterixDBTS(
               $whereAggregators
                 FROM $dataset
                 ${applyFilters(filters)}
-                $groupByPart;
-            """.trimIndent()
+                $groupByPart
+            """
         }
+        val outNodes : List<N>
+//        print(selectQuery)
+//        if(selectQuery == lastResult.first){
+//            println("ITS THE SAME")
+//            return lastResult.second
+//        }
 
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
 
             // If it's a simple select *
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
-//                val minTimestampTo = result.entities.map{(it as JSONObject).get("toTimestamp")}
-//                val maxTimestampFrom = result.entities.map{(it as JSONObject).get("fromTimestamp")}
-                return result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
+                outNodes = result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
+//                if(outNodes.isNotEmpty()){
+//                    println("HELLo")
+//                }
+                return outNodes
             }
 
             // If we are aggregating
@@ -206,7 +221,7 @@ class AsterixDBTS(
                         it
                     ).getString(TO_TIMESTAMP)
                 })
-                return result.entities.toList().map { it as HashMap<*, *> }.map {
+                outNodes =  result.entities.toList().map { it as HashMap<*, *> }.map {
                     val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it["count"] as? Number)?.toDouble())
                     N.createVirtualN(
                         labelFromString(it[PROPERTY]!!.toString()),
@@ -244,12 +259,14 @@ class AsterixDBTS(
                                 )
                     )
                 }
+                lastResult = Pair(selectQuery, outNodes)
+                return outNodes
             }
-
             else -> {
                 println("Error occurred while performing query \n $selectQuery")
                 return emptyList()
             }
+
         }
     }
 
@@ -258,7 +275,7 @@ class AsterixDBTS(
         USE $dataverse;
         SELECT * FROM $dataset
         WHERE timestamp = $timestamp
-        """.trimIndent()
+        """
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery)) {
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.length() > 0) {
@@ -293,17 +310,17 @@ class AsterixDBTS(
                 "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
             }]);
-        """.trimIndent()
+        """
         asterixHTTPClient.updateTs(upsertStatement)
     }
 
     private fun selectNodeFromJsonObject(node: JSONObject): N {
         val entity = CustomVertex(
-            id = encodeBitwise(getTSId(), node.getInt("timestamp").toLong()),
+            id = encodeBitwise(getTSId(), node.getLong("timestamp")),
             type = labelFromString(node.getString("property")),
             fromTimestamp = dateToTimestamp(node.getString("fromTimestamp")),
             toTimestamp = dateToTimestamp(node.getString("toTimestamp")),
-            value = node.getDouble("value").toLong(),
+            value = node.getLong("value"),
             g = g
         )
         node.takeIf { it.has("relationships") }

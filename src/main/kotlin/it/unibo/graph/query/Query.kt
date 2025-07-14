@@ -87,7 +87,7 @@ private fun join(
                                 val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
                                 val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
                                 props.forEach { p -> // explode each property
-                                    rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
+                                    rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value, attrFirst = mapAliases[curJoinFilter.first]!!.first == 1), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
                                 }
                             } else {
                                 rec(curMatch + step, index + 1, from, to)
@@ -412,64 +412,68 @@ fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long, matc
     return filters // push down the filters from the next step
 }
 
-//fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
-//    val acc: MutableList<Path> = mutableListOf()
-//    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
-//    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
-//
-//    fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
-//        fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean): Boolean {
-//            return when (alias) {
-//                mapWhere[alias]?.first -> c.isOk(e, path[mapAlias[c.second]!!], timeaware)
-//                mapWhere[alias]?.second -> c.isOk(path[mapAlias[c.first]!!], e, timeaware)
-//                else -> false
-//            }
-//        }
-//        val step: IStep? = match[index] // get the current step
-//        val alias: String? = step?.alias // get the alias (if any)
-//        val c: Compare? = if (alias != null) mapWhere[alias] else null // get the comparison operator (if any)
-//        if ((step == null || ( // no filter
-//                    (step.type == null || step.type == e.label)  // filter on label
-//                            // TODO: Questo è davvero un ALL o dovrebbe essere un ANY?
-//                            && step.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
-//                            && e.timeOverlap(timeaware, from, to) // check time overlap
-//                            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
-//        ) {
-//            val curPath = path + e
-//            if (curPath.size == match.size) {
-//                acc.add(Path(curPath, from, to))
-//            } else {
-//                val from = max(e.fromTimestamp, from)
-//                val to = min(e.toTimestamp, to)
-//                if (index % 2 == 0) { // is node
-//                    val nextStep: IStep? = if (index + 1 < match.size) match[index + 1] else null // get the next step
-//                    (e as N)
-//                        .getRels(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
-//                        .forEach {
-//                            dfs(it, index + 1, curPath, from, to, visited + e.id)
-//                        }
-//                } else { // is edge...
-//                    val r = (e as R)
-//                    if (e.label == HasTS) { // ... to time series
-//                        g.getTSM()
-//                            .getTS(r.toN)
-//                            .getValues(pushDownBy(index, by, match), pushDownFilters(index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
-//                            .forEach {
-//                                dfs(it, index + 1, curPath, from, to, visited)
-//                            }
-//                    } else { // ... or to graph node
-//                        val n = g.getNode(if (step is EdgeStep && step.direction == Direction.IN) { r.fromN } else { r.toN })
-//                        dfs(n, index + 1, curPath, from, to, visited)
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    for (node in g.getNodes()) {
-//        dfs(node, 0, emptyList(), from, to, mutableSetOf())
-//    }
-//    return acc
-//}
+fun search2(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
+    val acc: MutableList<Path> = mutableListOf()
+    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
+    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
+
+    fun dfs(e: ElemP, index: Int, path: List<ElemP>, from: Long, to: Long, visited: Set<Number>) {
+        fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean): Boolean {
+            return when (alias) {
+                mapWhere[alias]?.first -> c.isOk(e, path[mapAlias[c.second]!!], timeaware)
+                mapWhere[alias]?.second -> c.isOk(path[mapAlias[c.first]!!], e, timeaware)
+                else -> false
+            }
+        }
+        val step: IStep? = match[index] // get the current step
+        val alias: String? = step?.alias // get the alias (if any)
+        val c: Compare? = if (alias != null) mapWhere[alias] else null // get the comparison operator (if any)
+        if ((step == null || ( // no filter
+                    (step.type == null || step.type == e.label)  // filter on label
+                            && step.properties.all { f -> e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p ->
+                                if(f.attrFirst) {
+                                    Compare.apply(p.value, f.value, f.operator)
+                                }else{
+                                    Compare.apply(f.value, p.value, f.operator)
+                    } } })) // filter on properties
+                            && e.timeOverlap(timeaware, from, to) // check time overlap
+                            && (c == null || whereClause(e, path, alias!!, mapWhere, c, timeaware)) // apply the where clause
+        ) {
+            val curPath = path + e
+            if (curPath.size == match.size) {
+                acc.add(Path(curPath, from, to))
+            } else {
+                val from = max(e.fromTimestamp, from)
+                val to = min(e.toTimestamp, to)
+                if (index % 2 == 0) { // is node
+                    val nextStep: IStep? = if (index + 1 < match.size) match[index + 1] else null // get the next step
+                    (e as N)
+                        .getRels(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
+                        .forEach {
+                            dfs(it, index + 1, curPath, from, to, visited + e.id)
+                        }
+                } else { // is edge...
+                    val r = (e as R)
+                    if (e.label == HasTS) { // ... to time series
+                        g.getTSM()
+                            .getTS(r.toN)
+                            .getValues(pushDownBy(index, by, match), pushDownFilters(index, curPath, from, to, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
+                            .forEach {
+                                dfs(it, index + 1, curPath, from, to, visited)
+                            }
+                    } else { // ... or to graph node
+                        val n = g.getNode(if (step is EdgeStep && step.direction == Direction.IN) { r.fromN } else { r.toN })
+                        dfs(n, index + 1, curPath, from, to, visited)
+                    }
+                }
+            }
+        }
+    }
+    for (node in g.getNodes()) {
+        dfs(node, 0, emptyList(), from, to, mutableSetOf())
+    }
+    return acc
+}
 
 fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String, Compare>, c: Compare, timeaware: Boolean, mapAlias: Map<String, Int>): Boolean {
     return when (alias) {
@@ -523,8 +527,11 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val c: Compare? = if (alias != null) mapWhere[alias] else null // get the comparison operator (if any)
                 if ((step == null || ( // no filter
                             (step.type == null || step.type == curElem.e.label)  // filter on label
-                                    // TODO: Questo è davvero un ALL o dovrebbe essere un ANY?
-                                    && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> Compare.apply(f.value, p.value, f.operator) } })) // filter on properties
+                                    && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware).any { p -> if(f.attrFirst) {
+                                Compare.apply(p.value, f.value, f.operator)
+                            }else{
+                                Compare.apply(f.value, p.value, f.operator)
+                            } } })) // filter on properties
                     && curElem.e.timeOverlap(timeaware, from, to) // check time overlap
                     && (c == null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
                 ) {
@@ -548,6 +555,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                             if (curElem.e.label == HasTS) { // ... to time series
                                 launched++
                                 launch(executor) {
+                                    try{
                                     g.getTSM()
                                         .getTS(r.toN)
                                         .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
@@ -556,7 +564,12 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                             priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY))
                                             mutex.unlock()
                                         }
-                                    completed.incrementAndGet()
+                                    }catch(e: Exception){
+                                        e.printStackTrace()
+                                    }
+                                    finally{
+                                        completed.incrementAndGet()
+                                    }
                                 }
                             } else { // ... or to graph node
                                 val n = g.getNode(if (step is EdgeStep && step.direction == Direction.IN) { r.fromN } else { r.toN })

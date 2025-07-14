@@ -25,6 +25,6 @@ interface TS : Serializable {
     fun add(label: Label, timestamp: Long, value: Long, isUpdate: Boolean = false) = add(createNode(label, timestamp, value), isUpdate)
 
     fun add(n: N, isUpdate: Boolean): N
-    fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N>
+    fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean = false): List<N>
     fun get(id: Long): N
 }

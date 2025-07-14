@@ -471,6 +471,9 @@ class TestKotlin {
             assertEquals(0, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w2).size)
             assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
             assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
+
+            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter("value", Operators.GTE, 22.toLong(), attrFirst = true))))).size)
+            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter("value", Operators.GTE, 25.toLong(), attrFirst = true))))).size)
         }
     }
 
@@ -642,5 +645,35 @@ class TestKotlin {
         val gb2 = listOf(Aggregate("n3", property = "name"), Aggregate("n1", property = "name"), Aggregate("n2", property = "name"))
         val pattern3 = listOf(Step(C, alias = "n3"), EdgeStep(direction = Direction.IN), Step(A, alias = "n1"), EdgeStep(direction = Direction.OUT), Step(B, alias = "n2"))
         assertEquals(setOf(listOf("c", "a", "b")), query(g, pattern3, by=gb2, timeaware = true).toSet())
+    }
+
+    @Test
+    fun `join commutativity` (){
+        val g = MemoryGraph()
+        g.clear()
+        g.tsm = AsterixDBTSM.createDefault(g)
+
+        val ts = g.getTSM().addTS()
+        ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
+
+        val n10 = g.addNode(A)
+        val n11 = g.addNode(C, value = ts.getTSId())
+
+        g.addProperty(n10.id, "location", T0_LOCATION, PropType.GEOMETRY)
+        g.addEdge(Foo, n10.id, n11.id)
+
+        val w1 = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS))
+
+        val pattern1 = listOf(
+            listOf(Step(A, alias = "Environment")),
+            listOf(Step(C), null, Step(alias="Measurement", type = Measurement)),
+        )
+        val pattern2 = listOf(
+            listOf(Step(C), null, Step(alias="Measurement", type = Measurement)),
+            listOf(Step(A, alias = "Environment"))
+        )
+        assertEquals(1, query(g, pattern1, where = w1).size)
+        assertEquals(1, query(g, pattern2, where = w1).size)
+
     }
 }

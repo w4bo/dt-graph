@@ -5,6 +5,7 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import java.io.*
 import java.util.HashMap
+import java.util.Properties
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -67,5 +68,11 @@ fun propTypeFromValue(value: Any): PropType {
         }
 
         else -> PropType.STRING
+    }
+}
+
+fun loadProps(): Properties {
+    return Properties().apply {
+        load(ClassLoader.getSystemResourceAsStream("config.properties"))
     }
 }
