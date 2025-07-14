@@ -58,43 +58,63 @@ open class N(
     }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
-        val p = when (name) {
+        return when (name) {
             FROM_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, FROM_TIMESTAMP, this.fromTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
             TO_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, TO_TIMESTAMP, this.toTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
-            VALUE -> value?.let { listOf(P(DUMMY_ID, id, NODE, VALUE, it, PropType.DOUBLE, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp)) } ?: emptyList()
-            else -> emptyList()
+            VALUE -> value?.let { listOf(P(DUMMY_ID, id, NODE, VALUE, it, PropType.DOUBLE, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp)) } ?: super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
+            else -> super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
         }
-        return if (p.isNotEmpty()) return p else super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
     }
 
     fun getTS(): List<N> {
         return g.getTSM().getTS(value!!).getValues(emptyList(), emptyList())
     }
 
-    fun getRels(next: Int? = nextRel, direction: Direction? = null, label: Label? = null, includeHasTs: Boolean = false): List<R> {
-        return if (label == HasTS) { // Jump to the time series
-            listOf(R(DUMMY_ID, HasTS, id, value!!, g = g))
-        } else { // Iterate within the graph
-            if (relationships != null && relationships.isNotEmpty()) { // If TS snapshot
-                when (direction) {
-                    Direction.IN -> throw NotImplementedException()
-                    else -> relationships.filter { label == null || it.label == label }.toList()
-                }
-            } else { // Graph node
-                if (next == null) return if (includeHasTs && value != null) listOf(R(DUMMY_ID, HasTS, id, value, g = g)) else emptyList()
-                val r = g.getEdge(next)
-                if (label == null || r.label == label) {
-                    when (direction) {
-                        Direction.IN -> if (r.toN == id) listOf(r) else emptyList()
-                        Direction.OUT -> if (r.fromN == id) listOf(r) else emptyList()
-                        else -> listOf(r)
-                    }
-                } else {
-                    emptyList()
-                } + getRels(if (r.fromN == id) r.fromNextRel else r.toNextRel, direction, label, includeHasTs)
+    fun getRels(
+        next: Int? = nextRel,
+        direction: Direction? = null,
+        label: Label? = null,
+        includeHasTs: Boolean = false
+    ): List<R> {
+        // Caso speciale: label == HasTS
+        if (label == HasTS) {
+            return listOf(R(DUMMY_ID, HasTS, id, value!!, g = g))
+        }
+
+        val result = mutableListOf<R>()
+
+        // Caso snapshot (relazioni già presenti)
+        if (relationships != null && relationships.isNotEmpty()) {
+            when (direction) {
+                Direction.IN -> throw NotImplementedException()
+                else -> return relationships.filter { label == null || it.label == label }
             }
         }
+
+        // Caso nodo grafico: itera sulle relazioni collegate
+        var current = next
+        while (current != null) {
+            val r = g.getEdge(current)
+
+            if (label == null || r.label == label) {
+                when (direction) {
+                    Direction.IN -> if (r.toN == id) result.add(r)
+                    Direction.OUT -> if (r.fromN == id) result.add(r)
+                    else -> result.add(r)
+                }
+            }
+
+            current = if (r.fromN == id) r.fromNextRel else r.toNextRel
+        }
+
+        // Se richiesto, aggiungi relazione HasTS
+        if (includeHasTs && value != null) {
+            result.add(R(DUMMY_ID, HasTS, id, value, g = g))
+        }
+
+        return result
     }
+
 
     override fun toString(): String {
         return "(id: $id, type: $label, from: $fromTimestamp, to: $toTimestamp)"

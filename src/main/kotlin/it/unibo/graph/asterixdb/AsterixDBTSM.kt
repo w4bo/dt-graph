@@ -4,10 +4,13 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
+import it.unibo.graph.utils.loadProps
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+
+val props = loadProps()
 
 class AsterixDBTSM private constructor(
     override val g: Graph,
@@ -42,7 +45,7 @@ class AsterixDBTSM private constructor(
     val tsList: MutableMap<Long, CustomTS> = mutableMapOf()
 
     init {
-        createDataset()
+        setupAsterixDB()
     }
     fun addTS(inputPath : String): TS {
         val tsId = nextTSId()
@@ -109,7 +112,7 @@ class AsterixDBTSM private constructor(
         }
     }
 
-    private fun createDataset() {
+    private fun setupAsterixDB() {
         val creationQuery = """
           DROP dataverse $dataverse IF EXISTS;
           CREATE DATAVERSE $dataverse;
@@ -156,25 +159,15 @@ class AsterixDBTSM private constructor(
         }
     }
 
-    private fun deleteDataset(dataset: String) {
-        val deletionQuery = """
-            USE $dataverse;
-            DELETE FROM $dataset
-            """.trimIndent()
-        if (!queryAsterixDB(clusterControllerHost, deletionQuery)) {
-            println("Something went wrong while creating dataset $dataset")
-        }
-    }
-
     companion object {
         fun createDefault(g: Graph): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
-                "localhost",
-                "19002",
-                "Measurements_Dataverse",
-                listOf("localhost"),
-                "Measurement",
+                props.get("default_cc_host").toString(),
+                props.get("default_cc_port").toString(),
+                props.get("default_dataverse").toString(),
+                listOf(props.get("default_nc_pool").toString()),
+                props.get("default_datatype").toString(),
             )
         }
     }

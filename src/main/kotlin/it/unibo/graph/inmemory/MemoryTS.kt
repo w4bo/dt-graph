@@ -17,7 +17,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
         return n
     }
 
-    override fun getValues(by: List<Aggregate>, filters: List<Filter>): List<N> {
+    override fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean): List<N> {
         // Filtered list of nodes based on the provided filters
         val filteredValues = values.values.filter { node ->
             filters.all { filter -> // For each node, check that it satisfies *all* filters
