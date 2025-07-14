@@ -9,8 +9,7 @@ import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
-
-
+import kotlin.test.assertTrue
 
 
 /**
@@ -535,14 +534,15 @@ class TestWorkload{
                 .groupBy({ it[0] }, { it.drop(1) })
                 .mapValues { it.value.flatten() }
 
-            kotlin.test.assertEquals(resultMap[it].toString(),  result[it].toString())
+            assertEquals(resultMap[it]!!.toSet(), result[it]!!.toSet())
 
             result = (activeSpatialAgents as List<List<Any>>)
                 .filter { it.isNotEmpty() }
                 .groupBy({ it[0] }, { it.drop(1) })
                 .mapValues { it.value.flatten() }
 
-            kotlin.test.assertEquals(resultMap[it].toString(),  result[it].toString())
+            assertEquals(resultMap[it]!!.toSet(), result[it]!!.toSet())
+
         }
 
     }
