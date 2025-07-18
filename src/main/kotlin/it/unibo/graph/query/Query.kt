@@ -476,8 +476,9 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                             .forEach {
                                                 mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                             }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
+                                    // } catch (e: Exception) {
+                                    //     e.printStackTrace()
+                                    //     throw IllegalArgumentException(e.message)
                                     } finally {
                                         completed.incrementAndGet()
                                         wait.release()
