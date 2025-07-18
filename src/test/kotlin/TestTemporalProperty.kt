@@ -8,6 +8,7 @@ import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.EDGE
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TestTemporalProperty {
 
@@ -172,6 +173,29 @@ class TestTemporalProperty {
         assertEquals(1, query(g, pattern, from = 2, to = 4).size) // it still exists the first edge! the one spanning -inf, +inf
         // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [4, inf) RETURN a, e, b
         assertEquals(2, query(g, pattern, from = 5).size)
+    }
+
+    @Test
+    fun test5bis() {
+        val g = init()
+        val a1 = g.addNode(A)
+        g.addProperty(a1.id, "lastName", "foo", PropType.STRING)
+        g.addProperty(a1.id, "name", "foo", PropType.STRING)
+        g.addProperty(a1.id, "name", "foo", PropType.STRING, from = 0, to = 2)
+        g.addProperty(a1.id, "name", "foo", PropType.STRING, from = 5)
+        g.addProperty(a1.id, "name", "foo", PropType.STRING, from = 4, to = 5)
+        g.addProperty(a1.id, "name", "foo", PropType.STRING, from = 1, to = 2)
+
+        val props = g.getNode(a1.id).getProps()
+        assertEquals(6, props.size)
+        // assertTrue(props.zipWithNext().all { (a, b) -> a.toTimestamp <= b.toTimestamp }, props.toString())
+        assertTrue(props.all { a -> a.fromTimestamp < a.toTimestamp }, props.toString())
+
+        assertEquals(5, g.getNode(a1.id).getProps(name = "name", fromTimestamp = -4).size)
+        assertEquals(2, g.getNode(a1.id).getProps(name = "name", fromTimestamp = 3).size)
+        assertEquals(4, g.getNode(a1.id).getProps(name = "name", fromTimestamp = 0).size)
+        assertEquals(3, g.getNode(a1.id).getProps(name = "name", fromTimestamp = 1).size)
+        assertEquals(4, g.getNode(a1.id).getProps(fromTimestamp = 1).size)
     }
 
     @Test

@@ -20,12 +20,11 @@ interface Graph {
         P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextPropertyId(): Int
     fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P  {
-        if(type == PropType.GEOMETRY){
-            return addProperty(createProperty(sourceId, sourceType, key,  WKTReader().read(value as String), type, from = from, to = to, id = id))
-        }else{
-            return addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id))
+        return if (type == PropType.GEOMETRY) {
+            addProperty(createProperty(sourceId, sourceType, key,  WKTReader().read(value as String), type, from = from, to = to, id = id))
+        } else {
+            addProperty(createProperty(sourceId, sourceType, key, value, type, from = from, to = to, id = id))
         }
-
     }
 
     fun addProperty(p: P): P {

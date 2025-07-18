@@ -64,17 +64,17 @@ class TestWorkload{
 
         // Errano farm
         val errano = g.addNode(AgriFarm)
-        g.addProperty(errano.id, "name", "Errano Kiwi Farm",PropType.STRING)
+        g.addProperty(errano.id, "name", "Errano Kiwi Farm", PropType.STRING)
         g.addProperty(errano.id, "location", ERRANO_LOCATION, PropType.GEOMETRY)
 
         // Errano parcels
         val erranoT1 = g.addNode(AgriParcel)
-        g.addProperty(erranoT1.id, "name", "Errano T1" ,PropType.STRING)
-        g.addProperty(erranoT1.id, "location", T1_LOCATION ,PropType.GEOMETRY)
+        g.addProperty(erranoT1.id, "name", "Errano T1", PropType.STRING)
+        g.addProperty(erranoT1.id, "location", T1_LOCATION, PropType.GEOMETRY)
         val erranoT2 = g.addNode(AgriParcel)
 
-        g.addProperty(erranoT2.id, "location",T2_LOCATION ,PropType.GEOMETRY)
-        g.addProperty(erranoT2.id, "name", "Errano T2" ,PropType.STRING)
+        g.addProperty(erranoT2.id, "location", T2_LOCATION, PropType.GEOMETRY)
+        g.addProperty(erranoT2.id, "name", "Errano T2", PropType.STRING)
 
 
         g.addEdge(HasParcel, errano.id, erranoT1.id)
@@ -82,13 +82,13 @@ class TestWorkload{
 
         // Static devices
         val t1Moisture = g.addNode(Device)
-        g.addProperty(t1Moisture.id, "location", POINT_IN_T1 ,PropType.GEOMETRY)
-        g.addProperty(t1Moisture.id, "name", "Errano T1 MoistureDevice" ,PropType.STRING)
+        g.addProperty(t1Moisture.id, "location", POINT_IN_T1, PropType.GEOMETRY)
+        g.addProperty(t1Moisture.id, "name", "Errano T1 MoistureDevice", PropType.STRING)
         val t2Moisture = g.addNode(Device)
-        g.addProperty(t2Moisture.id, "location", POINT_IN_T2 ,PropType.GEOMETRY)
-        g.addProperty(t2Moisture.id, "name", "Errano T2 MoistureDevice" ,PropType.STRING)
+        g.addProperty(t2Moisture.id, "location", POINT_IN_T2, PropType.GEOMETRY)
+        g.addProperty(t2Moisture.id, "name", "Errano T2 MoistureDevice", PropType.STRING)
 
-        if(dynamicDevices){
+        if (dynamicDevices) {
             var measurementTimestamp = 0L
 
             // Moving device
@@ -111,7 +111,6 @@ class TestWorkload{
 
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = POINT_IN_T2)
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = POINT_IN_T2)
-
         }
 
         // Weather station, not linked to anything
@@ -439,10 +438,9 @@ class TestWorkload{
                 )
 
             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
+            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
 
             val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
-
-            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
     }

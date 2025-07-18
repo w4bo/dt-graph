@@ -9,6 +9,7 @@ import org.rocksdb.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
+import kotlin.math.min
 
 enum class PropType { INT, LONG, DOUBLE, STRING, GEOMETRY, NULL }
 
@@ -24,7 +25,7 @@ open class P(
     val value: Any,
     val type: PropType,
     var next: Int? = null,
-    final override val fromTimestamp: Long = Long.MIN_VALUE,
+    final override var fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     @Transient final override var g: Graph,
     @Transient val fromDisk: Boolean = false
@@ -129,16 +130,65 @@ open class P(
             assert(elem.fromTimestamp <= fromTimestamp && toTimestamp <= elem.toTimestamp) { "${elem}\n${toString()}" }
             if (elem.nextProp == null) elem.nextProp = id // if the element already has no properties, do nothing
             else {
-                // TODO we only update the `toTimestamp` of properties of elements of the graph (and not of the TS)
-                // TODO here we iterate all the properties of the element, but maybe we could exploit some sorting over time
-                val oldP: P? = elem.getProps(name = key).filter { it.toTimestamp > fromTimestamp }.maxByOrNull { it.toTimestamp } // check if the element contains a property with the same name
-                if (oldP != null) { // if so, and if the `toTimestamp` is ge than `fromTimestamp`
-                    oldP.toTimestamp = fromTimestamp // update the previous `toTimestamp`
-                    g.addProperty(oldP) // update the property
-                }
-                next = elem.nextProp  // update the next pointer of the node
-                elem.nextProp = id
+                 // TODO we only update the `toTimestamp` of properties of elements of the graph (and not of the TS)
+                 // TODO here we iterate all the properties of the element, but maybe we could exploit some sorting over time
+                 val oldP: P? = elem.getProps(name = key).filter { it.toTimestamp > fromTimestamp && it.fromTimestamp < fromTimestamp}.maxByOrNull { it.toTimestamp } // check if the element contains a property with the same name
+                 if (oldP != null) { // if so, and if the `toTimestamp` is \ge than `fromTimestamp`
+                     oldP.toTimestamp = fromTimestamp // update the previous `toTimestamp`
+                     g.addProperty(oldP) // update the property
+                 }
+                 next = elem.nextProp  // update the next pointer of the node
+                 elem.nextProp = id
+
+                // var prev: P? = null
+                // var cur: P = g.getProp(elem.nextProp!!)
+                // var pointerUpdated = false
+                // var lastP: P? = null
+                // if (cur.key == key && cur.toTimestamp != Long.MAX_VALUE && cur.toTimestamp >= fromTimestamp && cur.fromTimestamp <= toTimestamp)
+                //     throw IllegalArgumentException("You are trying to add overlapping properties!")
+                // while (true) {
+                //     if (cur.key == key) {
+                //         lastP = cur
+                //     }
+                //     if (cur.toTimestamp <= toTimestamp) {
+                //         // if (cur.toTimestamp == toTimestamp && cur.fromTimestamp > fromTimestamp)
+                //         //     throw IllegalArgumentException("The new property must be more recent")
+                //         if (prev == null) { // this is the first property to add
+                //             if (!pointerUpdated) {
+                //                 next = elem.nextProp  // update the next pointer of the node
+                //                 elem.nextProp = id
+                //                 pointerUpdated = true
+                //
+                //             }
+                //         } else { // there is a previous property to modify
+                //             if (!pointerUpdated) {
+                //                 next = prev.next
+                //                 prev.next = id
+                //                 g.addProperty(prev) // update the property
+                //                 pointerUpdated = true
+                //             }
+                //             if (cur.key == key) {
+                //                 cur.toTimestamp = fromTimestamp
+                //                 g.addProperty(cur) // update the property
+                //                 break
+                //             }
+                //         }
+                //     }
+                //     if (cur.next == null) break
+                //     prev = cur
+                //     cur = g.getProp(cur.next!!)
+                // }
+                // if (!pointerUpdated) {
+                //     cur.next = id
+                //     g.addProperty(cur)
+                //     if (lastP != null) {
+                //         lastP.fromTimestamp = toTimestamp
+                //         if (cur != lastP)
+                //             g.addProperty(lastP)
+                //     }
+                // }
             }
+
             if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again
         }
     }
@@ -155,6 +205,4 @@ open class P(
     override fun hashCode(): Int {
         return Objects.hash(id, key, value, sourceId, type, fromTimestamp, toTimestamp)
     }
-
-
 }
