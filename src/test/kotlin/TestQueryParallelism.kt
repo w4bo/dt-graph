@@ -30,7 +30,7 @@ class TestQueryParallelism {
     @BeforeAll
     fun setup() {
         val dataset = "smartbench"
-        val size = "large"
+        val size = props["default_smartbench_size"]
         val data: List<String> = listOf(
             "dataset/$dataset/$size/group.json",
             "dataset/$dataset/$size/user.json",

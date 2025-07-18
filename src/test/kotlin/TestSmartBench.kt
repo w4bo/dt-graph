@@ -9,33 +9,38 @@ import it.unibo.graph.query.*
 import it.unibo.graph.structure.CustomGraph
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import java.io.File
+import java.util.*
 import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestSmartBench {
 
+    val dataset = "smartbench"
+    val size = props["default_smartbench_size"]
+    val testIterations = props["smartbench_iterations"]!!.toString().toInt()
+    var uuid = UUID.randomUUID()
+
+    private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int) {
+        println("$queryName executed in $queryTime ms and returned $numEntities items")
+        val outputDir = File("results/query_evaluation/$dataset")
+        if (!outputDir.exists()) outputDir.mkdirs()
+
+        val file = File(outputDir, "statistics.csv")
+        val writeHeader = !file.exists()
+
+        file.appendText(buildString {
+            if (writeHeader) append("test_id,model,datasetSize,queryName,queryType,queryTime,numEntities\n")
+            append("${uuid},dtgraph,$size,$queryName,$queryType,$queryTime,$numEntities\n")
+        })
+    }
+
     private lateinit var graph: Graph
-
-//    private fun getFolderSize(folder: File): Long {
-//        var size: Long = 0File) {
-////                    file.length()
-////                } else {
-//        if (folder.exists() && folder.isDirectory) {
-//            folder.listFiles()?.forEach { file ->
-//                size += if (file.is
-//                    getFolderSize(file)
-//                }
-//            }
-//        }
-//        return size
-//    }
-
 
     @BeforeAll
     fun setup() {
-        val dataset = "smartbench"
-        val size = "small"
+
         val data: List<String> = listOf(
             "dataset/$dataset/$size/group.json",
             "dataset/$dataset/$size/user.json",
@@ -73,7 +78,6 @@ class TestSmartBench {
      * can generate measurements of a given type 𝜏 that can
      * cover the environments/locations specified in L.
      */
-    @Test
     fun environmentCoverage() {
         val tau = Temperature
         val infrastructureId = "3042"
@@ -102,7 +106,6 @@ class TestSmartBench {
         val spatialPattern = listOf(
             listOf(Step(Infrastructure, listOf(Filter("name", Operators.EQ, infrastructureId)), alias = "targetLocation")
             ),
-
             listOf(
                 Step(Sensor, alias = "s1"),
                 Step(labelFromString("has$tau")),
@@ -120,7 +123,9 @@ class TestSmartBench {
         var spatialQueryTime : Long = 10L
 
         edgesDirectionTime = measureTimeMillis {
-            edgesDirectionResult = search(graph, edgesDirectionPattern, timeaware = false)
+            edgesDirectionResult = query(graph,
+                edgesDirectionPattern,
+                by = listOf(Aggregate("Environment", "name"), Aggregate("device","name")), timeaware = false)
         }
 
 
@@ -141,9 +146,10 @@ class TestSmartBench {
         }
 
         println("--- EnvironmentCoverage execution times ---")
-        println("Semantic query time $semanticQueryTime ms and returned ${semanticResult.size}  items")
-        println("Spatial query time $spatialQueryTime ms and returned ${spatialResult.size}  items")
-        println("Edges direction query time $edgesDirectionTime ms and returned ${edgesDirectionResult.size}  items")
+        logQueryResult("EnvironmentCoverage","semantic", semanticQueryTime, semanticResult.size)
+        logQueryResult("EnvironmentCoverage", "spatial", spatialQueryTime, spatialResult.size)
+        logQueryResult("EnvironmentCoverage","edgesDirection", edgesDirectionTime, edgesDirectionResult.size)
+
 
     }
 
@@ -151,7 +157,6 @@ class TestSmartBench {
      *  EnvironmentsAggregate(𝜖, 𝜏, 𝑡𝑎 , 𝑡𝑏 ): List, for each Environment during the period [𝑡𝑎, 𝑡𝑏 [, the average value of type 𝜏 during
      * the period [𝑡𝑎, 𝑡𝑏 [ for each agent.
      */
-    @Test
     fun environmentAggregate() {
         val tau = Temperature
         val tA = 1510700400000L // 15/11/2017 00:00:00
@@ -199,7 +204,7 @@ class TestSmartBench {
         val semanticResult: List<Any>
         val edgesDirectionResult: List<Any>
 
-        val spatialResultTime = measureTimeMillis {
+        val spatialQueryTime = measureTimeMillis {
             spatialResult = query(
                 graph, spatialPattern,
                 where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
@@ -212,7 +217,7 @@ class TestSmartBench {
             )
         }
 
-        val edgesResultTime = measureTimeMillis {
+        val edgesQueryTime = measureTimeMillis {
              edgesDirectionResult = query(
                 graph, edgesDirectionPattern,
                 by = listOf(
@@ -240,16 +245,15 @@ class TestSmartBench {
         }
 
         println("--- EnvironmentAggregate execution times ---")
-        println("Semantic query time $semanticQueryTime ms and returned ${semanticResult.size} items")
-        println("Spatial query time $spatialResultTime ms and returned ${spatialResult.size} items")
-        println("Edges direction time $edgesResultTime ms and returned ${edgesDirectionResult.size} items")
+        logQueryResult("EnvironmentAggregate","semantic", semanticQueryTime, semanticResult.size)
+        logQueryResult("EnvironmentAggregate","spatial", spatialQueryTime, spatialResult.size)
+        logQueryResult("EnvironmentAggregate", "edgesDirection", edgesQueryTime, edgesDirectionResult.size)
     }
 
     /*
      * MaintenanceOwners(𝜏, alpha): List all owners of devices that measured took measurements
      * of type 𝜏 above a threshold alpha during the period [𝑡𝑎, 𝑡𝑏 [
     */ //TODO
-    @Test
     fun MaintenanceOwners() {
         val tA = 1510700400000L // 15/11/2017 00:00:00 - 24785
         val tB = 1511564400000L // 25/12/2017 00:00:00 -
@@ -288,19 +292,20 @@ class TestSmartBench {
             )
         }
     //TODO: NON CREDO DI POTER FARE MULTIJOIN
-//        val spatialPattern = listOf(
-//            listOf(
-//                Step(Infrastructure, alias = "Environment")
-//            ),
-//            listOf(
-//                Step(Sensor, alias = "Device"),
-//                null,
-//                Step(Temperature),
-//                Step(HasTS),
-//                Step(Temperature, alias = "Measurement")
-//            )
-//        )
+        val spatialPattern = listOf(
+            listOf(
+                Step(Infrastructure, alias = "Environment")
+            ),
+            listOf(
+                Step(Sensor, alias = "Device"),
+                null,
+                Step(Temperature),
+                Step(HasTS),
+                Step(Temperature, alias = "Measurement")
+            )
+        )
 //
+        val spatialResult : List<Any>
 //        val spatialQueryTime = measureTimeMillis {
 //            spatialResult = query(
 //                graph, spatialPattern,
@@ -317,9 +322,9 @@ class TestSmartBench {
 //          }
 
         println("--- MaintenanceOwners execution times ---")
-//        println("Semantic query time $semanticQueryTime ms and returned ${semanticResult.size} items")
-//        println("Spatial query time $spatialQueryTime ms and returned ${spatialResult.size} items")
-        println("Edges direction time $edgesDirectionQueryTime ms and returned ${edgesDirectionResult.size} items")
+        //logQueryResult("MaintenanceOwners", "semantic", semanticQueryTime, semanticResult.size)
+        //logQueryResult("MaintenanceOwners", "spatial", spatialQueryTime, spatialResult.size)
+        logQueryResult("MaintenanceOwners", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size)
 
     }
 
@@ -327,7 +332,6 @@ class TestSmartBench {
      * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during
      * the period [𝑡𝑎, 𝑡𝑏 [.
      */
-    @Test
     fun EnvironmentOutlier(){
 
         //TODO: Fixa average
@@ -357,15 +361,15 @@ class TestSmartBench {
         val spatialResult : List<Any>
         val edgesDirectionResult : List<Any>
 
-        val semanticQueryTime = measureTimeMillis {
-            semanticResult = query(graph, pattern,
-                where= listOf(Compare("Device","Device2","name",Operators.EQ)),
-                by=listOf(Aggregate("Environment","name")),
-                from = tA,
-                to = tB,
-                timeaware = true
-            )
-        }
+//        val semanticQueryTime = measureTimeMillis {
+//            semanticResult = query(graph, pattern,
+//                where= listOf(Compare("Device","Device2","name",Operators.EQ)),
+//                by=listOf(Aggregate("Environment","name")),
+//                from = tA,
+//                to = tB,
+//                timeaware = true
+//            )
+//        }
 
         val spatialPattern = listOf(
             listOf(Step(Infrastructure, alias = "Environment")),
@@ -407,21 +411,21 @@ class TestSmartBench {
                 timeaware = true
             )
         }
-        println("--- EnvironmentOutlier execution times ---")
-        println("Semantic query time $semanticQueryTime ms and returned ${semanticResult.size} items")
-        //println("Spatial query time $spatialQueryTime ms and returned ${spatialResult.size} items")
-        println("Edges direction time $edgesDirectionQueryTime ms and returned ${edgesDirectionResult.size} items")
 
+        println("--- EnvironmentOutlier execution times ---")
+
+        //logQueryResult("EnvironmentOutlier", "semantic", semanticQueryTime, semanticResult.size)
+        //logQueryResult("EnvironmentOutlier", "spatial",  spatialQueryTime, spatialResult.size)
+        logQueryResult("EnvironmentOutlier", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size)
     }
 
     /*
      * AgentOutlier: List the max value measured for each agent in each environment
      */
-    @Test
     fun AgentOutlier() {
         val tau = Temperature
         val tA = 1510095600000 // 08/11/2017 00:00:00
-        val tB = 1518044400000 // 08/02/2018 00:00:00
+        val tB = 1516370586000 // 19/01/2018 00:00:00
 
         val semanticPattern = listOf(
             listOf(
@@ -448,8 +452,19 @@ class TestSmartBench {
             )
         )
 
+        val edgesDirectionPattern = listOf(
+            Step(Infrastructure, alias = "Environment"),
+            EdgeStep(hasCoverage, direction = Direction.IN),
+            Step(Sensor, alias = "Device"),
+            null,
+            null,
+            Step(HasTS),
+            Step(Temperature, alias = "Measurement")
+        )
+
         val semanticResult : List<Any>
         val spatialResult : List<Any>
+        val edgesDirectionResult : List<Any>
 
         val semanticQueryTime = measureTimeMillis {
             semanticResult = query(graph, semanticPattern,
@@ -468,9 +483,19 @@ class TestSmartBench {
 //                timeaware = true)
 //        }
 
+//        val edgesDirectionTime = measureTimeMillis {
+//            edgesDirectionResult = query(graph, edgesDirectionPattern,
+//                by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement","value",AggOperator.MAX)),
+//                from = tA,
+//                to = tB,
+//                timeaware = true)
+//        }
+
         println("--- AgentOutlier execution times ---")
-        println("Semantic query time $semanticQueryTime ms and returned ${semanticResult.size} items")
-//        println("Spatial query time $spatialQueryTime ms and returned ${spatialResult.size} items")
+        logQueryResult("AgentOutlier", "semantic", semanticQueryTime, semanticResult.size)
+        //logQueryResult("AgentOutlier", "spatial", spatialQueryTime, spatialResult.size)
+        //logQueryResult("AgentOutlier", "edgesDirection", edgesDirectionTime, edgesDirectionResult.size)
+
     }
 
     /*
@@ -478,7 +503,6 @@ class TestSmartBench {
      * 𝛼 ∈ 𝐴, list all environments 𝜖 for which 𝛼 generated
      * measurements in.
      */
-    @Test
     fun agentHistory() {
         val devices = listOf("Thermometer3")
 
@@ -564,9 +588,22 @@ class TestSmartBench {
         }
 
         println("--- AgentHistory execution times ---")
-        println("Semantic query time $semanticQueryTime ms and returned $semanticEntities items")
-        println("Spatial query time $spatialQueryTime ms and returned $spatialEntities items")
-        println("Edges direction time $edgesDirectionQueryTime ms and returned $edgesDirectionEntitites items")
+        logQueryResult("AgentHistory", "semantic", semanticQueryTime, semanticEntities)
+        logQueryResult("AgentHistory", "spatial", spatialQueryTime, spatialEntities)
+        logQueryResult("AgentHistory", "edgesDirection", edgesDirectionQueryTime, edgesDirectionEntitites)
     }
 
+    @Test
+    fun runAllQueriesNTimes() {
+        repeat(testIterations) { i ->
+            uuid = UUID.randomUUID()
+            println("\n=== RUN  ITERATION #${i + 1} ===")
+            environmentCoverage()
+            environmentAggregate()
+            MaintenanceOwners()
+            EnvironmentOutlier()
+            AgentOutlier()
+            agentHistory()
+        }
+    }
 }

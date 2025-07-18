@@ -5,10 +5,14 @@ import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.structure.CustomTS
 import it.unibo.graph.utils.loadProps
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.Executors
 
 val props = loadProps()
 
@@ -47,15 +51,22 @@ class AsterixDBTSM private constructor(
     init {
         setupAsterixDB()
     }
+
     fun addTS(inputPath : String): TS {
         val tsId = nextTSId()
         val newTS =
             AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
+//        runBlocking {
+//            launch(executor) {
+//                newTS.loadInitialData(inputPath)
+//            }
+//        }
         val outTS = CustomTS(newTS, g)
-        tsList.put(tsId, outTS)
+        tsList[tsId] = outTS
         busyPorts.add(newTS.dataFeedPort)
-        return outTS
+        return newTS
     }
+
     override fun addTS(): TS {
         val tsId = nextTSId()
         val newTS =

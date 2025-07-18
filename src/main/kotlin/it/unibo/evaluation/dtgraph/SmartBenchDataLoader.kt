@@ -8,13 +8,14 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.asterixdb.dateToTimestamp
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.utils.LIMIT
 import it.unibo.graph.utils.propTypeFromValue
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
+import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(
@@ -22,17 +23,11 @@ class SmartBenchDataLoader(
     tsLabelsList: List<String> = listOf("Measurement", "Observation","Temperature", "Occupancy", "Presence"),
     virtualSensorTsLabelsList: List<String> = listOf("Occupancy", "Presence")
 ) {
-    private val tsLabels: Set<String> = tsLabelsList.toSet()
-    private val virtualSensorTsLabels: Set<String> = virtualSensorTsLabelsList.toSet()
-
     private val mapper: ObjectMapper = jacksonObjectMapper()
-    private val tsm = graph.getTSM()
+    private val tsm = graph.getTSM() as AsterixDBTSM
 
     // JSON-id -> graph node-id
     private val graphIdList: MutableMap<String, Long> = mutableMapOf()
-
-    // sensorId -> ( PropertyName -> TS )
-    private val tSList: MutableMap<String, MutableMap<String, TS>> = mutableMapOf()
 
     // Edges failed to create because some entity did not exist
     private val leftoverEdgesList: MutableList<Triple<Label, Long, String>> = mutableListOf()
@@ -49,7 +44,8 @@ class SmartBenchDataLoader(
         }}") }
 
     fun loadData(dataPath: List<String>): Boolean {
-            val tsList : MutableList<AsterixDBTS> = mutableListOf()
+        val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
+        val tsList : MutableMap<TS, String> = mutableMapOf()
             val totalTime = measureTimeMillis {
                 for (file in dataPath) {
                     println("Loading data from $file")
@@ -71,75 +67,9 @@ class SmartBenchDataLoader(
                                     Locale.getDefault()
                                 ) else it.toString()
                             })
+
                             if(!graphIdList.contains(entityId)) {
-
-                                // If it's a measurement
-                                if (tsLabels.contains(typeVal)) {
-                                    val sensorId = if (virtualSensorTsLabels.contains(typeVal)) {
-                                        (obj["id"]) as String
-                                    } else {
-                                        (obj["id"]) as String
-                                    }
-
-                                    // Get its TS list
-                                    val sensorTSMap = tSList[sensorId]
-
-                                    if (sensorTSMap != null) {
-                                        val labelString = typeVal
-
-                                        // Check if a TS for this sensor and this property exists
-                                    val ts: TS = sensorTSMap[labelString]
-                                        ?: run {
-                                            // If not, create it
-                                            val graphSensorId = graphIdList[sensorId]
-                                                ?: error("Sensor node missing for $sensorId")
-                                            val sensorTsFilePath = "${Paths.get(file).parent?.toString()}/timeseries/$sensorId"
-                                            val sensorTSFile = this::class.java.classLoader.getResource(
-                                                sensorTsFilePath
-                                            )
-                                            val newTs = tsm.addTS()
-                                            tsList.add(newTs as AsterixDBTS)
-                                            val newNode = graph.addNode(nodeLabel, value = newTs.getTSId())
-                                            graph.addEdge(hasLabel(labelString), graphSensorId, newNode.id)
-                                            sensorTSMap[labelString] = newTs
-                                            newTs
-                                        }
-
-                                        // Parse measurement
-                                    val payloadMap = obj["payload"] as Map<*, *>
-                                    val entry = payloadMap.entries.iterator().next()
-                                    val measureKey = entry.key as String
-                                    val measureLabel = labelFromString(measureKey.replaceFirstChar {
-                                        if (it.isLowerCase()) it.titlecase(
-                                            Locale.getDefault()
-                                        ) else it.toString()
-                                    })
-                                    val measureValue = (entry.value as Number).toLong()
-                                    val tsTimestamp = dateToTimestamp(obj["timestamp"] as String)
-
-                                    // Parse location
-                                    val locationJson: String? = obj["location"] as? String
-
-                                    // Add measurement to TS
-                                    if (locationJson != null) {
-                                        ts.add(
-                                            label = measureLabel,
-                                            timestamp = tsTimestamp,
-                                            value = measureValue,
-                                            location = locationJson,
-                                            isUpdate = false
-                                        )
-                                    } else {
-                                        ts.add(
-                                            label = measureLabel,
-                                            timestamp = tsTimestamp,
-                                            value = measureValue,
-                                            isUpdate = false
-                                        )
-                                    }
-                                    }
-                                } else {
-                                    // Otherwise, it's a static node.
+                                    // Add static node
                                     val node = graph.addNode(nodeLabel)
                                     val nodeId = node.id
                                     graphIdList[entityId] = nodeId
@@ -175,32 +105,28 @@ class SmartBenchDataLoader(
                                             }
                                         }
                                     }
-
-                                    if (obj["type"].toString() == Labels.Sensor.toString()) {
+                                    // If it's a sensor, check if it has a TS attached
+                                    if (typeVal == Labels.Sensor.toString() || typeVal == Labels.VirtualSensor.toString()) {
                                         val sensorId = obj["id"] as String
-                                        //TODO: FIX THIS HARDCODE
-                                        val labelString = "Temperature"
-                                            ?: error("Sensor node missing for $sensorId")
+
+                                        val labelString = if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
                                         val sensorTsFilePath =
                                             "${Paths.get(file).parent?.toString()}\\timeseries\\${sensorId}.json"
+                                        print(sensorTsFilePath)
                                         val sensorTSFile = this::class.java.classLoader.getResource(
                                             sensorTsFilePath
                                         )
                                         sensorTSFile?.let {
                                             println("Found $sensorTsFilePath")
-                                            val newTs = (tsm as AsterixDBTSM).addTS(sensorTsFilePath)
+                                            val newTs = tsm.addTS(sensorTsFilePath)
                                             val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
+                                            tsList[newTs] = sensorTsFilePath
                                         }
 
-                                        //tSList[sensorId] = newNode
-                                    }
-                                    // 5) Se è nodo sensore, inizializzo mappa TS vuota
-                                    if (typeVal == "Sensor" || typeVal == "VirtualSensor") {
-                                        tSList[entityId] = mutableMapOf()
                                     }
 
-                                }
+//                                }
                             }
 
 
@@ -210,6 +136,15 @@ class SmartBenchDataLoader(
                     }
                     println("Processed $count entities from $file in $fileTime ms")
                 }
+                println("Starting TS data loading...")
+                runBlocking {
+                    val jobs = tsList.map{
+                            row -> launch(executor) {
+                                (row.key as AsterixDBTS).loadInitialData(row.value)
+                            }
+                    }
+                    jobs.joinAll()
+                }
 
                 val latentTime = measureTimeMillis {
                     for ((label, source, destId) in leftoverEdgesList) {
@@ -218,9 +153,7 @@ class SmartBenchDataLoader(
                     }
                 }
                 println("Processed latent edges in $latentTime ms")
-                runBlocking {
-                    tsList.mapNotNull { it.job }.joinAll()
-                }
+
             }
         println("TOTAL ingestion time: $totalTime ms")
         return true

@@ -55,39 +55,47 @@ class AsterixDBTS(
         writer = PrintWriter(outputStream, true)
         lastResult = Pair("", listOf())
 
-        job = inputPath?.let{
-             GlobalScope.launch(Dispatchers.IO) {
-                try{
-                    loadInitialData(it)
-                }catch(e: Exception){
-                    println(e)
-                    e.printStackTrace()
-                }
-
-            }
-        }
+//        job = inputPath?.let{
+//             GlobalScope.launch(Dispatchers.IO) {
+//                try{
+//                    loadInitialData(it)
+//                }catch(e: Exception){
+//                    println(e)
+//                    e.printStackTrace()
+//                }
+//            }
+//        }
 
     }
 
-    private fun loadInitialData(path: String) {
+    fun loadInitialData(path: String)  {
         val resource = this::class.java.classLoader.getResource(path)
         if (resource != null) {
             resource.openStream().bufferedReader().useLines { lines ->
                 for (line in lines) {
                     if (line.isNotBlank()) {
                         val json: JsonNode = mapper.readTree(line)
+                        val label = if(json.get("type").textValue() == "Temperature") "temperature" else "presence"
+                        try{
+                            val location = json.get("location").textValue()
+                        }catch(e: Exception ){
+                            println("HELLOOOOOOOOOOOOOOOO ${resource.path}")
+                        }
                         add(
                             label = labelFromString(json.get("type").textValue()),
                             timestamp = dateToTimestamp(json.get("timestamp").textValue()),
                             location = json.get("location").textValue(),
                             //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
-                            value = json.get("payload").get("temperature").longValue(),
+                            value = json.get("payload").get(label).longValue(),
                             isUpdate = false
 
                         )
                     }
                 }
+                writer.close()
             }
+        }else{
+            println("Resource is null")
         }
     }
     override fun getTSId(): Long = id
@@ -158,12 +166,10 @@ class AsterixDBTS(
                     SELECT ${defaultAggregatorsList.joinToString(",")} $whereAggregators
                     FROM $dataset
                     ${applyFilters(filters)}
-                """
+                """.trimIndent()
             if(isGroupBy){
                 selectQuery = "$selectQuery LIMIT 1;"
             }
-        //println(selectQuery)
-
         } else {
             val groupBy = groupby(by)!!
             val selectClause = groupBy.first
@@ -183,15 +189,13 @@ class AsterixDBTS(
               $whereAggregators
                 FROM $dataset
                 ${applyFilters(filters)}
-                $groupByPart
-            """
+                $groupByPart;
+            """.trimIndent()
         }
         val outNodes : List<N>
-//        print(selectQuery)
-//        if(selectQuery == lastResult.first){
-//            println("ITS THE SAME")
-//            return lastResult.second
-//        }
+        if(selectQuery == lastResult.first){
+            return lastResult.second
+        }
 
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
 
