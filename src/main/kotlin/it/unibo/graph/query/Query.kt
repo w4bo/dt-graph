@@ -409,15 +409,11 @@ class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from
     override fun compareTo(other: ExploredPath): Int = priority.compareTo(other.priority)
 }
 
-const val HIGHPRIORITY = 0
-const val LOWPRIORITY = 1
-const val LIMIT = 1000
-
 
 
 fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
-    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias != null }.associate { it.second?.alias!! to it.first }
+    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias !== null }.associate { it.second?.alias!! to it.first }
     val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
 
     val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
@@ -444,12 +440,12 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val curElem = mutex.withLock { priorityQueue.removeAt(0) } // priorityQueue.poll()
                 val step: IStep? = match[curElem.index] // get the current step
                 val alias: String? = step?.alias // get the alias (if any)
-                val c: Compare? = if (alias != null) mapWhere[alias] else null // get the comparison operator (if any)
+                val c: Compare? = if (alias !== null) mapWhere[alias] else null // get the comparison operator (if any)
                 if ((step == null || ( // no filter
-                            (step.type == null || step.type == curElem.e.label)  // filter on label
+                            (step.type === null || step.type === curElem.e.label)  // filter on label
                                 && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware).any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) }}})) // filter on properties
                                 && curElem.e.timeOverlap(timeaware, curElem.from, curElem.to) // check time overlap
-                                && (c == null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
+                                && (c === null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
                 ) {
                     val from = max(curElem.e.fromTimestamp, curElem.from)
                     val to = min(curElem.e.toTimestamp, curElem.to)
@@ -466,13 +462,13 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                 }
                         } else { // is edge...
                             val r = (curElem.e as R)
-                            if (curElem.e.label == HasTS) { // ... to time series
+                            if (curElem.e.label === HasTS) { // ... to time series
                                 launched++
                                 launch(executor) {
                                     try {
                                         g.getTSM()
                                             .getTS(r.toN)
-                                            .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere)) // push down the filters from the next step
+                                            .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
                                             .forEach {
                                                 mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                             }
@@ -485,7 +481,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                     }
                                 }
                             } else { // ... or to graph node
-                                val n = g.getNode(if (step is EdgeStep && step.direction == Direction.IN) { r.fromN } else { r.toN })
+                                val n = g.getNode(if (step is EdgeStep && step.direction === Direction.IN) { r.fromN } else { r.toN })
                                 mutex.withLock { priorityQueue.add(ExploredPath(n, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                             }
                         }
