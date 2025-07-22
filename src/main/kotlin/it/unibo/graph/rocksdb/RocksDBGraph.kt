@@ -1,8 +1,6 @@
 package it.unibo.graph.rocksdb
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.utils.deserialize
-import it.unibo.graph.utils.serialize
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
 
@@ -69,17 +67,17 @@ class RocksDBGraph : Graph {
     override fun nextEdgeId(): Int = edgeId++
 
     override fun addNode(n: N): N {
-        db.put(nodes, "${n.id}".toByteArray(), serialize(n))
+        db.put(nodes, "${n.id}".toByteArray(), n.serialize())
         return n
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        db.put(properties, "${p.id}".toByteArray(), serialize(p))
+        db.put(properties, "${p.id}".toByteArray(), p.serialize())
         return p
     }
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        db.put(edges, "${r.id}".toByteArray(), serialize(r))
+        db.put(edges, "${r.id}".toByteArray(), r.serialize())
         return r
     }
 
@@ -92,7 +90,7 @@ class RocksDBGraph : Graph {
         val iterator = db.newIterator(nodes)
         iterator.seekToFirst()
         while (iterator.isValid) {
-            acc += deserialize<N>(iterator.value(), this)
+            acc += N.fromByteArray(iterator.value(), this)
             iterator.next()
         }
         return acc
@@ -104,16 +102,16 @@ class RocksDBGraph : Graph {
 
     override fun getProp(id: Int): P {
         val b = db.get(properties, "$id".toByteArray())
-        return deserialize<P>(b, this)
+        return P.fromByteArray(b, this)
     }
 
     override fun getNode(id: Long): N {
         val b = db.get(nodes, "$id".toByteArray())
-        return deserialize<N>(b, this)
+        return N.fromByteArray(b, this)
     }
 
     override fun getEdge(id: Int): R {
         val b = db.get(edges, "$id".toByteArray())
-        return deserialize<R>(b, this)
+        return R.fromByteArray(b, this)
     }
 }

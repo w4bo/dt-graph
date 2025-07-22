@@ -49,17 +49,7 @@ class CustomVertex(
                 if (it is CustomProperty<*>) {
                     it as CustomProperty<V>
                 } else {
-                    CustomProperty(
-                        it.id,
-                        it.sourceId,
-                        it.sourceType,
-                        it.key,
-                        it.value,
-                        it.type,
-                        fromTimestamp = it.fromTimestamp,
-                        toTimestamp = it.toTimestamp,
-                        g = g
-                    )
+                    CustomProperty(it.id, it.sourceId, it.sourceType, it.key, it.value, it.type, fromTimestamp = it.fromTimestamp, toTimestamp = it.toTimestamp, g = g)
                 }
             }
             .iterator()

@@ -15,7 +15,7 @@ enum class PropType { INT, LONG, DOUBLE, STRING, GEOMETRY, NULL }
 
 const val MAX_LENGTH_KEY = 24
 const val MAX_LENGTH_VALUE = 8
-const val PROPERTY_SIZE: Int = 41 * MAX_LENGTH_KEY + MAX_LENGTH_VALUE
+const val PROPERTY_SIZE: Int = 41 + MAX_LENGTH_KEY + MAX_LENGTH_VALUE
 
 open class P(
     final override val id: Int,
@@ -60,13 +60,13 @@ open class P(
             val typeOrdinal = buffer.int
             val type = PropType.entries[typeOrdinal]
             val value: Any = when (type) {
-                PropType.LONG -> buffer.long       // Serialize Long as 8 bytes
+                PropType.LONG -> buffer.long      // Serialize Long as 8 bytes
                 PropType.DOUBLE -> buffer.double // Serialize Double as 8 bytes
-                PropType.INT -> {                                    // Serialize Int as 4 bytes + 4 bytes as padding
+                PropType.INT -> {                // Serialize Int as 4 bytes + 4 bytes as padding
                     buffer.int
                     buffer.int
                 }
-                PropType.STRING -> {                                 // Serialize String (using your serializeString method)
+                PropType.STRING -> {             // Serialize String (using your serializeString method)
                     val v = readString(buffer, MAX_LENGTH_VALUE)
                     v.ifEmpty {
                         String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)

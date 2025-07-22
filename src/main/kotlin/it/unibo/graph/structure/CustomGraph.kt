@@ -31,7 +31,8 @@ class CustomGraph(val g: it.unibo.graph.interfaces.Graph) : Graph, it.unibo.grap
     }
 
     override fun vertices(vararg vertexIds: Any?): Iterator<Vertex> {
-        return getNodes().map { it as CustomVertex }.iterator()
+        // return getNodes().map { it as CustomVertex }.iterator()
+        return getNodes().map { CustomVertex(it.id, it.label, it.value, it.fromTimestamp, it.toTimestamp, it.g) }.iterator()
     }
 
     override fun edges(vararg edgeIds: Any?): Iterator<Edge> {

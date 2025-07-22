@@ -2,11 +2,27 @@ package it.unibo.graph.inmemory
 
 import it.unibo.graph.interfaces.*
 
-open class MemoryGraph: Graph {
-    override var tsm: TSManager? = null
-    private val nodes: MutableList<N> = ArrayList()
-    private val rels: MutableList<R> = ArrayList()
+open class MemoryGraph(
+    private val nodes: MutableList<N> = ArrayList(),
+    private val rels: MutableList<R> = ArrayList(),
     private val props: MutableList<P> = ArrayList()
+) : Graph {
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+        other as MemoryGraph
+        return nodes == other.nodes && rels == other.rels && props == other.props
+    }
+
+    override fun hashCode(): Int {
+        var result = nodes.hashCode()
+        result = 31 * result + rels.hashCode()
+        result = 31 * result + props.hashCode()
+        return result
+    }
+
+    override var tsm: TSManager? = null
 
     override fun clear() {
         listOf(nodes, rels, props).forEach { it.clear() }

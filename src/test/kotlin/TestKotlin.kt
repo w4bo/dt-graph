@@ -20,7 +20,14 @@ class TestKotlin {
             .forEach { g ->
                 listOf(MemoryTSM(g), AsterixDBTSM.createDefault(g))
                     .forEach { tsm ->
-                        val g: CustomGraph = setup(g, tsm)
+                        val g1 =
+                            if (g is MemoryGraphACID) {
+                                g.flushToDisk()
+                                MemoryGraphACID.readFromDisk()
+                            } else {
+                                g
+                            }
+                        val g: CustomGraph = setup(g1, tsm)
                         f(g)
                         g.close()
                     }
@@ -133,8 +140,14 @@ class TestKotlin {
     }
 
     @Test
-    fun testSum() {
-        assertEquals(42, 40 + 2)
+    fun `graph de-serialization`() {
+        val g = MemoryGraphACID()
+        setup(g, MemoryTSM(g))
+        g.flushToDisk()
+
+        val g1 = MemoryGraphACID.readFromDisk()
+        assertEquals(g, g1)
+        assertEquals(g.hashCode(), g1.hashCode())
     }
 
     @Test
@@ -147,7 +160,7 @@ class TestKotlin {
 
     @Test
     fun `test size`() {
-        var g = MemoryGraph()
+        val g = MemoryGraph()
         val tsm = MemoryTSM(g)
         setup(g, tsm)
         assertEquals(NODE_SIZE, g.getNode(N0).serialize().size)
@@ -361,6 +374,11 @@ class TestKotlin {
     @Test
     fun `graph to TS`() {
         matrix { g ->
+            assertEquals(
+                listOf(24.0),
+                query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m")), by= listOf(Aggregate("m", "value", AggOperator.AVG)))
+            )
+
             assertEquals(
                 listOf(24.0),
                 GraphTraversalSource(g as CustomGraph)
