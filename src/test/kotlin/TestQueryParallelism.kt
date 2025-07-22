@@ -1,25 +1,20 @@
 import it.unibo.evaluation.dtgraph.SmartBenchDataLoader
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
-import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.utils.loadProps
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import org.junit.jupiter.api.BeforeAll
-import kotlin.system.measureTimeMillis
-import kotlin.test.Test
+import org.junit.jupiter.api.TestInstance
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import kotlinx.coroutines.*
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal.Symbols.id
-import org.junit.jupiter.api.TestInstance
-import java.io.File
 import java.nio.file.Paths
+import kotlin.system.measureTimeMillis
+import kotlin.test.Test
 
 val props = loadProps()
 

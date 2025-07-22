@@ -7,7 +7,6 @@ import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
-import kotlin.test.assertTrue
 
 
 /**
