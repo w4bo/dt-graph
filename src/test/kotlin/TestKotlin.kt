@@ -13,20 +13,33 @@ import kotlin.test.assertTrue
 
 class TestKotlin {
 
+    /**
+     * Runs a test matrix on different combinations of Graph and TSM implementations.
+     *
+     * For each combination:
+     * - Sets up a Graph with a given TSM.
+     * - Optionally flushes and reloads if the Graph supports persistence.
+     * - Invokes the given function [f] with the prepared Graph.
+     * - Closes the Graph afterward to release resources.
+     */
     fun matrix(f: (Graph) -> Unit) {
+        // Loop over different Graph implementations
         listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
-            .forEach { g ->
-                listOf(MemoryTSM(g), AsterixDBTSM.createDefault(g))
+            .forEach { g1 ->
+                // For each Graph, test it with different TSM (Time-Series Management) implementations
+                listOf(MemoryTSM(g1), AsterixDBTSM.createDefault(g1))
                     .forEach { tsm ->
-                        val g1 =
-                            if (g is MemoryGraphACID) {
-                                g.flushToDisk()
-                                MemoryGraphACID.readFromDisk()
-                            } else {
-                                g
-                            }
-                        val g: Graph = setup(g1, tsm)
+                        // Set up the graph with the current TSM
+                        var g: Graph = setup(g1, tsm)
+                        // If the graph supports ACID and persistence, flush to the disk and reload
+                        if (g1 is MemoryGraphACID) {
+                            g1.flushToDisk() // Persist graph state to disk
+                            g = MemoryGraphACID.readFromDisk() // Reload from disk
+                            g.tsm = tsm // Reassign the TSM (not persisted)
+                        }
+                        // Apply the test function to the prepared graph
                         f(g)
+                        // Clean up and release resources
                         g.close()
                     }
             }
