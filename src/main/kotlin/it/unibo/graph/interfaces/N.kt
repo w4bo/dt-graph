@@ -21,10 +21,6 @@ open class N(
     @Transient final override var g: Graph
 ) : ElemP {
 
-    // init {
-    //     if (fromTimestamp > toTimestamp) throw IllegalArgumentException("fromTimestamp > toTimestamp: $this")
-    // }
-
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): N {
             val buffer = ByteBuffer.wrap(bytes)
@@ -113,7 +109,6 @@ open class N(
 
         return result
     }
-
 
     override fun toString(): String {
         return "(id: $id, type: $label, from: $fromTimestamp, to: $toTimestamp)"

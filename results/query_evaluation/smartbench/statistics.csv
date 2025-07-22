@@ -618,3 +618,15 @@ ae38399c-38a7-42c0-afa1-c0909d2cee97,dtgraph,small,AgentHistory,edgesDirection,2
 8c4dcf9e-d6ce-4ab8-8b5a-260669a01067,dtgraph,small,AgentHistory,semantic,29,1
 8c4dcf9e-d6ce-4ab8-8b5a-260669a01067,dtgraph,small,AgentHistory,spatial,5992,1
 8c4dcf9e-d6ce-4ab8-8b5a-260669a01067,dtgraph,small,AgentHistory,edgesDirection,24,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentCoverage,semantic,7,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentCoverage,spatial,67,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentCoverage,edgesDirection,3,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentAggregate,semantic,16,8
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentAggregate,spatial,120,0
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentAggregate,edgesDirection,42,8
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,MaintenanceOwners,edgesDirection,85,8
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,EnvironmentOutlier,edgesDirection,427,8
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentOutlier,semantic,129,8
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,semantic,24,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,spatial,21499,1
+c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,edgesDirection,23,1

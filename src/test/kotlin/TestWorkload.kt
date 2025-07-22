@@ -1,11 +1,9 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
-import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
@@ -48,16 +46,15 @@ class TestWorkload{
         Step(HasDevice),
         Step(Device, alias="device"),
     )
-    fun setup(dynamicDevices: Boolean = false): CustomGraph {
+    fun setup(dynamicDevices: Boolean = false): Graph {
         return setup(MemoryGraph(), dynamicDevices)
     }
 
-    fun setup(g: Graph, dynamicDevices: Boolean): CustomGraph {
+    fun setup(g: Graph, dynamicDevices: Boolean): Graph {
 
         // Define a relative timestamp for debug purposes
         val maxTimestamp = 5L
 
-        val g = CustomGraph(g)
         g.tsm = AsterixDBTSM.createDefault(g)//AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()

@@ -4,7 +4,6 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.EDGE
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +12,7 @@ import kotlin.test.assertTrue
 class TestTemporalProperty {
 
     private fun init(): Graph {
-        val g = CustomGraph(MemoryGraph())
+        val g = MemoryGraph()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()

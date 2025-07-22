@@ -6,7 +6,6 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.*
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,15 +26,14 @@ class TestKotlin {
                             } else {
                                 g
                             }
-                        val g: CustomGraph = setup(g1, tsm)
+                        val g: Graph = setup(g1, tsm)
                         f(g)
                         g.close()
                     }
             }
     }
 
-    fun setup(g: Graph, tsm: TSManager): CustomGraph {
-        val g = CustomGraph(g)
+    fun setup(g: Graph, tsm: TSManager): Graph {
         g.tsm = tsm
         g.clear()
         g.getTSM().clear()
@@ -101,8 +99,8 @@ class TestKotlin {
         return g
     }
 
-    fun setup1(): CustomGraph {
-        val g = CustomGraph(MemoryGraph())
+    fun setup1(): Graph {
+        val g = MemoryGraph()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()
@@ -206,14 +204,7 @@ class TestKotlin {
     @Test
     fun testTSAsNode0() {
         matrix {
-            val g = GraphTraversalSource(it as CustomGraph)
-            assertEquals(
-                1, g.V()
-                    .hasLabel(Device.toString())
-                    .out(HasHumidity.toString())
-                    .hasLabel(Humidity.toString())
-                    .toList().size
-            )
+            assertEquals(1, query(it, listOf(Step(Device), Step(HasHumidity), Step(Humidity))).size)
         }
     }
 
@@ -272,15 +263,7 @@ class TestKotlin {
     @Test
     fun testTSAsNode1() {
         matrix {
-            assertEquals(
-                6,
-                GraphTraversalSource(it as CustomGraph)
-                    .V()
-                    .hasLabel(Device.toString())
-                    .out(HasHumidity.toString())
-                    .hasLabel(Humidity.toString())
-                    .out(HasTS.toString()).toList().size
-            )
+            assertEquals(6, query(it, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement))).size)
         }
     }
 
@@ -319,19 +302,6 @@ class TestKotlin {
     @Test
     fun testTSAsNode4() {
         matrix { g ->
-            assertEquals(
-                listOf(12.5),
-                GraphTraversalSource(g as CustomGraph)
-                    .V()
-                    .hasLabel(Device.toString())
-                    .out(HasHumidity.toString())
-                    .hasLabel(Humidity.toString())
-                    .out(HasTS.toString())
-                    .values<Number>(VALUE)
-                    .mean<Number>()
-                    .toList()
-            )
-
             assertEquals(
                 listOf(12.5 as Any),
                 query(g,
@@ -378,19 +348,6 @@ class TestKotlin {
                 listOf(24.0),
                 query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m")), by= listOf(Aggregate("m", "value", AggOperator.AVG)))
             )
-
-            assertEquals(
-                listOf(24.0),
-                GraphTraversalSource(g as CustomGraph)
-                    .V()
-                    .hasLabel(Device.toString())
-                    .out(HasSolarRadiation.toString())
-                    .hasLabel(SolarRadiation.toString())
-                    .out(HasTS.toString())
-                    .values<Number>(VALUE)
-                    .mean<Number>()
-                    .toList()
-            )
         }
     }
 
@@ -399,13 +356,7 @@ class TestKotlin {
         matrix { g ->
             assertEquals(
                 1,
-                GraphTraversalSource(g as CustomGraph)
-                    .V()
-                    .hasLabel(Device.toString())
-                    .out(HasHumidity.toString())
-                    .hasLabel(Humidity.toString())
-                    .out(HasTS.toString())
-                    .out(HasManutentor.toString()).toList().size
+                query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement), Step(HasManutentor))).size
             )
         }
     }
@@ -415,14 +366,7 @@ class TestKotlin {
         matrix { g ->
             assertEquals(
                 1,
-                GraphTraversalSource(g as CustomGraph)
-                    .V()
-                    .hasLabel(Device.toString())
-                    .out(HasHumidity.toString())
-                    .hasLabel(Humidity.toString())
-                    .out(HasTS.toString())
-                    .out(HasManutentor.toString())
-                    .out(HasFriend.toString()).toList().size
+                query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement), Step(HasManutentor), Step(Person), Step(HasFriend))).size
             )
         }
     }
@@ -637,7 +581,7 @@ class TestKotlin {
 
     @Test
     fun `double edge`() {
-        val g = CustomGraph(MemoryGraph())
+        val g = MemoryGraph()
         g.tsm = MemoryTSM(g)
         g.clear()
         g.getTSM().clear()

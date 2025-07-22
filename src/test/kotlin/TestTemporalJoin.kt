@@ -5,13 +5,12 @@ import it.unibo.graph.interfaces.Labels.A
 import it.unibo.graph.interfaces.Labels.B
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
-import it.unibo.graph.structure.CustomGraph
 import kotlin.test.Test
 
 class TestTemporalJoin {
 
     private fun setup(): Graph {
-        val g = CustomGraph(MemoryGraph())
+        val g = MemoryGraph()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()

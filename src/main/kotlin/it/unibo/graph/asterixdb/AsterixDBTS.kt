@@ -6,7 +6,6 @@ import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.AggOperator
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
-import it.unibo.graph.structure.CustomVertex
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.*
 import org.json.JSONObject
@@ -319,9 +318,9 @@ class AsterixDBTS(
     }
 
     private fun selectNodeFromJsonObject(node: JSONObject): N {
-        val entity = CustomVertex(
+        val entity = N(
             id = encodeBitwise(getTSId(), node.getLong("timestamp")),
-            type = labelFromString(node.getString("property")),
+            label = labelFromString(node.getString("property")),
             fromTimestamp = dateToTimestamp(node.getString("fromTimestamp")),
             toTimestamp = dateToTimestamp(node.getString("toTimestamp")),
             value = node.getLong("value"),

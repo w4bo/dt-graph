@@ -1,9 +1,9 @@
 package it.unibo.graph.asterixdb
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo.As
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.structure.CustomTS
 import it.unibo.graph.utils.loadProps
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -46,7 +46,7 @@ class AsterixDBTSM private constructor(
     val clusterControllerHost: String = "http://$host:$port/query/service"
     var id = 1
     val busyPorts: MutableSet<Int> = mutableSetOf()
-    val tsList: MutableMap<Long, CustomTS> = mutableMapOf()
+    val tsList: MutableMap<Long, TS> = mutableMapOf()
 
     init {
         setupAsterixDB()
@@ -61,7 +61,7 @@ class AsterixDBTSM private constructor(
 //                newTS.loadInitialData(inputPath)
 //            }
 //        }
-        val outTS = CustomTS(newTS, g)
+        val outTS = newTS
         tsList[tsId] = outTS
         busyPorts.add(newTS.dataFeedPort)
         return newTS
@@ -71,7 +71,7 @@ class AsterixDBTSM private constructor(
         val tsId = nextTSId()
         val newTS =
             AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
-        val outTS = CustomTS(newTS, g)
+        val outTS = newTS
         tsList.put(tsId, outTS)
         busyPorts.add(newTS.dataFeedPort)
         return outTS
@@ -85,7 +85,7 @@ class AsterixDBTSM private constructor(
 
     override fun clear() {
         id = 1
-        tsList.values.forEach { (it.ts as AsterixDBTS).deleteTs() }
+        tsList.values.forEach { (it as AsterixDBTS).deleteTs() }
     }
 
     // Private utility functions

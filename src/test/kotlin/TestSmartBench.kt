@@ -6,7 +6,6 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.*
-import it.unibo.graph.structure.CustomGraph
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import java.io.File
@@ -56,7 +55,7 @@ class TestSmartBench {
             //"dataset/$dataset/$size/semanticObservation.json",
             //"dataset/$dataset/$size/observation.json"
         )
-        graph = CustomGraph(MemoryGraph())
+        graph = MemoryGraph()
         graph.tsm = AsterixDBTSM.createDefault(graph)
         graph.clear()
         graph.getTSM().clear()

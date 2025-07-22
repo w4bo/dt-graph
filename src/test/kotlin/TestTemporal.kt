@@ -9,7 +9,6 @@ import it.unibo.graph.query.Filter
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.EDGE
 import it.unibo.graph.utils.EPSILON
@@ -20,7 +19,7 @@ import kotlin.test.assertTrue
 class TestTemporal {
 
     fun setup(): Graph {
-        val g = CustomGraph(MemoryGraph())
+        val g = MemoryGraph()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()

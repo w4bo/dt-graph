@@ -3,7 +3,6 @@ package it.unibo.graph.rocksdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.structure.CustomTS
 import org.rocksdb.Options
 import org.rocksdb.RocksDB
 
@@ -20,11 +19,11 @@ class RocksDBTSM(override val g: Graph): TSManager {
     }
 
     override fun getTS(id: Long): TS {
-        return CustomTS(RocksDBTS(g, id, db), g)
+        return RocksDBTS(g, id, db)
     }
 
     override fun addTS(): TS {
-        return CustomTS(RocksDBTS(g, nextTSId(), db), g)
+        return RocksDBTS(g, nextTSId(), db)
     }
 
     override fun nextTSId(): Long = id++.toLong()

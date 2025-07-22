@@ -1,8 +1,8 @@
 import it.unibo.evaluation.dtgraph.SmartBenchDataLoader
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.structure.CustomGraph
 import it.unibo.graph.utils.loadProps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -46,7 +46,7 @@ class TestQueryParallelism {
             //"dataset/$dataset/$size/semanticObservation.json",
             //"dataset/$dataset/$size/observation.json"
         )
-        graph = CustomGraph(MemoryGraph())
+        graph = MemoryGraph()
         graph.tsm = AsterixDBTSM.createDefault(graph)
         graph.clear()
         graph.getTSM().clear()
