@@ -1,5 +1,5 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
-import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.PropType
@@ -46,7 +46,7 @@ class TestWorkload{
         Step(Device, alias="device"),
     )
     fun setup(dynamicDevices: Boolean = false): Graph {
-        return setup(MemoryGraph(), dynamicDevices)
+        return setup(MemoryGraphACID(), dynamicDevices)
     }
 
     fun setup(g: Graph, dynamicDevices: Boolean): Graph {

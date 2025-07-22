@@ -1,5 +1,5 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
-import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.A
 import it.unibo.graph.interfaces.Labels.B
@@ -10,7 +10,7 @@ import kotlin.test.Test
 class TestTemporalJoin {
 
     private fun setup(): Graph {
-        val g = MemoryGraph()
+        val g = MemoryGraphACID()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()

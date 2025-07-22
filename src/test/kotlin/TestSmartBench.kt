@@ -1,6 +1,6 @@
 import it.unibo.evaluation.dtgraph.SmartBenchDataLoader
 import it.unibo.graph.asterixdb.AsterixDBTSM
-import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
@@ -15,7 +15,6 @@ import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestSmartBench {
-
     val dataset = "smartbench"
     val size = props["default_smartbench_size"]
     val testIterations = props["smartbench_iterations"]!!.toString().toInt()
@@ -39,7 +38,6 @@ class TestSmartBench {
 
     @BeforeAll
     fun setup() {
-
         val data: List<String> = listOf(
             "dataset/$dataset/$size/group.json",
             "dataset/$dataset/$size/user.json",
@@ -55,7 +53,7 @@ class TestSmartBench {
             //"dataset/$dataset/$size/semanticObservation.json",
             //"dataset/$dataset/$size/observation.json"
         )
-        graph = MemoryGraph()
+        graph = MemoryGraphACID()
         graph.tsm = AsterixDBTSM.createDefault(graph)
         graph.clear()
         graph.getTSM().clear()

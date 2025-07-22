@@ -630,3 +630,15 @@ c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentOutlier,semantic,129,8
 c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,semantic,24,1
 c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,spatial,21499,1
 c019d80b-1a1f-41c3-9458-948e9646fb8b,dtgraph,small,AgentHistory,edgesDirection,23,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentCoverage,semantic,6,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentCoverage,spatial,51,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentCoverage,edgesDirection,3,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentAggregate,semantic,19,8
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentAggregate,spatial,72,0
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentAggregate,edgesDirection,65,8
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,MaintenanceOwners,edgesDirection,148,8
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,EnvironmentOutlier,edgesDirection,196,8
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,AgentOutlier,semantic,139,8
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,AgentHistory,semantic,24,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,AgentHistory,spatial,8750,1
+d75a01d5-d874-4035-bd5e-128f063465bb,dtgraph,small,AgentHistory,edgesDirection,20,1

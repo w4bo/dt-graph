@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.LIMIT
 import it.unibo.graph.utils.propTypeFromValue
@@ -21,8 +22,8 @@ import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(
-    private val graph: Graph = MemoryGraph(),
-    tsLabelsList: List<String> = listOf("Measurement", "Observation","Temperature", "Occupancy", "Presence"),
+    private val graph: Graph = MemoryGraphACID(),
+    tsLabelsList: List<String> = listOf("Measurement", "Observation", "Temperature", "Occupancy", "Presence"),
     virtualSensorTsLabelsList: List<String> = listOf("Occupancy", "Presence")
 ) {
     private val mapper: ObjectMapper = jacksonObjectMapper()
@@ -36,7 +37,6 @@ class SmartBenchDataLoader(
 
     // Label caching
     private val edgeLabelCache: MutableMap<String, Label> = mutableMapOf()
-
 
     private fun hasLabel(key: String): Label =
         edgeLabelCache.getOrPut(key) { labelFromString("has${key.replaceFirstChar {
