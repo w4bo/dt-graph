@@ -17,31 +17,28 @@ class AsterixDBTSM private constructor(
     port: String,
     val dataverse: String,
     nodeControllersIPs: List<String>,
-    val datatype: String,
+    val datatype: String
 ) : TSManager {
 
     private class UniformSampler<T>(private val source: List<T>) {
         private var pool: MutableList<T> = source.shuffled().toMutableList()
         private var index = 0
-
         fun next(): T {
             if (pool.isEmpty()) throw IllegalArgumentException("Source list is empty")
-
             // Reset and reshuffle once we've cycled through the list
             if (index >= pool.size) {
                 pool = source.shuffled().toMutableList()
                 index = 0
             }
-
             return pool[index++]
         }
     }
 
     private val nodeControllersPool = UniformSampler(nodeControllersIPs)
-    val clusterControllerHost: String = "http://$host:$port/query/service"
+    private val clusterControllerHost: String = "http://$host:$port/query/service"
     var id = 1
-    val busyPorts: MutableSet<Int> = mutableSetOf()
-    val tsList: MutableMap<Long, TS> = mutableMapOf()
+    private val busyPorts: MutableSet<Int> = mutableSetOf()
+    private val tsList: MutableMap<Long, TS> = mutableMapOf()
 
     init {
         setupAsterixDB()
@@ -49,8 +46,7 @@ class AsterixDBTSM private constructor(
 
     fun addTS(inputPath : String): TS {
         val tsId = nextTSId()
-        val newTS =
-            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
+        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
 //        runBlocking {
 //            launch(executor) {
 //                newTS.loadInitialData(inputPath)
@@ -64,12 +60,10 @@ class AsterixDBTSM private constructor(
 
     override fun addTS(): TS {
         val tsId = nextTSId()
-        val newTS =
-            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
-        val outTS = newTS
-        tsList.put(tsId, outTS)
+        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
+        tsList[tsId] = newTS
         busyPorts.add(newTS.dataFeedPort)
-        return outTS
+        return newTS
     }
 
     override fun nextTSId(): Long = id++.toLong()
@@ -114,52 +108,53 @@ class AsterixDBTSM private constructor(
             return true
         } catch (e: Exception) {
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            e.printStackTrace()
             throw UnsupportedOperationException(e)
         }
     }
 
     private fun setupAsterixDB() {
         val creationQuery = """
-          DROP dataverse $dataverse IF EXISTS;
-          CREATE DATAVERSE $dataverse;
-          USE $dataverse;
+            DROP dataverse $dataverse IF EXISTS;
+            CREATE DATAVERSE $dataverse;
+            USE $dataverse;
 
-           CREATE TYPE PropertyValue AS OPEN {
-              stringValue: string?,
-              doubleValue: double?,
-              intValue: int?,
-              geometryValue: string?
-          };
+            CREATE TYPE PropertyValue AS OPEN {
+                stringValue: string?,
+                doubleValue: double?,
+                intValue: int?,
+                geometryValue: string?
+            };
 
-          CREATE TYPE Property AS CLOSED {
-              sourceId: bigint,
-              sourceType: Boolean,
-              `key`: string,
-              `value`: PropertyValue,
-              `type`: int,
-              fromTimestamp: DATETIME?,
-              toTimestamp: DATETIME?
-          };
+            CREATE TYPE Property AS CLOSED {
+                sourceId: bigint,
+                sourceType: Boolean,
+                `key`: string,
+                `value`: PropertyValue,
+                `type`: int,
+                fromTimestamp: DATETIME?,
+                toTimestamp: DATETIME?
+            };
 
-          CREATE TYPE NodeRelationship AS CLOSED {
-              `type`: string,
-              fromN: bigint,
-              toN: bigint,
-              fromTimestamp: DATETIME?,
-              toTimestamp: DATETIME?,
-              properties: [Property]?
-          };
+            CREATE TYPE NodeRelationship AS CLOSED {
+                `type`: string,
+                fromN: bigint,
+                toN: bigint,
+                fromTimestamp: DATETIME?,
+                toTimestamp: DATETIME?,
+                properties: [Property]?
+            };
 
-          CREATE TYPE Measurement AS OPEN {
-              timestamp: int,
-              property: STRING,
-              location: geometry?,
-              relationships: [NodeRelationship]?,
-              properties: [Property]?,
-              fromTimestamp: DATETIME,
-              toTimestamp: DATETIME
-          };
-            """.trimIndent()
+            CREATE TYPE Measurement AS OPEN {
+                timestamp: int,
+                property: STRING,
+                location: geometry?,
+                relationships: [NodeRelationship]?,
+                properties: [Property]?,
+                fromTimestamp: DATETIME,
+                toTimestamp: DATETIME
+            };
+        """.trimIndent()
         if (!queryAsterixDB(clusterControllerHost, creationQuery)) {
             println("Something went wrong while creating time series environment")
         }
@@ -169,11 +164,11 @@ class AsterixDBTSM private constructor(
         fun createDefault(g: Graph): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
-                props.get("default_cc_host").toString(),
-                props.get("default_cc_port").toString(),
-                props.get("default_dataverse").toString(),
-                listOf(props.get("default_nc_pool").toString()),
-                props.get("default_datatype").toString(),
+                props["default_cc_host"].toString(),
+                props["default_cc_port"].toString(),
+                props["default_dataverse"].toString(),
+                listOf(props["default_nc_pool"].toString()),
+                props["default_datatype"].toString(),
             )
         }
     }

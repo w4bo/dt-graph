@@ -76,9 +76,10 @@ class AsterixDBTS(
                     if (line.isNotBlank()) {
                         val json: JsonNode = mapper.readTree(line)
                         val label = if(json.get("type").textValue() == "Temperature") "temperature" else "presence"
-                        try{
+                        try {
                             val location = json.get("location").textValue()
-                        }catch(e: Exception ){
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                             println("HELLOOOOOOOOOOOOOOOO ${resource.path}")
                         }
                         add(
@@ -88,7 +89,6 @@ class AsterixDBTS(
                             //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
                             value = json.get("payload").get(label).longValue(),
                             isUpdate = false
-
                         )
                     }
                 }
@@ -203,9 +203,6 @@ class AsterixDBTS(
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
                 outNodes = result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
-//                if(outNodes.isNotEmpty()){
-//                    println("HELLo")
-//                }
                 return outNodes
             }
 
