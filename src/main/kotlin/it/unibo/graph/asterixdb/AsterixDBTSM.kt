@@ -3,11 +3,16 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
+import it.unibo.graph.utils.LIMIT
 import it.unibo.graph.utils.loadProps
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.Executors
+import kotlinx.coroutines.launch
 
 val props = loadProps()
 
@@ -16,69 +21,53 @@ class AsterixDBTSM private constructor(
     host: String,
     port: String,
     val dataverse: String,
-    nodeControllersIPs: List<String>,
-    val datatype: String
+    val nodeControllersIPs: List<String>,
+    val datatype: String,
 ) : TSManager {
 
-    private class UniformSampler<T>(private val source: List<T>) {
-        private var pool: MutableList<T> = source.shuffled().toMutableList()
-        private var index = 0
-        fun next(): T {
-            if (pool.isEmpty()) throw IllegalArgumentException("Source list is empty")
-            // Reset and reshuffle once we've cycled through the list
-            if (index >= pool.size) {
-                pool = source.shuffled().toMutableList()
-                index = 0
+    val clusterControllerHost: String = "http://$host:$port/query/service"
+    var id = 1
+
+    init {
+        if(!checkRestore(dataverse)){
+            val result = createTSMEnvironment()
+            if (!result){
+                println("Something went wrong while creating $dataverse environment")
+                throw Exception()
             }
-            return pool[index++]
         }
     }
 
-    private val nodeControllersPool = UniformSampler(nodeControllersIPs)
-    private val clusterControllerHost: String = "http://$host:$port/query/service"
-    var id = 1
-    private val busyPorts: MutableSet<Int> = mutableSetOf()
-    private val tsList: MutableMap<Long, TS> = mutableMapOf()
-
-    init {
-        setupAsterixDB()
-    }
-
-    fun addTS(inputPath : String): TS {
-        val tsId = nextTSId()
-        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
-//        runBlocking {
-//            launch(executor) {
-//                newTS.loadInitialData(inputPath)
-//            }
-//        }
-        val outTS = newTS
-        tsList[tsId] = outTS
-        busyPorts.add(newTS.dataFeedPort)
-        return newTS
+    // Check if dataverse already exists
+    private fun checkRestore(dataverse: String) : Boolean{
+        val query = """
+            SELECT VALUE dv
+            FROM Metadata.`Dataverse` dv
+            WHERE dv.DataverseName = "$dataverse";
+        """.trimIndent()
+        return queryAsterixDB(clusterControllerHost, query, checkResults = true)
     }
 
     override fun addTS(): TS {
         val tsId = nextTSId()
-        val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts)
-        tsList[tsId] = newTS
-        busyPorts.add(newTS.dataFeedPort)
+        val newTS =
+            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersIPs, dataverse, datatype)
         return newTS
     }
 
     override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
-        return tsList.getValue(id)
+        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get=true)
     }
 
     override fun clear() {
         id = 1
-        tsList.values.forEach { (it as AsterixDBTS).deleteTs() }
+        queryAsterixDB(clusterControllerHost, getDataverseCreationQuery(dataverse))
     }
 
     // Private utility functions
-    private fun queryAsterixDB(host: String, query: String): Boolean {
+    private fun queryAsterixDB(host: String, query: String, checkResults: Boolean = false): Boolean {
         val uri = URI(host)
         val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -103,72 +92,86 @@ class AsterixDBTSM private constructor(
 
         connection.outputStream.use { it.write(postData.toByteArray()) }
 
-        try {
+
+        val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
-            return true
         } catch (e: Exception) {
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            e.printStackTrace()
             throw UnsupportedOperationException(e)
         }
-    }
 
-    private fun setupAsterixDB() {
-        val creationQuery = """
-            DROP dataverse $dataverse IF EXISTS;
-            CREATE DATAVERSE $dataverse;
-            USE $dataverse;
-
-            CREATE TYPE PropertyValue AS OPEN {
-                stringValue: string?,
-                doubleValue: double?,
-                intValue: int?,
-                geometryValue: string?
-            };
-
-            CREATE TYPE Property AS CLOSED {
-                sourceId: bigint,
-                sourceType: Boolean,
-                `key`: string,
-                `value`: PropertyValue,
-                `type`: int,
-                fromTimestamp: DATETIME?,
-                toTimestamp: DATETIME?
-            };
-
-            CREATE TYPE NodeRelationship AS CLOSED {
-                `type`: string,
-                fromN: bigint,
-                toN: bigint,
-                fromTimestamp: DATETIME?,
-                toTimestamp: DATETIME?,
-                properties: [Property]?
-            };
-
-            CREATE TYPE Measurement AS OPEN {
-                timestamp: int,
-                property: STRING,
-                location: geometry?,
-                relationships: [NodeRelationship]?,
-                properties: [Property]?,
-                fromTimestamp: DATETIME,
-                toTimestamp: DATETIME
-            };
-        """.trimIndent()
-        if (!queryAsterixDB(clusterControllerHost, creationQuery)) {
-            println("Something went wrong while creating time series environment")
+        if(connection.responseCode in 200..299) {
+            // If I just want the request to return successfully
+            if(!checkResults){
+                return true
+            }else{
+                // Check if it returned something
+                val isEmpty = Regex("\"results\"\\s*:\\s*\\[\\s*]").containsMatchIn(responseText)
+                return !isEmpty
+            }
+        }
+        else {
+            println(responseText)
+            return false
         }
     }
 
+    private fun createTSMEnvironment() : Boolean {
+        return queryAsterixDB(clusterControllerHost, getDataverseCreationQuery(dataverse))
+    }
+
+    private fun getDataverseCreationQuery(dataverse:String): String{
+        return """
+          DROP dataverse $dataverse IF EXISTS;
+          CREATE DATAVERSE $dataverse;
+          USE $dataverse;
+
+           CREATE TYPE PropertyValue AS OPEN {
+              stringValue: string?,
+              doubleValue: double?,
+              intValue: int?,
+              geometryValue: string?
+          };
+
+          CREATE TYPE Property AS CLOSED {
+              sourceId: bigint,
+              sourceType: Boolean,
+              `key`: string,
+              `value`: PropertyValue,
+              `type`: int,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?
+          };
+
+          CREATE TYPE NodeRelationship AS CLOSED {
+              `type`: string,
+              fromN: bigint,
+              toN: bigint,
+              fromTimestamp: DATETIME?,
+              toTimestamp: DATETIME?,
+              properties: [Property]?
+          };
+
+          CREATE TYPE Measurement AS OPEN {
+              timestamp: int,
+              property: STRING,
+              location: geometry?,
+              relationships: [NodeRelationship]?,
+              properties: [Property]?,
+              fromTimestamp: DATETIME,
+              toTimestamp: DATETIME
+          };
+            """.trimIndent()
+    }
     companion object {
         fun createDefault(g: Graph): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
-                props["default_cc_host"].toString(),
-                props["default_cc_port"].toString(),
-                props["default_dataverse"].toString(),
-                listOf(props["default_nc_pool"].toString()),
-                props["default_datatype"].toString(),
+                props.get("default_cc_host").toString(),
+                props.get("default_cc_port").toString(),
+                props.get("default_dataverse").toString(),
+                listOf(props.get("default_nc_pool").toString()),
+                props.get("default_datatype").toString(),
             )
         }
     }

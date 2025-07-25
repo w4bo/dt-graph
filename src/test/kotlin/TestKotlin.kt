@@ -33,9 +33,9 @@ class TestKotlin {
                         var g: Graph = setup(g1, tsm)
                         // If the graph supports ACID and persistence, flush to the disk and reload
                         if (g1 is MemoryGraphACID) {
-                            g1.flushToDisk() // Persist graph state to disk
-                            g = MemoryGraphACID.readFromDisk() // Reload from disk
-                            g.tsm = tsm // Reassign the TSM (not persisted)
+//                            g1.flushToDisk() // Persist graph state to disk
+//                            g = MemoryGraphACID.readFromDisk() // Reload from disk
+//                            g.tsm = tsm // Reassign the TSM (not persisted)
                         }
                         // Apply the test function to the prepared graph
                         f(g)
@@ -626,6 +626,7 @@ class TestKotlin {
         val g = MemoryGraph()
         g.clear()
         g.tsm = AsterixDBTSM.createDefault(g)
+        (g.tsm as AsterixDBTSM).clear()
 
         val ts = g.getTSM().addTS()
         ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)

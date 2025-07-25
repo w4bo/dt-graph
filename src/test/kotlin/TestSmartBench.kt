@@ -6,6 +6,7 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.*
+import it.unibo.graph.utils.LIMIT
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import java.io.File
@@ -21,17 +22,17 @@ class TestSmartBench {
     var uuid = UUID.randomUUID()
 
     private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int) {
-        println("$queryName executed in $queryTime ms and returned $numEntities items")
-        val outputDir = File("results/query_evaluation/$dataset")
-        if (!outputDir.exists()) outputDir.mkdirs()
-
-        val file = File(outputDir, "statistics.csv")
-        val writeHeader = !file.exists()
-
-        file.appendText(buildString {
-            if (writeHeader) append("test_id,model,datasetSize,queryName,queryType,queryTime,numEntities\n")
-            append("${uuid},dtgraph,$size,$queryName,$queryType,$queryTime,$numEntities\n")
-        })
+        println("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
+//        val outputDir = File("results/query_evaluation/$dataset")
+//        if (!outputDir.exists()) outputDir.mkdirs()
+//
+//        val file = File(outputDir, "statistics.csv")
+//        val writeHeader = !file.exists()
+//
+//        file.appendText(buildString {
+//            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,queryTime,numEntities\n")
+//            append("${uuid},dtgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities\n")
+//        })
     }
 
     private lateinit var graph: Graph
@@ -53,8 +54,10 @@ class TestSmartBench {
             //"dataset/$dataset/$size/semanticObservation.json",
             //"dataset/$dataset/$size/observation.json"
         )
+
         graph = MemoryGraphACID()
-        graph.tsm = AsterixDBTSM.createDefault(graph)
+        val tsm = AsterixDBTSM.createDefault(graph)
+        graph.tsm = tsm
         graph.clear()
         graph.getTSM().clear()
 
@@ -62,11 +65,16 @@ class TestSmartBench {
         val executionTime = measureTimeMillis {
             loader.loadData(data)
         }
+
+        (graph as MemoryGraphACID).flushToDisk() // Persist graph state to disk
+        graph = MemoryGraphACID.readFromDisk() // Reload from disk
+        graph.tsm = AsterixDBTSM.createDefault(graph)
+
         println("Should be done")
         println("Loaded ${graph.getNodes().size} verticles")
         println("Loaded ${graph.getEdges().size} edges")
         println("Loaded ${graph.getProps().size} props")
-        println("Ingestion Time: ${executionTime / 1000} s")
+        //println("Ingestion Time: ${executionTime / 1000} s")
     }
 
     /*
@@ -83,7 +91,7 @@ class TestSmartBench {
             listOf(
                 Step(Sensor, alias = "s1"),
                 Step(hasCoverage),
-                Step(Infrastructure, listOf(Filter("name", Operators.EQ, infrastructureId)), alias = "Environment")
+                Step(Infrastructure, listOf(Filter("id", Operators.EQ, infrastructureId)), alias = "Environment")
             ),
             listOf(
                 Step(Sensor, alias = "s2"),
@@ -93,7 +101,7 @@ class TestSmartBench {
         )
 
         val edgesDirectionPattern = listOf(
-            Step(Infrastructure, listOf(Filter("name", Operators.EQ, infrastructureId)), alias = "Environment"),
+            Step(Infrastructure, listOf(Filter("id", Operators.EQ, infrastructureId)), alias = "Environment"),
             EdgeStep(hasCoverage, direction = Direction.IN ),
             Step(Sensor, alias="device"),
             Step(labelFromString("has$tau")),
@@ -101,7 +109,7 @@ class TestSmartBench {
         )
 
         val spatialPattern = listOf(
-            listOf(Step(Infrastructure, listOf(Filter("name", Operators.EQ, infrastructureId)), alias = "targetLocation")
+            listOf(Step(Infrastructure, listOf(Filter("id", Operators.EQ, infrastructureId)), alias = "targetLocation")
             ),
             listOf(
                 Step(Sensor, alias = "s1"),
@@ -122,13 +130,13 @@ class TestSmartBench {
         edgesDirectionTime = measureTimeMillis {
             edgesDirectionResult = query(graph,
                 edgesDirectionPattern,
-                by = listOf(Aggregate("Environment", "name"), Aggregate("device","name")), timeaware = false)
+                by = listOf(Aggregate("Environment", "id"), Aggregate("device","id")), timeaware = false)
         }
 
 
         semanticQueryTime = measureTimeMillis {
             semanticResult =
-                query(graph, pattern, where = listOf(Compare("s1", "s2", "name", Operators.EQ)), timeaware = false)
+                query(graph, pattern, where = listOf(Compare("s1", "s2", "id", Operators.EQ)), timeaware = false)
         }
 
         // v.1
@@ -137,7 +145,7 @@ class TestSmartBench {
             spatialResult = query(
                 graph, spatialPattern,
                 where = listOf(Compare("targetLocation", "Measurement", "location", Operators.ST_INTERSECTS)),
-                by = listOf(Aggregate("s1", "name")),
+                by = listOf(Aggregate("s1", "id")),
                 timeaware = false
             )
         }
@@ -206,8 +214,8 @@ class TestSmartBench {
                 graph, spatialPattern,
                 where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
                 by = listOf(
-                    Aggregate("Environment","name"),
-                    Aggregate("Device", "name"),
+                    Aggregate("Environment","id"),
+                    Aggregate("Device", "id"),
                     Aggregate("Measurement","value", AggOperator.AVG)
                 ),
                 from = tA, to = tB, timeaware = true
@@ -218,8 +226,8 @@ class TestSmartBench {
              edgesDirectionResult = query(
                 graph, edgesDirectionPattern,
                 by = listOf(
-                    Aggregate("Environment","name"),
-                    Aggregate("Device", "name"),
+                    Aggregate("Environment","id"),
+                    Aggregate("Device", "id"),
                     Aggregate("Measurement","value", AggOperator.AVG)
                 ),
                 from = tA, to = tB, timeaware = true
@@ -231,10 +239,10 @@ class TestSmartBench {
         val semanticQueryTime = measureTimeMillis {
             semanticResult = query(
                 graph, pattern,
-                where = listOf(Compare("Device", "Device2", "name", Operators.EQ)),
+                where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
                 by = listOf(
-                    Aggregate("Environment","name"),
-                    Aggregate("Device", "name"),
+                    Aggregate("Environment","id"),
+                    Aggregate("Device", "id"),
                     Aggregate("Measurement","value", AggOperator.AVG),
                 ),
                 from = tA, to = tB, timeaware = true
@@ -252,11 +260,16 @@ class TestSmartBench {
      * of type 𝜏 above a threshold alpha during the period [𝑡𝑎, 𝑡𝑏 [
     */ //TODO
     fun MaintenanceOwners() {
-        val tA = 1510700400000L // 15/11/2017 00:00:00 - 24785
-        val tB = 1511564400000L // 25/12/2017 00:00:00 -
+        val tA = 1510700400000L // 15/11/2017 00:00:00
+        val tB = 1511564400000L // 25/12/2017 00:00:00
         val minTemp = 65L
 
         val edgesDirectionPattern = listOf(
+            listOf(
+                Step(Sensor, alias = "Device2"),
+                Step(hasOwner),
+                Step(User, alias = "Owner")
+            ),
             listOf(
                 Step(Infrastructure, alias = "Environment"),
                 EdgeStep(hasCoverage, direction = Direction.IN ),
@@ -264,23 +277,18 @@ class TestSmartBench {
                 null,
                 null,
                 Step(HasTS),
-                Step(Temperature, properties = listOf(Filter("value",Operators.GTE, minTemp)), alias = "Measurement")
+                Step(Temperature, properties = listOf(Filter("value",Operators.GTE, minTemp)))
             ),
-            listOf(
-                Step(Sensor, alias = "Device2"),
-                Step(hasOwner),
-                Step(User, alias = "Owner")
-            )
         )
 
         val edgesDirectionResult : List<Any>
         val edgesDirectionQueryTime = measureTimeMillis {
             edgesDirectionResult = query(
                 graph, edgesDirectionPattern,
-                where = listOf(Compare("Device","Device2","name",Operators.EQ)),
+                where = listOf(Compare("Device","Device2","id",Operators.EQ)),
                 by = listOf(
-                    Aggregate("Device", "name"),
-                    Aggregate("Environment","name"),
+                    Aggregate("Device", "id"),
+                    Aggregate("Environment","id"),
                     Aggregate("Owner", "emailId"),
                 ),
                 from = tA,
@@ -308,8 +316,8 @@ class TestSmartBench {
 //                graph, spatialPattern,
 //                where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
 //                by = listOf(
-//                    Aggregate("Device", "name"),
-//                    Aggregate("Environment", "name"),
+//                    Aggregate("Device", "id"),
+//                    Aggregate("Environment", "id"),
 //                    Aggregate("Measurement", "value", AggOperator.AVG)
 //                ),
 //                from = tA,
@@ -360,8 +368,8 @@ class TestSmartBench {
 
 //        val semanticQueryTime = measureTimeMillis {
 //            semanticResult = query(graph, pattern,
-//                where= listOf(Compare("Device","Device2","name",Operators.EQ)),
-//                by=listOf(Aggregate("Environment","name")),
+//                where= listOf(Compare("Device","Device2","id",Operators.EQ)),
+//                by=listOf(Aggregate("Environment","id")),
 //                from = tA,
 //                to = tB,
 //                timeaware = true
@@ -382,7 +390,7 @@ class TestSmartBench {
 //        val spatialQueryTime = measureTimeMillis {
 //            spatialResult = query(graph, spatialPattern,
 //                where=listOf(Compare("Environment","Measurement","location",Operators.ST_INTERSECTS)),
-//                by=listOf(Aggregate("Environment","name")),//, Aggregate("Measurement","value",AggOperator.AVG))
+//                by=listOf(Aggregate("Environment","id")),//, Aggregate("Measurement","value",AggOperator.AVG))
 //                from = tA,
 //                to = tB,
 //                timeaware = true
@@ -402,7 +410,7 @@ class TestSmartBench {
         val edgesDirectionQueryTime = measureTimeMillis {
             edgesDirectionResult = query(graph, edgesDirectionPattern,
                 where=listOf(Compare("Environment","Measurement","location",Operators.ST_INTERSECTS)),
-                by=listOf(Aggregate("Environment","name")),//, Aggregate("Measurement","value",AggOperator.AVG))
+                by=listOf(Aggregate("Environment","id")),//, Aggregate("Measurement","value",AggOperator.AVG))
                 from = tA,
                 to = tB,
                 timeaware = true
@@ -465,7 +473,7 @@ class TestSmartBench {
 
         val semanticQueryTime = measureTimeMillis {
             semanticResult = query(graph, semanticPattern,
-                by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement","value",AggOperator.MAX)),
+                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
                 from = tA,
                 to = tB,
                 timeaware = true)
@@ -474,7 +482,7 @@ class TestSmartBench {
 //        val spatialQueryTime = measureTimeMillis {
 //            spatialResult = query(graph, spatialPattern,
 //                where = listOf(Compare("Environment","Measurement","location",Operators.ST_INTERSECTS)),
-//                by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement","value",AggOperator.MAX)),
+//                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
 //                from = tA,
 //                to = tB,
 //                timeaware = true)
@@ -482,7 +490,7 @@ class TestSmartBench {
 
 //        val edgesDirectionTime = measureTimeMillis {
 //            edgesDirectionResult = query(graph, edgesDirectionPattern,
-//                by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement","value",AggOperator.MAX)),
+//                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
 //                from = tA,
 //                to = tB,
 //                timeaware = true)
@@ -501,7 +509,7 @@ class TestSmartBench {
      * measurements in.
      */
     fun agentHistory() {
-        val devices = listOf("Thermometer3")
+        val devices = listOf("thermometer3")
 
         var semanticEntities = 0
         var spatialEntities = 0
@@ -518,12 +526,12 @@ class TestSmartBench {
         devices.forEach {
             val traversalPattern = listOf(
                 listOf(
-                    Step(Sensor, listOf(Filter("name", Operators.EQ, it)), alias = "Device"),
+                    Step(Sensor, listOf(Filter("id", Operators.EQ, it)), alias = "Device"),
                     null,
                     Step(Infrastructure, alias = "Environment")
                 ),
                 listOf(
-                    Step(Sensor, listOf(Filter("name", Operators.EQ, it)), alias = "Device2"),
+                    Step(Sensor, listOf(Filter("id", Operators.EQ, it)), alias = "Device2"),
                     null,
                     null,
                     Step(HasTS),
@@ -533,7 +541,7 @@ class TestSmartBench {
             val edgesDirectionPattern = listOf(
                 Step(Infrastructure, alias = "Environment"),
                 EdgeStep(hasCoverage, direction = Direction.IN),
-                Step(Sensor, listOf(Filter("name", Operators.EQ, it)),  alias = "Device"),
+                Step(Sensor, listOf(Filter("id", Operators.EQ, it)),  alias = "Device"),
                 null,
                 null,
                 Step(HasTS),
@@ -543,7 +551,7 @@ class TestSmartBench {
             edgesDirectionQueryTime += measureTimeMillis {
                 edgesDirectionResult = query(
                     graph, edgesDirectionPattern,
-                    by = listOf(Aggregate("Device", "name"), Aggregate("Environment", "name")),
+                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id")),
                     timeaware = true
                 )
             }
@@ -553,8 +561,8 @@ class TestSmartBench {
             semanticQueryTime += measureTimeMillis {
                 semanticResult = query(
                     graph, traversalPattern,
-                    where = listOf(Compare("Device", "Device2", "name", Operators.EQ)),
-                    by = listOf(Aggregate("Device", "name"), Aggregate("Environment", "name")),
+                    where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
+                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id")),
                     timeaware = true
                 )
             }
@@ -566,7 +574,7 @@ class TestSmartBench {
             val spatialPattern = listOf(
                 listOf(Step(Infrastructure, alias = "Environment")),
                 listOf(
-                    Step(Sensor, listOf(Filter("name", Operators.EQ, it)), alias = "Device"),
+                    Step(Sensor, listOf(Filter("id", Operators.EQ, it)), alias = "Device"),
                     null,
                     null,
                     Step(HasTS),
@@ -577,7 +585,7 @@ class TestSmartBench {
                 spatialResult = query(
                     graph, spatialPattern,
                     where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
-                    by = listOf(Aggregate("Device", "name"), Aggregate("Environment", "name"))
+                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id"))
                 )
             }
             spatialEntities += spatialResult.size
