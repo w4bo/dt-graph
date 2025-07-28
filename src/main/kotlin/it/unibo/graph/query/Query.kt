@@ -71,8 +71,7 @@ private fun join(
     runBlocking {
         val jobs = pattern1.map { row -> // for each result (i.e., path) of the first pattern
             launch(executor) {
-                // Restrict the temporal interval
-                val from = max(from, row.from)
+                val from = max(from, row.from) // restrict the temporal interval
                 val to = min(to, row.to)
                 val row = row.result
                 val acc: MutableList<Path> = mutableListOf()
@@ -84,7 +83,7 @@ private fun join(
                             val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second } // Check if the step contains a node to join
                             if (curJoinFilters.isNotEmpty()) { // ... if so
                                 if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step")
-                                val curJoinFilter = curJoinFilters.first() // Take the filter condition. TODO I assume that there is a single joining filter on a step
+                                val curJoinFilter = curJoinFilters.first() // Take the filter condition
                                 val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
                                 val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
                                 props.forEach { p -> // explode each property
@@ -101,9 +100,7 @@ private fun join(
                     }
                 }
                 rec(emptyList(), 0, from, to)
-                mutex.lock()
-                result += acc
-                mutex.unlock()
+                mutex.withLock { result += acc }
             }
         }
         jobs.joinAll()
@@ -409,8 +406,6 @@ class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from
     override fun compareTo(other: ExploredPath): Int = priority.compareTo(other.priority)
 }
 
-
-
 fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
     val acc: MutableList<Path> = mutableListOf()
     val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias !== null }.associate { it.second?.alias!! to it.first }
@@ -432,7 +427,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
         while (true) {
             if (mutex.withLock { priorityQueue.isEmpty() }) {
                 if (completed.get() < launched) {
-                    wait.acquire(wait.availablePermits())
+                    wait.acquire()
                 } else {
                     break
                 }

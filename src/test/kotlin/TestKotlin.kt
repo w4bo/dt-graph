@@ -33,9 +33,9 @@ class TestKotlin {
                         var g: Graph = setup(g1, tsm)
                         // If the graph supports ACID and persistence, flush to the disk and reload
                         if (g1 is MemoryGraphACID) {
-//                            g1.flushToDisk() // Persist graph state to disk
-//                            g = MemoryGraphACID.readFromDisk() // Reload from disk
-//                            g.tsm = tsm // Reassign the TSM (not persisted)
+                            g1.flushToDisk() // Persist graph state to disk
+                            g = MemoryGraphACID.readFromDisk() // Reload from disk
+                            g.tsm = tsm // Reassign the TSM (not persisted)
                         }
                         // Apply the test function to the prepared graph
                         f(g)

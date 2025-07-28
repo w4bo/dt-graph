@@ -58,20 +58,22 @@ class TestSmartBench {
         graph = MemoryGraphACID()
         val tsm = AsterixDBTSM.createDefault(graph)
         graph.tsm = tsm
-        graph.clear()
-        graph.getTSM().clear()
 
-        val loader = SmartBenchDataLoader(graph)
-        val executionTime = measureTimeMillis {
-            loader.loadData(data)
+        val reloadData = true
+        if (reloadData) {
+            graph.clear()
+            graph.getTSM().clear()
+            val loader = SmartBenchDataLoader(graph)
+            val executionTime = measureTimeMillis {
+                loader.loadData(data)
+            }
+            (graph as MemoryGraphACID).flushToDisk() // Persist graph state to disk
         }
-
-        (graph as MemoryGraphACID).flushToDisk() // Persist graph state to disk
         graph = MemoryGraphACID.readFromDisk() // Reload from disk
         graph.tsm = AsterixDBTSM.createDefault(graph)
 
         println("Should be done")
-        println("Loaded ${graph.getNodes().size} verticles")
+        println("Loaded ${graph.getNodes().size} vertexes")
         println("Loaded ${graph.getEdges().size} edges")
         println("Loaded ${graph.getProps().size} props")
         //println("Ingestion Time: ${executionTime / 1000} s")
@@ -296,7 +298,7 @@ class TestSmartBench {
                 timeaware = true
             )
         }
-    //TODO: NON CREDO DI POTER FARE MULTIJOIN
+        // TODO: NON CREDO DI POTER FARE MULTIJOIN
         val spatialPattern = listOf(
             listOf(
                 Step(Infrastructure, alias = "Environment")
@@ -603,12 +605,12 @@ class TestSmartBench {
         repeat(testIterations) { i ->
             uuid = UUID.randomUUID()
             println("\n=== RUN  ITERATION #${i + 1} ===")
-            environmentCoverage()
-            environmentAggregate()
+            // environmentCoverage()
+            // environmentAggregate()
             MaintenanceOwners()
-            EnvironmentOutlier()
-            AgentOutlier()
-            agentHistory()
+            // EnvironmentOutlier()
+            // AgentOutlier()
+            // agentHistory()
         }
     }
 }
