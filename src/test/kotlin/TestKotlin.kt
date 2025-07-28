@@ -22,7 +22,7 @@ class TestKotlin {
      * - Invokes the given function [f] with the prepared Graph.
      * - Closes the Graph afterward to release resources.
      */
-    fun matrix(f: (Graph) -> Unit) {
+    private fun matrix(f: (Graph) -> Unit) {
         // Loop over different Graph implementations
         listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
             .forEach { g1 ->
@@ -45,7 +45,7 @@ class TestKotlin {
             }
     }
 
-    fun setup(g: Graph, tsm: TSManager): Graph {
+    private fun setup(g: Graph, tsm: TSManager): Graph {
         g.tsm = tsm
         g.clear()
         g.getTSM().clear()
@@ -111,7 +111,7 @@ class TestKotlin {
         return g
     }
 
-    fun setup1(): Graph {
+    private fun setup1(): Graph {
         val g = MemoryGraph()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()

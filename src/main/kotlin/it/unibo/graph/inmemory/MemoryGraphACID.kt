@@ -32,14 +32,12 @@ class MemoryGraphACID(
     private val nodeChannel: FileChannel = FileChannel.open(File("$path/$nodeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val edgeChannel: FileChannel = FileChannel.open(File("$path/$edgeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val propertyChannel: FileChannel = FileChannel.open(File("$path/$propertyFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
-    // private val scheduler: ScheduledExecutorService = Executors.newScheduledThreadPool(1)
 
     init {
         if (!Files.exists(Paths.get(path))) {
             Files.createDirectories(Paths.get(path))
         }
         wal.setFlushable(this)
-        // startPeriodicFlush()
     }
 
     // Generic function to read from disk and deserialize
@@ -69,7 +67,6 @@ class MemoryGraphACID(
             it.position(0)
         }
         wal.clear()
-        // scheduler.shutdownNow()
     }
 
     companion object {
@@ -120,16 +117,6 @@ class MemoryGraphACID(
             }
         }
     }
-
-    // private fun startPeriodicFlush() {
-    //     scheduler.scheduleAtFixedRate({
-    //         try {
-    //             flushToDisk()
-    //         } catch (e: IOException) {
-    //             e.printStackTrace()
-    //         }
-    //     }, 10, 10, TimeUnit.SECONDS) // Flush every 10 seconds
-    // }
 
     @Throws(IOException::class)
     override fun addEdge(r: R): R {

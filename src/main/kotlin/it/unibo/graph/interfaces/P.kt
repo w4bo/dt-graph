@@ -34,7 +34,7 @@ open class P(
         private val db: RocksDB
         private val DB_NAME = "db_properties"
         init {
-            val options: DBOptions = DBOptions()
+            val options = DBOptions()
             options.setCreateIfMissing(true)
             options.setCreateMissingColumnFamilies(true)
             val cfDescriptors = listOf(ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()))
@@ -59,7 +59,7 @@ open class P(
             val typeOrdinal = buffer.int
             val type = PropType.entries[typeOrdinal]
             val value: Any = when (type) {
-                PropType.LONG -> buffer.long      // Serialize Long as 8 bytes
+                PropType.LONG -> buffer.long     // Serialize Long as 8 bytes
                 PropType.DOUBLE -> buffer.double // Serialize Double as 8 bytes
                 PropType.INT -> {                // Serialize Int as 4 bytes + 4 bytes as padding
                     buffer.int

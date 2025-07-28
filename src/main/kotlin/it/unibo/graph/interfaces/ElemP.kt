@@ -17,7 +17,6 @@ interface ElemP : Elem {
         var current = next
         while (current != null) {
             val p = g.getProp(current)
-//            if (name != null && name == p.key && timeaware && p.toTimestamp < fromTimestamp) break
             if (filterCheck(p)) result.add(p)
             current = p.next
         }

@@ -426,11 +426,11 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
     }
 
     val completed = AtomicInteger(0)
-    var launched: Int = 0
+    var launched = 0
 
     runBlocking {
         while (true) {
-            if (priorityQueue.isEmpty()) {
+            if (mutex.withLock { priorityQueue.isEmpty() }) {
                 if (completed.get() < launched) {
                     wait.acquire(wait.availablePermits())
                 } else {

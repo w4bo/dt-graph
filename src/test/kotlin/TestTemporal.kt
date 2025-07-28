@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 
 class TestTemporal {
 
-    fun setup(): Graph {
+    private fun setup(): Graph {
         val g = MemoryGraphACID()
         g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()

@@ -44,16 +44,15 @@ class AsterixDBTSM private constructor(
         setupAsterixDB()
     }
 
-    fun addTS(inputPath : String): TS {
+    fun addTS(inputPath: String): TS {
         val tsId = nextTSId()
         val newTS = AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersPool.next(), dataverse, datatype, busyPorts, inputPath = inputPath)
-//        runBlocking {
-//            launch(executor) {
-//                newTS.loadInitialData(inputPath)
-//            }
-//        }
-        val outTS = newTS
-        tsList[tsId] = outTS
+        // runBlocking {
+        //     launch(executor) {
+        //         newTS.loadInitialData(inputPath)
+        //     }
+        // }
+        tsList[tsId] = newTS
         busyPorts.add(newTS.dataFeedPort)
         return newTS
     }
