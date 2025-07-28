@@ -23,8 +23,6 @@ import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(
     private val graph: Graph = MemoryGraphACID(),
-    tsLabelsList: List<String> = listOf("Measurement", "Observation", "Temperature", "Occupancy", "Presence"),
-    virtualSensorTsLabelsList: List<String> = listOf("Occupancy", "Presence")
 ) {
     private val mapper: ObjectMapper = jacksonObjectMapper()
     private val tsm = graph.getTSM() as AsterixDBTSM
@@ -77,7 +75,7 @@ class SmartBenchDataLoader(
                                     graphIdList[entityId] = nodeId
                                     // Parse its properties
                                     for ((key, value) in obj) {
-                                        if (key === "type" || key === "id") continue
+                                        //if (key === "type" || key === "id") continue
 
                                         when (value) {
                                             is Map<*, *> -> {
@@ -120,7 +118,7 @@ class SmartBenchDataLoader(
                                         )
                                         sensorTSFile?.let {
                                             println("Found $sensorTsFilePath")
-                                            val newTs = tsm.addTS(sensorTsFilePath)
+                                            val newTs = tsm.addTS()
                                             val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                             tsList[newTs] = sensorTsFilePath
@@ -147,7 +145,6 @@ class SmartBenchDataLoader(
                     }
                     jobs.joinAll()
                 }
-
                 val latentTime = measureTimeMillis {
                     for ((label, source, destId) in leftoverEdgesList) {
                         val target = graphIdList[destId] ?: continue

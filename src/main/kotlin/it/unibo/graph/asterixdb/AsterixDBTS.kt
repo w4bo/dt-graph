@@ -19,91 +19,109 @@ class AsterixDBTS(
     override val g: Graph,
     val id: Long,
     clusterControllerHost: String,
-    dataFeedIp: String,
+    nodeControllersIPs: List<String>,
     private val dataverse: String,
     datatype: String,
-    busyPorts: MutableSet<Int>,
-    seed: Int = SEED,
-    inputPath: String? = null,
-    var job: Job? = null
+    seed: Long = id,
+    get : Boolean = false
 ) : TS {
 
     private var dataset: String
-    var dataFeedPort: Int
 
-    private var socket: Socket
-    private var outputStream: OutputStream
-    private var writer: PrintWriter
+    private val asterixHTTPClient: AsterixDBHTTPClient
+    val dataFeedIp : String = getDataFeedIP(id, nodeControllersIPs)
+    var dataFeedPort : Int = getDataFeedPort(id, FIRSTFEEDPORT, LASTFEEDPORT)
+
+    private lateinit var socket: Socket
+    private lateinit var outputStream: OutputStream
+    private lateinit var writer: PrintWriter
+    private var isFeedConnectionOpen: Boolean = false
     private val mapper = ObjectMapper()
-    private var lastResult : Pair<String, List<N>>
-    private val asterixHTTPClient: AsterixDBHTTPClient = AsterixDBHTTPClient(
-        clusterControllerHost,
-        dataFeedIp,
-        busyPorts,
-        dataverse,
-        datatype,
-        id,
-        seed
-    )
 
     init {
-        dataset = asterixHTTPClient.getDataset()
-        dataFeedPort = asterixHTTPClient.getDataFeedPort()
+        asterixHTTPClient = AsterixDBHTTPClient(
+            clusterControllerHost,
+            dataFeedIp,
+            dataFeedPort,
+            dataverse,
+            datatype,
+            id,
+            seed,
+            get = get
+        )
 
+        dataset = asterixHTTPClient.getDataset()
+        // DataFeedPort might be changed if connection failed
+        dataFeedPort = asterixHTTPClient.getDataFeedPort()
+    }
+
+    private fun openDataFeedConnection() {
         socket = Socket(dataFeedIp, dataFeedPort)
         outputStream = socket.getOutputStream()
         writer = PrintWriter(outputStream, true)
-        lastResult = Pair("", listOf())
+        isFeedConnectionOpen = true
+    }
 
-//        job = inputPath?.let{
-//             GlobalScope.launch(Dispatchers.IO) {
-//                try{
-//                    loadInitialData(it)
-//                }catch(e: Exception){
-//                    println(e)
-//                    e.printStackTrace()
-//                }
-//            }
-//        }
+    private fun closeDataFeedConnection(){
+        writer.close()
+        outputStream.close()
+        socket.close()
+        isFeedConnectionOpen = false
+    }
 
+    private fun getDataFeedIP(id: Long, ipList: List<String>): String {
+        val hash = id.hashCode()
+        val index = (hash and 0x7FFFFFFF) % ipList.size
+        return ipList[index]
+    }
+
+    private fun getDataFeedPort(id: Long, min: Int, max: Int): Int {
+        require(min <= max) { "min must be <= max" }
+        val rangeSize = max - min + 1
+        val normalized = (id % rangeSize).toInt()
+        return min + normalized
     }
 
     fun loadInitialData(path: String)  {
-        val resource = this::class.java.classLoader.getResource(path)
-        if (resource != null) {
-            resource.openStream().bufferedReader().useLines { lines ->
-                for (line in lines) {
-                    if (line.isNotBlank()) {
-                        val json: JsonNode = mapper.readTree(line)
-                        val label = if(json.get("type").textValue() == "Temperature") "temperature" else "presence"
-                        try {
-                            val location = json.get("location").textValue()
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            println("HELLOOOOOOOOOOOOOOOO ${resource.path}")
+        if(asterixHTTPClient.isDatasetEmpty(dataverse, dataset)){
+            val resource = this::class.java.classLoader.getResource(path)
+            if (resource != null) {
+                openDataFeedConnection()
+                resource.openStream().bufferedReader().useLines { lines ->
+                    for (line in lines) {
+                        if (line.isNotBlank()) {
+                            val json: JsonNode = mapper.readTree(line)
+                            val label = if(json.get("type").textValue() == "Temperature") "temperature" else "presence"
+                            add(
+                                label = labelFromString(json.get("type").textValue()),
+                                timestamp = dateToTimestamp(json.get("timestamp").textValue()),
+                                location = json.get("location").textValue(),
+                                //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
+                                value = json.get("payload").get(label).longValue(),
+                                isUpdate = false
+
+                            )
                         }
-                        add(
-                            label = labelFromString(json.get("type").textValue()),
-                            timestamp = dateToTimestamp(json.get("timestamp").textValue()),
-                            location = json.get("location").textValue(),
-                            //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
-                            value = json.get("payload").get(label).longValue(),
-                            isUpdate = false
-                        )
                     }
                 }
-                writer.close()
+                closeDataFeedConnection()
+            }else{
+                println("Resource is null")
             }
-        }else{
-            println("Resource is null")
         }
     }
     override fun getTSId(): Long = id
 
     override fun add(n: N, isUpdate: Boolean): N {
+        var closeFeed = false
         if (isUpdate) {
             updateTs(n)
         } else {
+            if(!isFeedConnectionOpen){
+                openDataFeedConnection()
+                closeFeed = true
+            }
+
             val measurement = """
             {
                 "timestamp": ${n.fromTimestamp},
@@ -120,6 +138,9 @@ class AsterixDBTS(
             if (writer.checkError()) {
                 println("Errore durante la scrittura nel file!")
                 throw Exception("Coudln't insert data into AsterixDB")
+            }
+            if(closeFeed){
+                closeDataFeedConnection()
             }
         }
         //TODO: Nei test, cambia apertura chiusura dei socket
@@ -168,7 +189,7 @@ class AsterixDBTS(
                     ${applyFilters(filters)}
                 """.trimIndent()
             if(isGroupBy){
-                selectQuery = "$selectQuery LIMIT 1;"
+                selectQuery = "$selectQuery  ORDER BY timestamp DESC LIMIT 1;"
             }
         } else {
             val groupBy = groupby(by)!!
@@ -193,9 +214,6 @@ class AsterixDBTS(
             """.trimIndent()
         }
         val outNodes : List<N>
-        if(selectQuery == lastResult.first){
-            return lastResult.second
-        }
 
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
 
@@ -203,6 +221,9 @@ class AsterixDBTS(
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
                 outNodes = result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
+//                if(outNodes.isNotEmpty()){
+//                    println("HELLo")
+//                }
                 return outNodes
             }
 
@@ -260,7 +281,6 @@ class AsterixDBTS(
                                 )
                     )
                 }
-                lastResult = Pair(selectQuery, outNodes)
                 return outNodes
             }
             else -> {
@@ -291,11 +311,6 @@ class AsterixDBTS(
                 throw IllegalArgumentException("Error occurred while performing query \n $selectQuery")
             }
         }
-    }
-
-    fun deleteTs() {
-        asterixHTTPClient.deleteTs()
-        writer.close()
     }
 
     private fun updateTs(n: N) {

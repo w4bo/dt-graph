@@ -9,29 +9,53 @@ import kotlin.random.Random
 class AsterixDBHTTPClient(
         private val clusterControllerHost: String,
         dataFeedIp: String,
-        private val busyPorts: MutableSet<Int>,
+        private var dataFeedPort: Int,
         private val dataverse: String,
         datatype: String,
         private val tsId: Long,
-        seed: Int = SEED,
-
+        seed: Long,
+        get : Boolean = false
 ) {
-    private var dataFeedPort : Int
     private val feedName: String = "$DATAFEED_PREFIX$tsId"
-    private val dataset: String
+    private val dataset: String = "$DATASET_PREFIX$tsId"
 
 
     fun getDataset() : String = dataset
     fun getDataFeedPort(): Int = dataFeedPort
 
     init{
+        if(!get){
+            //If it's not, just try to use the old port
+            initializeTS(dataFeedIp, dataFeedPort, datatype)
+            Random(seed)
+        }
 
-        Random(seed)
-        dataset = "$DATASET_PREFIX$tsId"
-        dataFeedPort = FIRSTFEEDPORT + tsId.toInt()
+    }
+    fun checkDatasetExists(dataverse : String, dataset : String) : Boolean {
+        val checkDatasetExistence = """
+            SELECT VALUE ds
+            FROM Metadata.`Dataset` ds
+            WHERE ds.DataverseName = "$dataverse" AND ds.DatasetName = "$dataset";      
+        """.trimIndent()
+        return queryAsterixDB(checkDatasetExistence, checkResults = true)
+    }
+
+    fun isDatasetEmpty(dataverse : String, dataset : String) : Boolean {
+        val checkDatasetExistence = """
+            USE $dataverse;
+            SELECT *
+            FROM $dataset
+            LIMIT 1;
+        """.trimIndent()
+        return !queryAsterixDB(checkDatasetExistence, checkResults = true)
+    }
+
+    private fun initializeTS(dataFeedIp: String, feedPort: Int, dataType: String) : Boolean{
+        var newDataFeedPort = feedPort
+
         val datasetSetupQuery = """
             USE $dataverse;
-            CREATE DATASET $dataset($datatype)IF NOT EXISTS primary key timestamp;
+            CREATE DATASET $dataset($dataType)IF NOT EXISTS primary key timestamp;
             CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
         """.trimIndent()
         var dataFeedSetupQuery = """
@@ -39,68 +63,86 @@ class AsterixDBHTTPClient(
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
                       "adapter-name": "socket_adapter",
-                      "sockets": "$dataFeedIp:$dataFeedPort",
+                      "sockets": "$dataFeedIp:$newDataFeedPort",
                       "address-type": "IP",
-                      "type-name": "$datatype",
+                      "type-name": "$dataType",
                       "policy": "Spill",
                       "format": "adm"
                     };
                     CONNECT FEED MeasurementsFeed_$tsId TO DATASET $dataset;
                     START FEED $feedName;
                 """.trimIndent()
-        val datasetSetup = queryAsterixDB(datasetSetupQuery)
-        if(datasetSetup){
+        val datasetExists = checkDatasetExists(dataverse, dataset)
+        var datasetSetup = false
+
+        // IF dataset does not exist, create it
+        if(!datasetExists){
+            datasetSetup = queryAsterixDB(datasetSetupQuery)
+        }
+
+        //If dataset existed or I've successfully created it
+        if(datasetSetup || datasetExists){
             var socketConnect: Boolean
             var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
 
-            try {
-                val testSocket = Socket(dataFeedIp, dataFeedPort)
-                socketConnect = true
-                testSocket.close()
-            }catch(e: Exception){
-                println("Failed to open a socket, stopping datafeed and will try to open a new one")
-                deleteTs(deleteDataset = false)
-                socketConnect = false
-            }
+            socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
 
+            // Until I've succesffully created a DataFeed and I can actually connect to it
             while(!datafeedSetup || !socketConnect){
-                busyPorts.add(dataFeedPort)
-                dataFeedPort = generateSequence { (FIRSTFEEDPORT + tsId.toInt()..MAX_TS).random() }
-                    .distinct()
-                    .filterNot { it in busyPorts }
-                    .firstOrNull() ?: throw IllegalStateException("No available port found")
-                dataFeedSetupQuery = """
+                // TODO: cap the number of retries and fail if it doesn't work
+                // TODO: Update this new port generation, should be more deterministic
+                newDataFeedPort = randomDataFeedPort()
+                datafeedSetup = setupDataFeed(dataFeedIp, newDataFeedPort, dataverse, feedName, dataset, dataType)
+
+                if(datafeedSetup){
+                    socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
+                }
+            }
+            dataFeedPort = newDataFeedPort
+            return true
+        }else{
+            return false
+        }
+    }
+
+
+    private fun setupDataFeed(dataFeedIp: String, dataFeedPort: Int, dataverse: String, feedName: String, dataset: String, dataType: String) : Boolean{
+        val dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
                       "adapter-name": "socket_adapter",
                       "sockets": "$dataFeedIp:$dataFeedPort",
                       "address-type": "IP",
-                      "type-name": "$datatype",
+                      "type-name": "$dataType",
                       "policy": "Spill",
                       "format": "adm"
                     };
                     CONNECT FEED $feedName TO DATASET $dataset;
                     START FEED $feedName;
                 """.trimIndent()
-                datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
+        return queryAsterixDB(dataFeedSetupQuery)
+    }
 
-                if(datafeedSetup){
-                    try {
-                        val testSocket = Socket(dataFeedIp, dataFeedPort)
-                        socketConnect = true
-                        testSocket.close()
-                    }catch(e: Exception){
-                        println("Failed to open a socket, stopping datafeed and will try to open a new one")
-                        deleteTs(deleteDataset = false)
-                        socketConnect = false
-                    }
-                }
-            }
+    private fun tryDataFeedConnection(dataFeedIp: String, dataFeedPort: Int): Boolean{
+        try {
+            val testSocket = Socket(dataFeedIp, dataFeedPort)
+            testSocket.close()
+            return true
+        }catch(e: Exception){
+            println("Failed to open a socket, stopping datafeed and will try to open a new one")
+            deleteTs(deleteDataset = false)
+            return false
         }
     }
 
-    private fun queryAsterixDB(query: String): Boolean {
+    fun randomDataFeedPort(): Int{
+        return generateSequence { (FIRSTFEEDPORT + tsId.toInt()..LASTFEEDPORT).random() }
+            .distinct()
+            .firstOrNull() ?: throw IllegalStateException("No available port found")
+    }
+
+    private fun queryAsterixDB(query: String, checkResults: Boolean = false): Boolean {
         val uri = URI(clusterControllerHost)
         val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -123,12 +165,20 @@ class AsterixDBHTTPClient(
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
+            print(query)
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             throw UnsupportedOperationException(e)
         }
 
         if(connection.responseCode in 200..299) {
-            return true
+            // If I just want the request to return successfully
+            if(!checkResults){
+                return true
+            }else{
+                // Check if it returned something
+                val isEmpty = Regex("\"results\"\\s*:\\s*\\[\\s*]").containsMatchIn(responseText)
+                return !isEmpty
+            }
         }
         else {
             println(responseText)

@@ -1,0 +1,16 @@
+EnvironemtnAggregate:
+    small: 2729310
+    large: 8158670
+    big: 40770780
+MaintenanceOwners:
+    small: 2729310
+    large: 8158670
+    big: 40770780
+EnvironmentOutlier:
+  small: 2729310
+  large: 8158670
+  big: 40770780
+AgentOutlier:
+  small: 3766110
+  large: 11269070
+  big: 56322780

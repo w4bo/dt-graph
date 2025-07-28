@@ -1,4 +1,5 @@
 outputs/*.csv
+statistics.csv
 results/dummy.pdf
 metastore_db/
 db_*
@@ -7,6 +8,7 @@ db_*
 .kotlin/
 src/main/resources/dataset/smartbench/big
 src/main/resources/dataset/smartbench/large
+/asterix_data
 
 # These are useless since we use gradle import
 .idea/

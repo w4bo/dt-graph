@@ -4,8 +4,7 @@ const val SEED=42
 
 const val HIGHPRIORITY = 0
 const val LOWPRIORITY = 1
-const val LIMIT = 200
-
+const val LIMIT = 10
 const val PROPERTY="property"
 const val FROM_TIMESTAMP = "fromTimestamp"
 const val TO_TIMESTAMP = "toTimestamp"
@@ -42,6 +41,6 @@ const val METEO_POINT = "POINT (11.80164 44.234831)"
 //Max amount of ports associated to datafeeds
 const val MAX_ASTERIX_DATE=253402210800000
 const val FIRSTFEEDPORT: Int = 10000
-const val MAX_TS=60999
+const val LASTFEEDPORT: Int = 65000
 const val DATASET_PREFIX="dataset_"
 const val DATAFEED_PREFIX="MeasurementsFeed_"
