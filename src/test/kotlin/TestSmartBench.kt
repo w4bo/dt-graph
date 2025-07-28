@@ -6,10 +6,8 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.LIMIT
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import java.io.File
 import java.util.*
 import kotlin.system.measureTimeMillis
 import kotlin.test.Test
@@ -72,7 +70,6 @@ class TestSmartBench {
         graph = MemoryGraphACID.readFromDisk() // Reload from disk
         graph.tsm = AsterixDBTSM.createDefault(graph)
 
-        println("Should be done")
         println("Loaded ${graph.getNodes().size} vertexes")
         println("Loaded ${graph.getEdges().size} edges")
         println("Loaded ${graph.getProps().size} props")
@@ -261,7 +258,7 @@ class TestSmartBench {
      * MaintenanceOwners(𝜏, alpha): List all owners of devices that measured took measurements
      * of type 𝜏 above a threshold alpha during the period [𝑡𝑎, 𝑡𝑏 [
     */ //TODO
-    fun MaintenanceOwners() {
+    fun maintenanceOwners() {
         val tA = 1510700400000L // 15/11/2017 00:00:00
         val tB = 1511564400000L // 25/12/2017 00:00:00
         val minTemp = 65L
@@ -339,7 +336,7 @@ class TestSmartBench {
      * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during
      * the period [𝑡𝑎, 𝑡𝑏 [.
      */
-    fun EnvironmentOutlier(){
+    fun environmentOutlier(){
 
         //TODO: Fixa average
 
@@ -429,7 +426,7 @@ class TestSmartBench {
     /*
      * AgentOutlier: List the max value measured for each agent in each environment
      */
-    fun AgentOutlier() {
+    fun agentOutlier() {
         val tau = Temperature
         val tA = 1510095600000 // 08/11/2017 00:00:00
         val tB = 1516370586000 // 19/01/2018 00:00:00
@@ -605,12 +602,12 @@ class TestSmartBench {
         repeat(testIterations) { i ->
             uuid = UUID.randomUUID()
             println("\n=== RUN  ITERATION #${i + 1} ===")
-            // environmentCoverage()
-            // environmentAggregate()
-            MaintenanceOwners()
-            // EnvironmentOutlier()
-            // AgentOutlier()
-            // agentHistory()
+            environmentCoverage()
+            environmentAggregate()
+            maintenanceOwners()
+            environmentOutlier()
+            agentOutlier()
+            agentHistory()
         }
     }
 }
