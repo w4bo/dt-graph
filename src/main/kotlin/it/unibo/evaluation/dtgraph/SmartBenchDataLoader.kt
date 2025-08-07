@@ -43,8 +43,8 @@ class SmartBenchDataLoader(
             ) else it.toString()
         }}") }
 
-    fun loadData(dataPath: List<String>): Boolean {
-        val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
+    fun loadData(dataPath: List<String>, threads: Int = LIMIT): Boolean {
+        val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
         val tsList : MutableMap<TS, String> = mutableMapOf()
             val totalTime = measureTimeMillis {
                 for (file in dataPath) {
@@ -111,19 +111,27 @@ class SmartBenchDataLoader(
 
                                         val labelString = if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
                                         val sensorTsFilePath =
-                                            "${Paths.get(file).parent?.toString()}\\timeseries\\${sensorId}.json"
-                                        print(sensorTsFilePath)
+                                            "${Paths.get(file).parent?.toString()}${File.separator}timeseries${File.separator}${sensorId}.json"
+                                        println("Trying to find TSFILE in $sensorTsFilePath")
                                         val sensorTSFile = this::class.java.classLoader.getResource(
                                             sensorTsFilePath
                                         )
-                                        sensorTSFile?.let {
+//                                        sensorTSFile?.let {
+//                                            println("Found $sensorTsFilePath")
+//                                            val newTs = tsm.addTS()
+//                                            val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
+//                                            graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
+//                                            tsList[newTs] = sensorTsFilePath
+//                                        }
+                                        if (sensorTSFile != null) {
                                             println("Found $sensorTsFilePath")
                                             val newTs = tsm.addTS()
                                             val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                             tsList[newTs] = sensorTsFilePath
+                                        } else {
+                                            println("sensorTSFile is null, skipping...")
                                         }
-
                                     }
 
 //                                }
@@ -137,6 +145,7 @@ class SmartBenchDataLoader(
                     println("Processed $count entities from $file in $fileTime ms")
                 }
                 println("Starting TS data loading...")
+                val c = measureTimeMillis {
                 runBlocking {
                     val jobs = tsList.map{
                             row -> launch(executor) {
@@ -145,6 +154,9 @@ class SmartBenchDataLoader(
                     }
                     jobs.joinAll()
                 }
+
+                }
+                println("IT TOOK $c ms to load TS data")
                 val latentTime = measureTimeMillis {
                     for ((label, source, destId) in leftoverEdgesList) {
                         val target = graphIdList[destId] ?: continue

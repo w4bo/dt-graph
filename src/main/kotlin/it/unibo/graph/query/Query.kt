@@ -459,7 +459,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                             val r = (curElem.e as R)
                             if (curElem.e.label === HasTS) { // ... to time series
                                 launched++
-                                launch(executor) {
+                                if(LIMIT == 1){
                                     try {
                                         g.getTSM()
                                             .getTS(r.toN)
@@ -467,12 +467,29 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                             .forEach {
                                                 mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                             }
-                                    // } catch (e: Exception) {
-                                    //     e.printStackTrace()
-                                    //     throw IllegalArgumentException(e.message)
+                                        // } catch (e: Exception) {
+                                        //     e.printStackTrace()
+                                        //     throw IllegalArgumentException(e.message)
                                     } finally {
                                         completed.incrementAndGet()
                                         wait.release()
+                                    }
+                                }else{
+                                    launch(executor) {
+                                        try {
+                                            g.getTSM()
+                                                .getTS(r.toN)
+                                                .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
+                                                .forEach {
+                                                    mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
+                                                }
+                                            // } catch (e: Exception) {
+                                            //     e.printStackTrace()
+                                            //     throw IllegalArgumentException(e.message)
+                                        } finally {
+                                            completed.incrementAndGet()
+                                            wait.release()
+                                        }
                                     }
                                 }
                             } else { // ... or to graph node

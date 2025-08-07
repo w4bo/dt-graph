@@ -29,8 +29,8 @@ class AsterixDBHTTPClient(
             initializeTS(dataFeedIp, dataFeedPort, datatype)
             Random(seed)
         }
-
     }
+
     fun checkDatasetExists(dataverse : String, dataset : String) : Boolean {
         val checkDatasetExistence = """
             SELECT VALUE ds
@@ -58,12 +58,13 @@ class AsterixDBHTTPClient(
             CREATE DATASET $dataset($dataType)IF NOT EXISTS primary key timestamp;
             CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
         """.trimIndent()
+        val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
         var dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
                       "adapter-name": "socket_adapter",
-                      "sockets": "$dataFeedIp:$newDataFeedPort",
+                      "sockets": "${hostIP}:$newDataFeedPort",
                       "address-type": "IP",
                       "type-name": "$dataType",
                       "policy": "Spill",
@@ -80,19 +81,18 @@ class AsterixDBHTTPClient(
             datasetSetup = queryAsterixDB(datasetSetupQuery)
         }
 
-        //If dataset existed or I've successfully created it
+        //If dataset already existed or I've successfully created it
         if(datasetSetup || datasetExists){
             var socketConnect: Boolean
             var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
 
             socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
-
             // Until I've succesffully created a DataFeed and I can actually connect to it
             while(!datafeedSetup || !socketConnect){
                 // TODO: cap the number of retries and fail if it doesn't work
                 // TODO: Update this new port generation, should be more deterministic
                 newDataFeedPort = randomDataFeedPort()
-                datafeedSetup = setupDataFeed(dataFeedIp, newDataFeedPort, dataverse, feedName, dataset, dataType)
+                datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
 
                 if(datafeedSetup){
                     socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
@@ -165,7 +165,6 @@ class AsterixDBHTTPClient(
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            print(query)
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             throw UnsupportedOperationException(e)
         }
@@ -216,6 +215,7 @@ class AsterixDBHTTPClient(
         } catch (e: Exception) {
             println(e)
             connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            throw Exception()
         }
 
         return when {
@@ -233,7 +233,7 @@ class AsterixDBHTTPClient(
                     } catch (e: Exception) {
                         println(e)
                         println("Error parsing JSON response: ${e.message}")
-                        AsterixDBResult.ErrorResult
+                        throw Exception("Error parsing JSON response: ${e.message}")
                     }
                 } else {
                     AsterixDBResult.InsertResult
@@ -241,7 +241,7 @@ class AsterixDBHTTPClient(
             }
             else -> {
                 println("Query failed with status code $statusCode")
-                AsterixDBResult.ErrorResult
+                throw Exception("Query failed with status code $statusCode")
             }
         }
     }

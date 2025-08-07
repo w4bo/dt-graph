@@ -54,6 +54,8 @@ class AsterixDBTSM private constructor(
         return newTS
     }
 
+
+
     override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
@@ -162,10 +164,10 @@ class AsterixDBTSM private constructor(
         fun createDefault(g: Graph): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
-                props["default_cc_host"].toString(),
+                System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
                 props["default_cc_port"].toString(),
                 props["default_dataverse"].toString(),
-                listOf(props["default_nc_pool"].toString()),
+                System.getenv("DEFAULT_NC_POOL")?.split('|') ?: listOf("localhost"),
                 props["default_datatype"].toString(),
             )
         }

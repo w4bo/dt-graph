@@ -9,71 +9,52 @@ import it.unibo.graph.query.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import java.util.*
+import java.io.File
 import kotlin.system.measureTimeMillis
 import kotlin.test.Test
+import it.unibo.graph.utils.LIMIT
+import org.slf4j.LoggerFactory
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TestSmartBench {
-    val dataset = "smartbench"
-    val size = props["default_smartbench_size"]
-    val testIterations = props["smartbench_iterations"]!!.toString().toInt()
+class TestQuerySmartBench {
+    private val logger = LoggerFactory.getLogger(TestQuerySmartBench::class.java)
+
+    val resultFolder = props["smartbench_results_folder"] ?: "results/dt_graph/"
+
+    // Test params set through env variables
+    private val dataset = System.getenv("DATASET") ?: "smartbench"
+    private val testIterations = System.getenv("QUERY_ITERATIONS")?.toInt() ?: 1
+    private val size = System.getenv("DATASETSIZE") ?: "small"
+
+
     var uuid = UUID.randomUUID()
 
     private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int) {
         println("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
-//        val outputDir = File("results/query_evaluation/$dataset")
-//        if (!outputDir.exists()) outputDir.mkdirs()
-//
-//        val file = File(outputDir, "statistics.csv")
-//        val writeHeader = !file.exists()
-//
-//        file.appendText(buildString {
-//            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,queryTime,numEntities\n")
-//            append("${uuid},dtgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities\n")
-//        })
+        val outputDir = File("$resultFolder/query_evaluation/$dataset")
+        if (!outputDir.exists()) outputDir.mkdirs()
+
+        val file = File(outputDir, "statistics.csv")
+        val writeHeader = !file.exists()
+
+        file.appendText(buildString {
+            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,elapsedTime,numEntities\n")
+            append("${uuid},dtgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities\n")
+        })
     }
 
     private lateinit var graph: Graph
 
     @BeforeAll
     fun setup() {
-        val data: List<String> = listOf(
-            "dataset/$dataset/$size/group.json",
-            "dataset/$dataset/$size/user.json",
-            "dataset/$dataset/$size/platformType.json",
-            "dataset/$dataset/$size/sensorType.json",
-            "dataset/$dataset/$size/platform.json",
-            "dataset/$dataset/$size/infrastructureType.json",
-            "dataset/$dataset/$size/infrastructure.json",
-            "dataset/$dataset/$size/sensor.json",
-            "dataset/$dataset/$size/virtualSensorType.json",
-            "dataset/$dataset/$size/virtualSensor.json",
-            "dataset/$dataset/$size/semanticObservationType.json",
-            //"dataset/$dataset/$size/semanticObservation.json",
-            //"dataset/$dataset/$size/observation.json"
-        )
-
         graph = MemoryGraphACID()
+        graph = MemoryGraphACID.readFromDisk() // Reload from disk
         val tsm = AsterixDBTSM.createDefault(graph)
         graph.tsm = tsm
-
-        val reloadData = true
-        if (reloadData) {
-            graph.clear()
-            graph.getTSM().clear()
-            val loader = SmartBenchDataLoader(graph)
-            val executionTime = measureTimeMillis {
-                loader.loadData(data)
-            }
-            (graph as MemoryGraphACID).flushToDisk() // Persist graph state to disk
-        }
-        graph = MemoryGraphACID.readFromDisk() // Reload from disk
-        graph.tsm = AsterixDBTSM.createDefault(graph)
 
         println("Loaded ${graph.getNodes().size} vertexes")
         println("Loaded ${graph.getEdges().size} edges")
         println("Loaded ${graph.getProps().size} props")
-        //println("Ingestion Time: ${executionTime / 1000} s")
     }
 
     /*
@@ -133,25 +114,25 @@ class TestSmartBench {
         }
 
 
-        semanticQueryTime = measureTimeMillis {
-            semanticResult =
-                query(graph, pattern, where = listOf(Compare("s1", "s2", "id", Operators.EQ)), timeaware = false)
-        }
+//        semanticQueryTime = measureTimeMillis {
+//            semanticResult =
+//                query(graph, pattern, where = listOf(Compare("s1", "s2", "id", Operators.EQ)), timeaware = false)
+//        }
+//
+//        // v.1
+//        spatialQueryTime = measureTimeMillis {
+//            // v.2
+//            spatialResult = query(
+//                graph, spatialPattern,
+//                where = listOf(Compare("targetLocation", "Measurement", "location", Operators.ST_INTERSECTS)),
+//                by = listOf(Aggregate("s1", "id")),
+//                timeaware = false
+//            )
+//        }
 
-        // v.1
-        spatialQueryTime = measureTimeMillis {
-            // v.2
-            spatialResult = query(
-                graph, spatialPattern,
-                where = listOf(Compare("targetLocation", "Measurement", "location", Operators.ST_INTERSECTS)),
-                by = listOf(Aggregate("s1", "id")),
-                timeaware = false
-            )
-        }
-
-        println("--- EnvironmentCoverage execution times ---")
-        logQueryResult("EnvironmentCoverage","semantic", semanticQueryTime, semanticResult.size)
-        logQueryResult("EnvironmentCoverage", "spatial", spatialQueryTime, spatialResult.size)
+        logger.info("--- EnvironmentCoverage execution times ---")
+//        logQueryResult("EnvironmentCoverage","semantic", semanticQueryTime, semanticResult.size)
+//        logQueryResult("EnvironmentCoverage", "spatial", spatialQueryTime, spatialResult.size)
         logQueryResult("EnvironmentCoverage","edgesDirection", edgesDirectionTime, edgesDirectionResult.size)
 
 
@@ -208,18 +189,18 @@ class TestSmartBench {
         val semanticResult: List<Any>
         val edgesDirectionResult: List<Any>
 
-        val spatialQueryTime = measureTimeMillis {
-            spatialResult = query(
-                graph, spatialPattern,
-                where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
-                by = listOf(
-                    Aggregate("Environment","id"),
-                    Aggregate("Device", "id"),
-                    Aggregate("Measurement","value", AggOperator.AVG)
-                ),
-                from = tA, to = tB, timeaware = true
-            )
-        }
+//        val spatialQueryTime = measureTimeMillis {
+//            spatialResult = query(
+//                graph, spatialPattern,
+//                where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
+//                by = listOf(
+//                    Aggregate("Environment","id"),
+//                    Aggregate("Device", "id"),
+//                    Aggregate("Measurement","value", AggOperator.AVG)
+//                ),
+//                from = tA, to = tB, timeaware = true
+//            )
+//        }
 
         val edgesQueryTime = measureTimeMillis {
              edgesDirectionResult = query(
@@ -235,22 +216,22 @@ class TestSmartBench {
 
 
 
-        val semanticQueryTime = measureTimeMillis {
-            semanticResult = query(
-                graph, pattern,
-                where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
-                by = listOf(
-                    Aggregate("Environment","id"),
-                    Aggregate("Device", "id"),
-                    Aggregate("Measurement","value", AggOperator.AVG),
-                ),
-                from = tA, to = tB, timeaware = true
-            )
-        }
+//        val semanticQueryTime = measureTimeMillis {
+//            semanticResult = query(
+//                graph, pattern,
+//                where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
+//                by = listOf(
+//                    Aggregate("Environment","id"),
+//                    Aggregate("Device", "id"),
+//                    Aggregate("Measurement","value", AggOperator.AVG),
+//                ),
+//                from = tA, to = tB, timeaware = true
+//            )
+//        }
 
-        println("--- EnvironmentAggregate execution times ---")
-        logQueryResult("EnvironmentAggregate","semantic", semanticQueryTime, semanticResult.size)
-        logQueryResult("EnvironmentAggregate","spatial", spatialQueryTime, spatialResult.size)
+        logger.info("--- EnvironmentAggregate execution times ---")
+//        logQueryResult("EnvironmentAggregate","semantic", semanticQueryTime, semanticResult.size)
+//        logQueryResult("EnvironmentAggregate","spatial", spatialQueryTime, spatialResult.size)
         logQueryResult("EnvironmentAggregate", "edgesDirection", edgesQueryTime, edgesDirectionResult.size)
     }
 
@@ -260,7 +241,7 @@ class TestSmartBench {
     */ //TODO
     fun maintenanceOwners() {
         val tA = 1510700400000L // 15/11/2017 00:00:00
-        val tB = 1511564400000L // 25/12/2017 00:00:00
+        val tB = 1514156400000L // 25/12/2017 00:00:00
         val minTemp = 65L
 
         val edgesDirectionPattern = listOf(
@@ -276,19 +257,39 @@ class TestSmartBench {
                 null,
                 null,
                 Step(HasTS),
-                Step(Temperature, properties = listOf(Filter("value",Operators.GTE, minTemp)))
+                Step(Temperature, properties = listOf(Filter("value",Operators.LTE, minTemp)))
             ),
         )
-
+        val simplePattern = listOf(
+            Step(Infrastructure, alias = "Environment"),
+            EdgeStep(hasCoverage, direction = Direction.IN ),
+            Step(Sensor, alias = "Device"),
+            null,
+            null,
+            Step(HasTS),
+            Step(Temperature, properties = listOf(Filter("value",Operators.GTE, minTemp)))
+        )
         val edgesDirectionResult : List<Any>
+//        val edgesDirectionQueryTime = measureTimeMillis {
+//            edgesDirectionResult = query(
+//                graph, edgesDirectionPattern,
+//                where = listOf(Compare("Device","Device2","id",Operators.EQ)),
+//                by = listOf(
+//                    Aggregate("Device", "id"),
+//                    Aggregate("Environment","id"),
+//                    Aggregate("Owner", "emailId"),
+//                ),
+//                from = tA,
+//                to = tB,
+//                timeaware = true
+//            )
+//        }
         val edgesDirectionQueryTime = measureTimeMillis {
-            edgesDirectionResult = query(
-                graph, edgesDirectionPattern,
-                where = listOf(Compare("Device","Device2","id",Operators.EQ)),
+            edgesDirectionResult = search(
+                graph, simplePattern,
                 by = listOf(
                     Aggregate("Device", "id"),
                     Aggregate("Environment","id"),
-                    Aggregate("Owner", "emailId"),
                 ),
                 from = tA,
                 to = tB,
@@ -325,7 +326,7 @@ class TestSmartBench {
 //            )//from = 0, to = 5)
 //          }
 
-        println("--- MaintenanceOwners execution times ---")
+        logger.info("--- MaintenanceOwners execution times ---")
         //logQueryResult("MaintenanceOwners", "semantic", semanticQueryTime, semanticResult.size)
         //logQueryResult("MaintenanceOwners", "spatial", spatialQueryTime, spatialResult.size)
         logQueryResult("MaintenanceOwners", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size)
@@ -416,7 +417,7 @@ class TestSmartBench {
             )
         }
 
-        println("--- EnvironmentOutlier execution times ---")
+        logger.info("--- EnvironmentOutlier execution times ---")
 
         //logQueryResult("EnvironmentOutlier", "semantic", semanticQueryTime, semanticResult.size)
         //logQueryResult("EnvironmentOutlier", "spatial",  spatialQueryTime, spatialResult.size)
@@ -470,13 +471,13 @@ class TestSmartBench {
         val spatialResult : List<Any>
         val edgesDirectionResult : List<Any>
 
-        val semanticQueryTime = measureTimeMillis {
-            semanticResult = query(graph, semanticPattern,
-                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
-                from = tA,
-                to = tB,
-                timeaware = true)
-        }
+//        val semanticQueryTime = measureTimeMillis {
+//            semanticResult = query(graph, semanticPattern,
+//                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
+//                from = tA,
+//                to = tB,
+//                timeaware = true)
+//        }
 
 //        val spatialQueryTime = measureTimeMillis {
 //            spatialResult = query(graph, spatialPattern,
@@ -487,18 +488,18 @@ class TestSmartBench {
 //                timeaware = true)
 //        }
 
-//        val edgesDirectionTime = measureTimeMillis {
-//            edgesDirectionResult = query(graph, edgesDirectionPattern,
-//                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
-//                from = tA,
-//                to = tB,
-//                timeaware = true)
-//        }
+        val edgesDirectionTime = measureTimeMillis {
+            edgesDirectionResult = query(graph, edgesDirectionPattern,
+                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
+                from = tA,
+                to = tB,
+                timeaware = true)
+        }
 
-        println("--- AgentOutlier execution times ---")
-        logQueryResult("AgentOutlier", "semantic", semanticQueryTime, semanticResult.size)
+        logger.info("--- AgentOutlier execution times ---")
+        //logQueryResult("AgentOutlier", "semantic", semanticQueryTime, semanticResult.size)
         //logQueryResult("AgentOutlier", "spatial", spatialQueryTime, spatialResult.size)
-        //logQueryResult("AgentOutlier", "edgesDirection", edgesDirectionTime, edgesDirectionResult.size)
+        logQueryResult("AgentOutlier", "edgesDirection", edgesDirectionTime, edgesDirectionResult.size)
 
     }
 
@@ -557,43 +558,43 @@ class TestSmartBench {
             edgesDirectionEntitites += edgesDirectionResult.size
 
 
-            semanticQueryTime += measureTimeMillis {
-                semanticResult = query(
-                    graph, traversalPattern,
-                    where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
-                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id")),
-                    timeaware = true
-                )
-            }
-            semanticEntities += semanticResult.size
+//            semanticQueryTime += measureTimeMillis {
+//                semanticResult = query(
+//                    graph, traversalPattern,
+//                    where = listOf(Compare("Device", "Device2", "id", Operators.EQ)),
+//                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id")),
+//                    timeaware = true
+//                )
+//            }
+//            semanticEntities += semanticResult.size
         }
 
 
-        devices.forEach {
-            val spatialPattern = listOf(
-                listOf(Step(Infrastructure, alias = "Environment")),
-                listOf(
-                    Step(Sensor, listOf(Filter("id", Operators.EQ, it)), alias = "Device"),
-                    null,
-                    null,
-                    Step(HasTS),
-                    Step(Temperature, alias = "Measurement")
-                )
-            )
-            spatialQueryTime += measureTimeMillis {
-                spatialResult = query(
-                    graph, spatialPattern,
-                    where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
-                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id"))
-                )
-            }
-            spatialEntities += spatialResult.size
+//        devices.forEach {
+//            val spatialPattern = listOf(
+//                listOf(Step(Infrastructure, alias = "Environment")),
+//                listOf(
+//                    Step(Sensor, listOf(Filter("id", Operators.EQ, it)), alias = "Device"),
+//                    null,
+//                    null,
+//                    Step(HasTS),
+//                    Step(Temperature, alias = "Measurement")
+//                )
+//            )
+//            spatialQueryTime += measureTimeMillis {
+//                spatialResult = query(
+//                    graph, spatialPattern,
+//                    where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_INTERSECTS)),
+//                    by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id"))
+//                )
+//            }
+//            spatialEntities += spatialResult.size
+//
+//        }
 
-        }
-
-        println("--- AgentHistory execution times ---")
-        logQueryResult("AgentHistory", "semantic", semanticQueryTime, semanticEntities)
-        logQueryResult("AgentHistory", "spatial", spatialQueryTime, spatialEntities)
+        logger.info("--- AgentHistory execution times ---")
+//        logQueryResult("AgentHistory", "semantic", semanticQueryTime, semanticEntities)
+//        logQueryResult("AgentHistory", "spatial", spatialQueryTime, spatialEntities)
         logQueryResult("AgentHistory", "edgesDirection", edgesDirectionQueryTime, edgesDirectionEntitites)
     }
 
@@ -601,7 +602,7 @@ class TestSmartBench {
     fun runAllQueriesNTimes() {
         repeat(testIterations) { i ->
             uuid = UUID.randomUUID()
-            println("\n=== RUN  ITERATION #${i + 1} ===")
+            logger.info("\n=== RUN QUERY ITERATION #${i + 1} ===")
             environmentCoverage()
             environmentAggregate()
             maintenanceOwners()

@@ -32,6 +32,7 @@ class AsterixDBTS(
     val dataFeedIp : String = getDataFeedIP(id, nodeControllersIPs)
     var dataFeedPort : Int = getDataFeedPort(id, FIRSTFEEDPORT, LASTFEEDPORT)
 
+
     private lateinit var socket: Socket
     private lateinit var outputStream: OutputStream
     private lateinit var writer: PrintWriter
@@ -53,6 +54,7 @@ class AsterixDBTS(
         dataset = asterixHTTPClient.getDataset()
         // DataFeedPort might be changed if connection failed
         dataFeedPort = asterixHTTPClient.getDataFeedPort()
+
     }
 
     private fun openDataFeedConnection() {
@@ -189,7 +191,7 @@ class AsterixDBTS(
                     ${applyFilters(filters)}
                 """.trimIndent()
             if(isGroupBy){
-                selectQuery = "$selectQuery  ORDER BY timestamp DESC LIMIT 1;"
+                selectQuery = "$selectQuery LIMIT 1;"
             }
         } else {
             val groupBy = groupby(by)!!
@@ -214,16 +216,12 @@ class AsterixDBTS(
             """.trimIndent()
         }
         val outNodes : List<N>
-
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
 
             // If it's a simple select *
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
                 outNodes = result.entities.map { selectNodeFromJsonObject((it as JSONObject)) }
-//                if(outNodes.isNotEmpty()){
-//                    println("HELLo")
-//                }
                 return outNodes
             }
 

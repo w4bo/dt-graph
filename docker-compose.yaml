@@ -10,16 +10,9 @@ services:
       - |
         cp /asterixsetup/cc.conf opt/local/conf/cc.conf
         opt/local/bin/start-sample-cluster.sh
-        curl -X POST "http://localhost:19002/query/service" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        --data-urlencode "statement=$(cat /asterixsetup/setup.txt)" \
-        --data-urlencode "pretty=true" \
-        --data-urlencode "mode=immediate" \
-
         tail -f /dev/null
     volumes:
       - "./asterixdbconf:/asterixsetup/"
-      - "./asterix_data:/workspace/asterixdb/asterixdb/asterix-server/target/asterix-server-0.9.10-SNAPSHOT-binary-assembly/apache-asterixdb-0.9.10-SNAPSHOT/opt/local/data"
     ports:
       - 19006:19006
       - 19002:19002
@@ -27,5 +20,24 @@ services:
       - 19003:19003
       - 1009:1009
       - 1098:1098
-      - 10001-10600:10001-10600
 
+  dtgraph:
+    image: mp4sini/dtgraph
+    hostname: dtgraph
+    container_name: dtgraph
+    volumes:
+      - "./results:/dt_graph/results"
+      - "./db_graphm:/dt_graph/db_graphm"
+      - ${RESOURCES_PATH}:/dt_graph/src/main/resources/dataset"
+      - "./logs:/dt_graph/logs"
+    env_file: .env
+    depends_on:
+      - asterixdb
+    command:
+      - /bin/bash
+      - -c
+      - |
+        tail -f /dev/null
+#        ./wait-for-it.sh asterixdb:19006 -t 90 -- echo "AsterixDB running, starting to ingest data..."
+#        chmod +x scripts/run_smartbench_evaluation.sh
+#        ./scripts/run_smartbench_evaluation.sh

@@ -5,4 +5,6 @@ LABEL authors="manuele.pasini2"
 COPY . /dt_graph
 WORKDIR /dt_graph
 
-CMD ["gradle", "build", "-x", "test"]
+RUN gradle build  -x test --no-daemon
+
+CMD ["bash"]

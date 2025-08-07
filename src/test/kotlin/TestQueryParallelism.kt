@@ -106,7 +106,7 @@ class TestQueryParallelism {
         runBlocking {
             val iterations = listOf(2, 4, 10, 20, 50, 100, 150, 200)
             val endpoint = "http://localhost:19002/query/service"
-            val folder = Paths.get(props["benchmark_results_folder"].toString()).toFile()
+            val folder = Paths.get(props["parallelism_results_folder"].toString()).toFile()
             if (!folder.exists()) {
                 folder.mkdirs()
             }
