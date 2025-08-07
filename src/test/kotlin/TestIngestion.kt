@@ -16,7 +16,7 @@ class TestIngestion {
     // Test params set through env variables
     private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
     private val threads = System.getenv("THREAD")?.toInt() ?: 1
-    private val dataset_size = System.getenv("DATASETSIZE") ?: "small"
+    private val dataset_size = System.getenv("DATASET_SIZE") ?: "small"
 
     // Output folders setup
     private val resultPath = "${props["smartbench_results_folder"] ?: "results/dt_graph/"}ingestion_time"

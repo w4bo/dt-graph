@@ -24,7 +24,7 @@ class TestQuerySmartBench {
     // Test params set through env variables
     private val dataset = System.getenv("DATASET") ?: "smartbench"
     private val testIterations = System.getenv("QUERY_ITERATIONS")?.toInt() ?: 1
-    private val size = System.getenv("DATASETSIZE") ?: "small"
+    private val size = System.getenv("DATASET_SIZE") ?: "small"
 
 
     var uuid = UUID.randomUUID()
