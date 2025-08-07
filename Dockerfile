@@ -1,4 +1,4 @@
-FROM gradle:8.13-jdk21-corretto
+FROM gradle:8.3-jdk17
 
 LABEL authors="manuele.pasini2"
 

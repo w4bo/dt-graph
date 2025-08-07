@@ -35,7 +35,6 @@ services:
       - /bin/bash
       - -c
       - |
-        tail -f /dev/null
         ./wait-for-it.sh asterixdb:19006 -t 90 -- echo "AsterixDB running, starting to ingest data..."
         chmod +x scripts/download_dataset.sh
         chmod +x scripts/run_smartbench_evaluation.sh
