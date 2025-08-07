@@ -112,7 +112,6 @@ class SmartBenchDataLoader(
                                         val labelString = if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
                                         val sensorTsFilePath =
                                             "${Paths.get(file).parent?.toString()}${File.separator}timeseries${File.separator}${sensorId}.json"
-                                        println("Trying to find TSFILE in $sensorTsFilePath")
                                         val sensorTSFile = this::class.java.classLoader.getResource(
                                             sensorTsFilePath
                                         )
@@ -124,13 +123,10 @@ class SmartBenchDataLoader(
 //                                            tsList[newTs] = sensorTsFilePath
 //                                        }
                                         if (sensorTSFile != null) {
-                                            println("Found $sensorTsFilePath")
                                             val newTs = tsm.addTS()
                                             val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
                                             graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                             tsList[newTs] = sensorTsFilePath
-                                        } else {
-                                            println("sensorTSFile is null, skipping...")
                                         }
                                     }
 

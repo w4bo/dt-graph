@@ -31,7 +31,7 @@ class TestQuerySmartBench {
 
     private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int) {
         println("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
-        val outputDir = File("$resultFolder/query_evaluation/$dataset")
+        val outputDir = File("$resultFolder/query_evaluation/")
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val file = File(outputDir, "statistics.csv")
