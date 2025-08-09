@@ -31,7 +31,7 @@ idea {
 
 dependencies {
     implementation 'org.apache.tinkerpop:gremlin-core:3.7.4'
-    implementation 'org.apache.tinkerpop:gremlin-server:3.7.3' // Optional for Gremlin Server
+    implementation 'org.apache.tinkerpop:gremlin-server:3.7.4' // Optional for Gremlin Server
     implementation 'org.apache.tinkerpop:gremlin-driver:3.7.4' // Gremlin client for remote queries
     implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.7.3' // In-memory graph (for testing)
     implementation 'org.rocksdb:rocksdbjni:10.2.1'
