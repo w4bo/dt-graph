@@ -1,5 +1,4 @@
 outputs/*.csv
-statistics.csv
 results/dummy.pdf
 metastore_db/
 db_*
