@@ -1,3 +1,19 @@
+## [1.2.9](https://github.com/w4bo/dt-graph/compare/1.2.8...1.2.9) (2025-08-20)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.140 ([#88](https://github.com/w4bo/dt-graph/issues/88)) ([59c3acf](https://github.com/w4bo/dt-graph/commit/59c3acf5a42e53633ce917fa634705dd38c6f312))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.2.10 ([#89](https://github.com/w4bo/dt-graph/issues/89)) ([0288118](https://github.com/w4bo/dt-graph/commit/0288118f062333ce3e702f7f8e2eb4483b77dcbe))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.4.2 ([#90](https://github.com/w4bo/dt-graph/issues/90)) ([1782e80](https://github.com/w4bo/dt-graph/commit/1782e807e04283c8b7235f473ed7ef81e297173c))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v4.3.0 ([#86](https://github.com/w4bo/dt-graph/issues/86)) ([44d102f](https://github.com/w4bo/dt-graph/commit/44d102f2e65dc25c8e494128306219fffa815dbb))
+* **deps:** update actions/checkout action to v5 ([#87](https://github.com/w4bo/dt-graph/issues/87)) ([f4ad8a9](https://github.com/w4bo/dt-graph/commit/f4ad8a90fe49d6d29dd325a94af719f72d7a7ba6))
+
 ## [1.2.8](https://github.com/w4bo/dt-graph/compare/1.2.7...1.2.8) (2025-08-10)
 
 ### Bug Fixes
