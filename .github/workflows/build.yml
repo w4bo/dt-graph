@@ -22,7 +22,12 @@ jobs:
           docker compose -f docker-compose_asterix.yaml up -d
           chmod +x ./gradlew
           chmod +x ./wait-for-it.sh
-          ./wait-for-it.sh localhost:19006 -t 30 -- ./gradlew test --tests '*Test*' -x TestIngestion -x TestQueryParallelism -x TestQuerySmartBench
+          ./wait-for-it.sh localhost:19006 -t 30 
+          ./gradlew test --tests TestKotlin
+          ./gradlew test --tests TestTemporal
+          ./gradlew test --tests TestTemporalJoin
+          ./gradlew test --tests TestTemporalProperty
+          ./gradlew test --tests TestWorkload
 
   release:
     needs:
