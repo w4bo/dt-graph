@@ -19,7 +19,7 @@ jobs:
           java-version: '8'
       - name: Test Gradle
         run: |
-          docker compose up --file docker-compose_asterix.yaml -d
+          docker-compose up -f docker-compose_asterix.yaml -d
           chmod +x ./gradlew
           chmod +x ./wait-for-it.sh
           ./wait-for-it.sh localhost:19006 -t 30 -- ./gradlew test --stacktrace --scan \
