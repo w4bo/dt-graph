@@ -1,11 +1,10 @@
-package it.unibo.evaluation.dtgraph
+package it.unibo.ingestion
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
-import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.LIMIT
