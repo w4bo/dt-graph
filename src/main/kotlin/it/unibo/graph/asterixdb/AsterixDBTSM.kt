@@ -167,7 +167,7 @@ class AsterixDBTSM private constructor(
                 System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
                 props["default_cc_port"].toString(),
                 props["default_dataverse"].toString(),
-                System.getenv("DEFAULT_NC_POOL")?.split('|') ?: listOf("localhost"),
+                System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
                 props["default_datatype"].toString(),
             )
         }

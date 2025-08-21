@@ -23,12 +23,7 @@ RUN curl -O https://downloads.apache.org/asterixdb/asterixdb-0.9.9/asterix-serve
 RUN unzip asterix-server-0.9.9-binary-assembly.zip && \
     rm asterix-server-0.9.9-binary-assembly.zip
 
-GIT CLONE
-
 WORKDIR /workspace/apache-asterixdb-0.9.9
-
-# Expose ports for AsterixDB
-EXPOSE 19002 19006
 
 # Set the default command to open a bash shell
 CMD ["/bin/bash"]

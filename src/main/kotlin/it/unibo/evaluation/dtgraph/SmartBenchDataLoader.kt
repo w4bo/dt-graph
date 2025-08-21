@@ -108,7 +108,8 @@ class SmartBenchDataLoader(
                                     // If it's a sensor, check if it has a TS attached
                                     if (typeVal == Labels.Sensor.toString() || typeVal == Labels.VirtualSensor.toString()) {
                                         val sensorId = obj["id"] as String
-
+                                        // TODO:
+                                        // TODO: ATM IT works only with Sensors label and Temperature TS
                                         val labelString = if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
                                         val sensorTsFilePath =
                                             "${Paths.get(file).parent?.toString()}${File.separator}timeseries${File.separator}${sensorId}.json"
