@@ -58,6 +58,22 @@ fun propTypeFromValue(value: Any): PropType {
     }
 }
 
+fun remove3DfromWkt(wkt: String): String {
+    // 1. Rimuove eventuali marker Z, M, ZM
+    var result = wkt.replace(Regex("""\bZ[M]?\b"""), "").trim()
+
+    // 2. Cerca solo tuple con 3 o 4 numeri -> le riduce a 2
+    result = result.replace(
+        Regex("""(-?\d+(?:\.\d+)?)[ ]+(-?\d+(?:\.\d+)?)(?:[ ]+-?\d+(?:\.\d+)?){1,2}""")
+    ) { match ->
+        val x = match.groupValues[1]
+        val y = match.groupValues[2]
+        "$x $y"
+    }
+
+    return result
+}
+
 fun loadProps(): Properties {
     return Properties().apply {
         load(ClassLoader.getSystemResourceAsStream("config.properties"))

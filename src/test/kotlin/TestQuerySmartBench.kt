@@ -37,8 +37,8 @@ class TestQuerySmartBench {
         val writeHeader = !file.exists()
 
         file.appendText(buildString {
-            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,elapsedTime,numEntities\n")
-            append("${uuid},dtgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities\n")
+            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines\n")
+            append("${uuid},dtgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1}\n")
         })
     }
 
@@ -602,12 +602,21 @@ class TestQuerySmartBench {
         repeat(testIterations) { i ->
             uuid = UUID.randomUUID()
             logger.info("\n=== RUN QUERY ITERATION #${i + 1} ===")
-            environmentCoverage()
-            environmentAggregate()
-            maintenanceOwners()
-            environmentOutlier()
-            agentOutlier()
-            agentHistory()
+
+            fun safeRun(name: String, block: () -> Unit) {
+                try {
+                    block()
+                } catch (e: Exception) {
+                    logger.error("Query $name failed in iteration #${i + 1}: ${e.message}")
+                }
+            }
+
+            safeRun("environmentCoverage") { environmentCoverage() }
+            safeRun("environmentAggregate") { environmentAggregate() }
+            safeRun("maintenanceOwners") { maintenanceOwners() }
+            safeRun("environmentOutlier") { environmentOutlier() }
+            safeRun("agentOutlier") { agentOutlier() }
+            safeRun("agentHistory") { agentHistory() }
         }
     }
 }

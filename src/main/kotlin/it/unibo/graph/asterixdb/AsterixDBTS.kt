@@ -32,7 +32,6 @@ class AsterixDBTS(
     val dataFeedIp : String = getDataFeedIP(id, nodeControllersIPs)
     var dataFeedPort : Int = getDataFeedPort(id, FIRSTFEEDPORT, LASTFEEDPORT)
 
-
     private lateinit var socket: Socket
     private lateinit var outputStream: OutputStream
     private lateinit var writer: PrintWriter

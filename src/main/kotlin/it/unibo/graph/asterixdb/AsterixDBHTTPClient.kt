@@ -59,7 +59,7 @@ class AsterixDBHTTPClient(
             CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
         """.trimIndent()
         val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
-        var dataFeedSetupQuery = """
+        val dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
@@ -80,29 +80,35 @@ class AsterixDBHTTPClient(
         if(!datasetExists){
             datasetSetup = queryAsterixDB(datasetSetupQuery)
         }
+        try{
+            //If dataset already existed or I've successfully created it
+            if(datasetSetup || datasetExists){
+                var socketConnect: Boolean
+                // Try to setup a DataFeed
+                var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
+                // Try to connect to it
+                socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
+                // Until I've succesffully created a DataFeed and I can actually connect to it
+                while(!datafeedSetup || !socketConnect){
+                    // TODO: cap the number of retries and fail if it doesn't work
+                    // TODO: Update this new port generation, should be more deterministic
+                    newDataFeedPort = randomDataFeedPort()
+                    datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
 
-        //If dataset already existed or I've successfully created it
-        if(datasetSetup || datasetExists){
-            var socketConnect: Boolean
-            var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
-
-            socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
-            // Until I've succesffully created a DataFeed and I can actually connect to it
-            while(!datafeedSetup || !socketConnect){
-                // TODO: cap the number of retries and fail if it doesn't work
-                // TODO: Update this new port generation, should be more deterministic
-                newDataFeedPort = randomDataFeedPort()
-                datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
-
-                if(datafeedSetup){
-                    socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
+                    if(datafeedSetup){
+                        socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
+                    }
                 }
+                dataFeedPort = newDataFeedPort
+                return true
+            }else{
+                return false
             }
-            dataFeedPort = newDataFeedPort
-            return true
-        }else{
-            return false
+        }catch(e: Exception){
+            newDataFeedPort = randomDataFeedPort()
+            return initializeTS(dataFeedIp, newDataFeedPort, dataType)
         }
+
     }
 
 

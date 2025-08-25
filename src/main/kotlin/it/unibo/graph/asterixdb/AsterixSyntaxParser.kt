@@ -3,10 +3,7 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.Filter
 import it.unibo.graph.query.Operators
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.LOCATION
-import it.unibo.graph.utils.MAX_ASTERIX_DATE
-import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.locationtech.jts.geom.Geometry
@@ -304,8 +301,9 @@ private fun parseFilter(filter: Filter): String {
 
     return when (filter.operator) {
         Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {
-            val arg1Raw = if (filter.attrFirst) right else left
-            val arg2Raw = if (filter.attrFirst) left else right
+            val arg1Raw = remove3DfromWkt(if (filter.attrFirst) right else left)
+            val arg2Raw = remove3DfromWkt(if (filter.attrFirst) left else right)
+
 
             val arg1 = normalizeWkt(arg1Raw)?.let { "st_geom_from_text('$it')" } ?: arg1Raw
             val arg2 = normalizeWkt(arg2Raw)?.let { "st_geom_from_text('$it')" } ?: arg2Raw
