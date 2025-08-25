@@ -12,6 +12,9 @@ mkdir -p dt_graph/logs
 
 # Test ingestion performances
 for DATASET in "${DATASET_SIZES[@]}"
+
+./download_dataset.sh $DATASET
+
 do
   export DATASET_SIZE="$DATASET"
   export INGESTION_ITERATIONS=$INGESTION_ITERATIONS_NUMBER
