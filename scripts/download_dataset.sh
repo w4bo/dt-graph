@@ -10,7 +10,7 @@ mkdir -p "$OUTPUT_DIR"
 echo "Downloading dataset ..."
 cd "$OUTPUT_DIR" || exit 1
 
-wget ${LINK}${DATASET_SIZE}.tar
+wget "${LINK}${DATASET_SIZE}.tar"
 
 if [[ -f "${DATASET_SIZE}.tar" ]]; then
     echo "Downloaded: ${DATASET_SIZE}.tar"
