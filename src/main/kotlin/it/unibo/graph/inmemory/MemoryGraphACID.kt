@@ -152,7 +152,6 @@ class WALRecord(val file: WALSource, val offset: Long, val payload: ByteArray, v
 
 class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 100) {
     private val logChannel: FileChannel
-    private val lock = ReentrantLock()
     val toWrite: MutableList<WALRecord> = mutableListOf()
     private var flushable: Flushable? = null
     private var i = 0
@@ -163,23 +162,22 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
         logChannel = FileChannel.open(File("$PATH/$fileName").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)
     }
 
-    @Throws(IOException::class)
     fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
-        // lock.lock()
         try {
             val record = WALRecord(fileChannel, offset, payload, true)
             toWrite.add(record)
-            val buffer = ByteBuffer.wrap(serialize(record))
-            logChannel.write(buffer)
-            logChannel.force(true)
             if (frequency > 0 && flushable != null) {
                 i = (i + 1) % frequency
                 if (i == 0) {
+                    toWrite.forEach {
+                        val buffer = ByteBuffer.wrap(serialize(it))
+                        logChannel.write(buffer)
+                    }
+                    logChannel.force(true)
                     flushable!!.flushToDisk()
                 }
             }
         } finally {
-            // lock.unlock()
         }
     }
 

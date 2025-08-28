@@ -23,19 +23,18 @@ class TestIngestion {
     private val testUUID: UUID = UUID.randomUUID()
     private val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
 
-    private fun loadSmartBench(graph: Graph, dataPath: List<String>) : IngestionResult {
+    private fun loadSmartBench(graph: Graph, dataPath: List<String>): IngestionResult {
         val loader = SmartBenchDataLoader(graph)
-        val startTimestamp = System.currentTimeMillis()/1000
+        val startTimestamp = System.currentTimeMillis() / 1000
         val ingestionTime = measureTimeMillis {
             loader.loadData(dataPath, threads)
         }
-        val endTimestamp = System.currentTimeMillis()/1000
-        return IngestionResult(startTimestamp,endTimestamp,ingestionTime)
-
+        val endTimestamp = System.currentTimeMillis() / 1000
+        return IngestionResult(startTimestamp, endTimestamp, ingestionTime)
     }
 
-    private fun loadDataset(dataPath: List<String>, threads: Int, dataset : String = "smartbench"){
-        if(!resultFolder.exists()) resultFolder.mkdirs()
+    private fun loadDataset(dataPath: List<String>, threads: Int, dataset: String = "smartbench") {
+        if (!resultFolder.exists()) resultFolder.mkdirs()
 
         val dtGraph: Graph
         dtGraph = MemoryGraphACID()
@@ -46,9 +45,9 @@ class TestIngestion {
         dtGraph.clear()
         dtGraph.getTSM().clear()
 
-        val ingestionStats = when(dataset){
+        val ingestionStats = when (dataset) {
             "smartbench" -> loadSmartBench(dtGraph, dataPath)
-            else -> IngestionResult(-1,-1,-1)
+            else -> IngestionResult(-1, -1, -1)
         }
 
         // Flush graph to disk to be queried
@@ -63,7 +62,7 @@ class TestIngestion {
     }
 
     @Test
-    fun testSmartBenchIngestion(){
+    fun testSmartBenchIngestion() {
         val data: List<String> = listOf(
             "dataset/smartbench/$dataset_size/group.json",
             "dataset/smartbench/$dataset_size/user.json",
