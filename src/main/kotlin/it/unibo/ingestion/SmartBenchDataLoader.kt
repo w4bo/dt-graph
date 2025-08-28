@@ -138,16 +138,24 @@ class SmartBenchDataLoader(
             }
             println("Processed latent edges in $latentTime ms")
         }
+
         println("Starting TS data loading...")
         val tsLoadingTime = measureTimeMillis {
-            runBlocking {
-                val jobs = tsList.map{
-                        row -> launch(executor) {
-                    (row.key as AsterixDBTS).loadInitialData(row.value)
+            if(threads > 1){
+                runBlocking {
+                    val jobs = tsList.map{
+                            row -> launch(executor) {
+                        (row.key as AsterixDBTS).loadInitialData(row.value)
+                    }
+                    }
+                    jobs.joinAll()
                 }
+            }else{
+                tsList.forEach{
+                    ts -> (ts.key as AsterixDBTS).loadInitialData(ts.value)
                 }
-                jobs.joinAll()
             }
+
         }
         println("IT TOOK $tsLoadingTime ms to load TS data")
         println("TOTAL ingestion time: ${graphLoadingTime+tsLoadingTime} ms")

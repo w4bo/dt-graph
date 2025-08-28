@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory
 class TestQuerySmartBench {
     private val logger = LoggerFactory.getLogger(TestQuerySmartBench::class.java)
 
-    val resultFolder = props["smartbench_results_folder"] ?: "results/dt_graph/"
+    val resultFolder = "results/dt_graph/"
 
     // Test params set through env variables
     private val dataset = System.getenv("DATASET") ?: "smartbench"
@@ -37,8 +37,8 @@ class TestQuerySmartBench {
         val writeHeader = !file.exists()
 
         file.appendText(buildString {
-            if (writeHeader) append("test_id,model,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines\n")
-            append("${uuid},stgraph,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1}\n")
+            if (writeHeader) append("test_id,model,dataset,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines\n")
+            append("${uuid},stgraph,$dataset,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1}\n")
         })
     }
 

@@ -23,7 +23,7 @@ class TestIngestion {
     private val graphDataFolder = System.getenv("GRAPH_DATA_FOLDER") ?: "db_graphm"
 
     // Output folders setup
-    private val resultPath = "${props["smartbench_results_folder"] ?: "results/dt_graph/"}ingestion_time"
+    private val resultPath = "results/dt_graph/ingestion_time"
     private val resultFolder = File(resultPath)
     private val testUUID: UUID = UUID.randomUUID()
     private val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
