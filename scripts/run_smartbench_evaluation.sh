@@ -24,9 +24,9 @@ do
   do
     export THREAD=$EVALTHREAD
     echo "Running SmartBench ingestion performance evaluation with $DATASET dataset size and $THREAD threads"
-    ./gradlew test --tests TestIngestion --rerun-tasks --info 2>&1 | tee "dt_graph/logs/ingestion_size${DATASET}_THREADS${EVALTHREAD}.log"
+    ./gradlew test --tests TestIngestion --rerun-tasks 2>&1 | tee "dt_graph/logs/ingestion_size${DATASET}_THREADS${EVALTHREAD}.log"
     echo "Running SmartBench query performance evaluation with $DATASET dataset size and $THREAD threads"
-    ./gradlew test --tests TestQuerySmartBench --rerun-tasks --info 2>&1 | tee -a "dt_graph/logs/query_size${DATASET}_THREADS${EVALTHREAD}.log"
+    ./gradlew test --tests TestQuerySmartBench --rerun-tasks 2>&1 | tee -a "dt_graph/logs/query_size${DATASET}_THREADS${EVALTHREAD}.log"
   done
 done
 

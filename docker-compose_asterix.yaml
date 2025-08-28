@@ -12,7 +12,7 @@ services:
         opt/local/bin/start-sample-cluster.sh
         tail -f /dev/null
     volumes:
-      - "./asterixdbconf:/asterixsetup/"
+      - ./asterix_data:/workspace/apache-asterixdb-0.9.9/opt/local/data
     ports:
       - 19006:19006
       - 19002:19002
