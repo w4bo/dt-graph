@@ -22770,3 +22770,9 @@ dd1df25a-086a-40c4-81b3-85dbbb74eda0,stgraph,small,1,MaintenanceOwners,edgesDire
 dd1df25a-086a-40c4-81b3-85dbbb74eda0,stgraph,small,1,EnvironmentOutlier,edgesDirection,13538,8,1
 dd1df25a-086a-40c4-81b3-85dbbb74eda0,stgraph,small,1,AgentOutlier,edgesDirection,11279,100,1
 dd1df25a-086a-40c4-81b3-85dbbb74eda0,stgraph,small,1,AgentHistory,edgesDirection,58,1,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,EnvironmentCoverage,edgesDirection,0,0,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,EnvironmentAggregate,edgesDirection,0,0,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,MaintenanceOwners,edgesDirection,0,0,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,EnvironmentOutlier,edgesDirection,0,0,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,AgentOutlier,edgesDirection,0,0,1
+4a43122c-ed70-4b59-9fde-71ca67a98395,stgraph,small,1,AgentHistory,edgesDirection,0,0,1
