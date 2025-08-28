@@ -156,6 +156,9 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
     private var flushable: Flushable? = null
     private var i = 0
     init {
+        if (frequency < 1) {
+            throw IllegalArgumentException("Frequency must be greater than zero.")
+        }
         if (!Files.exists(Paths.get(path))) {
             Files.createDirectories(Paths.get(path))
         }
@@ -163,21 +166,18 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
     }
 
     fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
-        try {
-            val record = WALRecord(fileChannel, offset, payload, true)
-            toWrite.add(record)
-            if (frequency > 0 && flushable != null) {
-                i = (i + 1) % frequency
-                if (i == 0) {
-                    toWrite.forEach {
-                        val buffer = ByteBuffer.wrap(serialize(it))
-                        logChannel.write(buffer)
-                    }
-                    logChannel.force(true)
-                    flushable!!.flushToDisk()
-                }
+        toWrite.add(WALRecord(fileChannel, offset, payload, true))
+        i = (i + 1) % frequency
+        if (i == 0) {
+            val serializedRecords = toWrite.map { serialize(it) }
+            val buffer = ByteBuffer.allocate(serializedRecords.sumOf { it.size })
+            serializedRecords.forEach { buffer.put(it) }
+            buffer.flip()
+            logChannel.write(buffer)
+            logChannel.force(false)
+            if (flushable != null) {
+                flushable!!.flushToDisk()
             }
-        } finally {
         }
     }
 
