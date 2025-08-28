@@ -12,7 +12,7 @@ import kotlin.math.round
 
 class TestIngestion {
     private val logger = LoggerFactory.getLogger(TestIngestion::class.java)
-    data class IngestionResult(val startTimestamp: Long, val endTimestamp: Long, val elapsedTime: Long)
+    data class IngestionResult(val startTimestamp: Long, val endTimestamp: Long, val graphLoadingTime: Long, val tsLoadingTime: Long)
 
     // Test params set through env variables
     private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
@@ -42,11 +42,9 @@ class TestIngestion {
     private fun loadSmartBench(graph: Graph, dataPath: List<String>) : IngestionResult {
         val loader = SmartBenchDataLoader(graph)
         val startTimestamp = System.currentTimeMillis()/1000
-        val ingestionTime = measureTimeMillis {
-            loader.loadData(dataPath, threads)
-        }
+        val ingestionTime = loader.loadData(dataPath, threads)
         val endTimestamp = System.currentTimeMillis()/1000
-        return IngestionResult(startTimestamp,endTimestamp,ingestionTime)
+        return IngestionResult(startTimestamp,endTimestamp,ingestionTime.first, ingestionTime.second)
 
     }
 
@@ -64,7 +62,7 @@ class TestIngestion {
 
         val ingestionStats = when(dataset){
             "smartbench" -> loadSmartBench(dtGraph, dataPath)
-            else -> IngestionResult(-1,-1,-1)
+            else -> IngestionResult(-1,-1,-1, -1)
         }
 
         // Flush graph to disk to be queried
@@ -73,8 +71,8 @@ class TestIngestion {
         //Log statistics to file
         val writeHeader = !statisticsFile.exists()
         statisticsFile.appendText(buildString {
-            if (writeHeader) append("test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,elapsedTime,storage\n")
-            append("$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.elapsedTime},${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n")
+            if (writeHeader) append("test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,storage\n")
+            append("$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.graphLoadingTime},${ingestionStats.tsLoadingTime},${ingestionStats.graphLoadingTime+ingestionStats.tsLoadingTime},${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n")
         })
     }
 

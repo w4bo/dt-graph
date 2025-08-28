@@ -64,49 +64,89 @@ private fun join(
     timeaware: Boolean,
     by: List<Aggregate>
 ): List<Path> {
-    val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
-    val mutex = Mutex()
-    val result: MutableList<Path> = mutableListOf()
 
-    runBlocking {
-        val jobs = pattern1.map { row -> // for each result (i.e., path) of the first pattern
-            launch(executor) {
-                val from = max(from, row.from) // restrict the temporal interval
-                val to = min(to, row.to)
-                val row = row.result
-                val acc: MutableList<Path> = mutableListOf()
-                fun rec(curMatch: List<Step?>, index: Int, from: Long, to: Long) {
-                    if (index < match[1].size) { // Iterate until the last step of match[1] (i.e., the second pattern)
-                        val step = match[1][index] // Get the current step
-                        if (step != null) { // If the step has some filters
-                            if (joinFilters.size > 1) throw IllegalArgumentException("Too many joining filters")
-                            val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second } // Check if the step contains a node to join
-                            if (curJoinFilters.isNotEmpty()) { // ... if so
-                                if (curJoinFilters.size > 1) throw IllegalArgumentException("Too many joining filters on a single Step")
-                                val curJoinFilter = curJoinFilters.first() // Take the filter condition
-                                val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second // take the alias of the step in the previous pattern; e.g. "a"
-                                val props = row[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = from, toTimestamp = to, timeaware = timeaware) // take the properties of the corresponding node/edge in the path; e.g. "a.name" and its historic versions
-                                props.forEach { p -> // explode each property
-                                    rec(curMatch + Step(step.type, step.properties + Filter(curJoinFilter.property, curJoinFilter.operator, p.value, attrFirst = mapAliases[curJoinFilter.first]!!.first == 1), step.alias), index + 1, max(from, p.fromTimestamp), min(to, p.toTimestamp)) // else, add this as a filter
-                                }
-                            } else {
-                                rec(curMatch + step, index + 1, from, to)
-                            }
-                        } else {
-                            rec(curMatch + step, index + 1, from, to)
-                        }
-                    } else {
-                        acc += search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, from, to, timeaware, by = by).map { Path(row + it.result, it.from, it.to) }
-                    }
-                }
-                rec(emptyList(), 0, from, to)
-                mutex.withLock { result += acc }
-            }
+    val result = mutableListOf<Path>()
+    val mutex = Mutex()
+
+    // Funzione ricorsiva locale
+    fun rec(curMatch: MutableList<Step?>, index: Int, fromLimit: Long, toLimit: Long, row: Path, acc: MutableList<Path>) {
+        if (index >= match[1].size) {
+            val paths = search(
+                g,
+                curMatch,
+                (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 },
+                fromLimit,
+                toLimit,
+                timeaware,
+                by = by
+            ).map { Path(row.result + it.result, it.from, it.to) }
+            acc.addAll(paths)
+            return
         }
-        jobs.joinAll()
+
+        val step = match[1][index]
+        if (step == null) {
+            curMatch.add(null)
+            rec(curMatch, index + 1, fromLimit, toLimit, row, acc)
+            curMatch.removeAt(curMatch.size - 1)
+            return
+        }
+
+        val curJoinFilters = joinFilters.filter { step.alias == it.first || step.alias == it.second }
+        if (curJoinFilters.isNotEmpty()) {
+            val curJoinFilter = curJoinFilters.first()
+            val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second
+            val props = row.result[mapAliases[cAlias]!!.second]
+                .getProps(name = curJoinFilter.property, fromTimestamp = fromLimit, toTimestamp = toLimit, timeaware = timeaware)
+            props.forEach { p ->
+                curMatch.add(
+                    Step(
+                        step.type,
+                        step.properties + Filter(
+                            curJoinFilter.property,
+                            curJoinFilter.operator,
+                            p.value,
+                            attrFirst = mapAliases[curJoinFilter.first]!!.first == 1
+                        ),
+                        step.alias
+                    )
+                )
+                rec(curMatch, index + 1, max(fromLimit, p.fromTimestamp), min(toLimit, p.toTimestamp), row, acc)
+                curMatch.removeAt(curMatch.size - 1)
+            }
+        } else {
+            curMatch.add(step)
+            rec(curMatch, index + 1, fromLimit, toLimit, row, acc)
+            curMatch.removeAt(curMatch.size - 1)
+        }
     }
+
+    if (LIMIT <= 1) {
+        // Single-thread
+        pattern1.forEach { row ->
+            val acc = mutableListOf<Path>()
+            rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
+            result.addAll(acc)
+        }
+    } else {
+        // Parallel
+        val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
+        runBlocking {
+            val jobs = pattern1.map { row ->
+                launch(executor) {
+                    val acc = mutableListOf<Path>()
+                    rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
+                    mutex.withLock { result += acc }
+                }
+            }
+            jobs.joinAll()
+        }
+    }
+
     return result
 }
+
+
 
 
 fun intervalOuterJoin(listA: List<Elem>, listB: List<Elem>, timeaware: Boolean): Set<Pair<Elem?, Elem?>> {
