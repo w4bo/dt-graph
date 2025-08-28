@@ -150,7 +150,7 @@ class WALRecord(val file: WALSource, val offset: Long, val payload: ByteArray, v
     }
 }
 
-class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 100) {
+class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 1000) {
     private val logChannel: FileChannel
     val toWrite: MutableList<WALRecord> = mutableListOf()
     private var flushable: Flushable? = null
