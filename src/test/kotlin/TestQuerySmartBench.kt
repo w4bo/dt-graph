@@ -29,7 +29,7 @@ class TestQuerySmartBench {
     var uuid = UUID.randomUUID()
 
     private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int) {
-        println("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
+        logger.info("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
         val outputDir = File("$resultFolder/query_evaluation/")
         if (!outputDir.exists()) outputDir.mkdirs()
 
@@ -51,9 +51,9 @@ class TestQuerySmartBench {
         val tsm = AsterixDBTSM.createDefault(graph)
         graph.tsm = tsm
 
-        println("Loaded ${graph.getNodes().size} vertexes")
-        println("Loaded ${graph.getEdges().size} edges")
-        println("Loaded ${graph.getProps().size} props")
+        logger.info("Loaded ${graph.getNodes().size} vertexes")
+        logger.info("Loaded ${graph.getEdges().size} edges")
+        logger.info("Loaded ${graph.getProps().size} props")
     }
 
     /*

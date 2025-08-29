@@ -1,17 +1,23 @@
-import it.unibo.ingestion.SmartBenchDataLoader
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
+import it.unibo.ingestion.SmartBenchDataLoader
 import org.junit.jupiter.api.Test
-import java.io.File
-import java.util.UUID
 import org.slf4j.LoggerFactory
+import java.io.File
+import java.util.*
 import kotlin.math.round
 
 
 class TestIngestion {
     private val logger = LoggerFactory.getLogger(TestIngestion::class.java)
-    data class IngestionResult(val startTimestamp: Long, val endTimestamp: Long, val graphLoadingTime: Long, val tsLoadingTime: Long)
+
+    data class IngestionResult(
+        val startTimestamp: Long,
+        val endTimestamp: Long,
+        val graphLoadingTime: Long,
+        val tsLoadingTime: Long
+    )
 
     // Test params set through env variables
     private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
@@ -19,7 +25,7 @@ class TestIngestion {
     private val dataset_size = System.getenv("DATASET_SIZE") ?: "small"
 
     // Folder path for storage consuption
-    private val asterixDataFolder = System.getenv("ASTIXDB_DATA_FOLDER") ?: "asterix_data"
+    private val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "asterix_data"
     private val graphDataFolder = System.getenv("GRAPH_DATA_FOLDER") ?: "db_graphm"
 
     // Output folders setup
@@ -69,8 +75,14 @@ class TestIngestion {
         //Log statistics to file
         val writeHeader = !statisticsFile.exists()
         statisticsFile.appendText(buildString {
-            if (writeHeader) append("test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,storage\n")
-            append("$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.graphLoadingTime},${ingestionStats.tsLoadingTime},${ingestionStats.graphLoadingTime+ingestionStats.tsLoadingTime},${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n")
+            if (writeHeader) append("test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,numMachines,storage\n")
+            append(
+                "$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.graphLoadingTime},${ingestionStats.tsLoadingTime},${ingestionStats.graphLoadingTime + ingestionStats.tsLoadingTime},${
+                    System.getenv(
+                        "DEFAULT_NC_POOL"
+                    )?.toString()?.split(',')?.size ?: 1
+                },${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n"
+            )
         })
     }
 
