@@ -93,10 +93,10 @@ class TestQuerySmartBench {
      *  EnvironmentsAggregate(𝜖, 𝜏, 𝑡𝑎 , 𝑡𝑏 ): List, for each Environment during the period [𝑡𝑎, 𝑡𝑏 [, the average value of type 𝜏 during
      * the period [𝑡𝑎, 𝑡𝑏 [ for each agent.
      */
-    fun environmentAggregate() {
+    fun environmentAggregate(temporalConstraints: Pair<Long,Long>) {
+        val tA = temporalConstraints.first
+        val tB = temporalConstraints.second
         val tau = Temperature
-        val tA = 1510700400000L // 15/11/2017 00:00:00
-        val tB = 1511564400000L // 25/12/2017 00:00:00
 
         val edgesDirectionPattern = listOf(
             Step(Infrastructure, alias = "Environment"),
@@ -132,9 +132,10 @@ class TestQuerySmartBench {
      * MaintenanceOwners(𝜏, alpha): List all owners of devices that measured took measurements
      * of type 𝜏 above a threshold alpha during the period [𝑡𝑎, 𝑡𝑏 [
     */ //TODO
-    fun maintenanceOwners() {
-        val tA = 1510700400000L // 15/11/2017 00:00:00
-        val tB = 1514156400000L // 25/12/2017 00:00:00
+    fun maintenanceOwners(temporalConstraints: Pair<Long,Long>) {
+        val tA = temporalConstraints.first
+        val tB = temporalConstraints.second
+
         val minTemp = 65L
 
         val simplePattern = listOf(
@@ -172,13 +173,12 @@ class TestQuerySmartBench {
      * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during
      * the period [𝑡𝑎, 𝑡𝑏 [.
      */
-    fun environmentOutlier(){
-
-        //TODO: Fixa average
+    fun environmentOutlier(temporalConstraints: Pair<Long,Long>) {
+        val tA = temporalConstraints.first
+        val tB = temporalConstraints.second
 
         val minTemp = 60L
-        val tA = 1510700400000L // 15/11/2017 00:00:00 - 24785
-        val tB = 1511564400000L // 25/12/2017 00:00:00 -
+
 
         val edgesDirectionResult : List<Any>
 
@@ -209,10 +209,10 @@ class TestQuerySmartBench {
     /*
      * AgentOutlier: List the max value measured for each agent in each environment
      */
-    fun agentOutlier() {
+    fun agentOutlier(temporalConstraints: Pair<Long,Long>) {
+        val tA = temporalConstraints.first
+        val tB = temporalConstraints.second
         val tau = Temperature
-        val tA = 1510095600000 // 08/11/2017 00:00:00
-        val tB = 1516370586000 // 19/01/2018 00:00:00
 
         val edgesDirectionPattern = listOf(
             Step(Infrastructure, alias = "Environment"),
@@ -277,8 +277,22 @@ class TestQuerySmartBench {
         logQueryResult("AgentHistory", "edgesDirection", edgesDirectionQueryTime, edgesDirectionEntitites)
     }
 
+
+
     @Test
     fun runAllQueriesNTimes() {
+
+        fun timeFromQueryName(queryName: String, datasetSize: String, temporalConstraints: Map<String,Map<String,Pair<Long, Long>>>): Pair<Long, Long> {
+            return temporalConstraints[queryName]!![datasetSize]!!
+        }
+
+        val temporalConstraints : Map<String,Map<String,Pair<Long, Long>>> = mapOf(
+            "environmentAggregate" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
+            "maintenanceOwners" to mapOf("small" to Pair(1510700400000L,1514156400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
+            "environmentOutlier" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
+            "agentOutlier" to mapOf("small" to Pair(1510095600000L ,1516370586000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
+        )
+
         repeat(testIterations) { i ->
             uuid = UUID.randomUUID()
             logger.info("\n=== RUN QUERY ITERATION #${i + 1} ===")
@@ -292,10 +306,10 @@ class TestQuerySmartBench {
             }
 
             safeRun("environmentCoverage") { environmentCoverage() }
-            safeRun("environmentAggregate") { environmentAggregate() }
-            safeRun("maintenanceOwners") { maintenanceOwners() }
-            safeRun("environmentOutlier") { environmentOutlier() }
-            safeRun("agentOutlier") { agentOutlier() }
+            safeRun("environmentAggregate") { environmentAggregate(timeFromQueryName("environmentAggregate", size, temporalConstraints)) }
+            safeRun("maintenanceOwners") { maintenanceOwners(timeFromQueryName("maintenanceOwners", size, temporalConstraints)) }
+            safeRun("environmentOutlier") { environmentOutlier(timeFromQueryName("environmentOutlier", size, temporalConstraints)) }
+            safeRun("agentOutlier") { agentOutlier(timeFromQueryName("agentOutlier", size, temporalConstraints)) }
             safeRun("agentHistory") { agentHistory() }
         }
     }
