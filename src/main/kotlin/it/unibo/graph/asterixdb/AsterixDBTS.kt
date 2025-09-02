@@ -130,8 +130,6 @@ class AsterixDBTS(
                 ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull())}
                 ${relationshipToAsterixCitizen(n.relationships)}
                 ${propertiesToAsterixCitizen(n.getProps())}
-                "fromTimestamp": datetime("${timestampToISO8601(n.fromTimestamp)}"),
-                "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
                 "value": ${n.value}
             }
             """
@@ -171,7 +169,7 @@ class AsterixDBTS(
         val groupByClause: List<String>
         val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
         val defaultGroupByAggregators =
-            ", $PROPERTY, COUNT(*) as count, MIN($FROM_TIMESTAMP) as $FROM_TIMESTAMP, MAX($TO_TIMESTAMP) as $TO_TIMESTAMP"
+            ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
 
         // Select *each where predicate*
         var whereAggregators = filters
@@ -229,17 +227,18 @@ class AsterixDBTS(
                 if (result.entities.isEmpty) return emptyList()
                 val aggOperator = by.first { it.operator != null }.property!!.toString()
 
-                val fromTimestamp = dateToTimestamp((0 until result.entities.length()).minOf {
+                val fromTimestamp = (0 until result.entities.length()).minOf {
                     result.entities.getJSONObject(
                         it
-                    ).getString(FROM_TIMESTAMP)
-                })
+                    ).getLong(FROM_TIMESTAMP)
+                }
 
-                val toTimestamp = dateToTimestamp((0 until result.entities.length()).maxOf {
+                val toTimestamp = (0 until result.entities.length()).maxOf {
                     result.entities.getJSONObject(
                         it
-                    ).getString(TO_TIMESTAMP)
-                })
+                    ).getLong(TO_TIMESTAMP)
+                }
+
                 outNodes =  result.entities.toList().map { it as HashMap<*, *> }.map {
                     val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it["count"] as? Number)?.toDouble())
                     N.createVirtualN(
@@ -331,8 +330,8 @@ class AsterixDBTS(
         val entity = N(
             id = encodeBitwise(getTSId(), node.getLong("timestamp")),
             label = labelFromString(node.getString("property")),
-            fromTimestamp = dateToTimestamp(node.getString("fromTimestamp")),
-            toTimestamp = dateToTimestamp(node.getString("toTimestamp")),
+            fromTimestamp = node.getLong("timestamp"),
+            toTimestamp = node.getLong("timestamp"),
             value = node.getLong("value"),
             g = g
         )

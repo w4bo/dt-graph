@@ -153,9 +153,7 @@ class AsterixDBTSM private constructor(
                     property: STRING,
                     location: geometry?,
                     relationships: [NodeRelationship]?,
-                    properties: [Property]?,
-                    fromTimestamp: DATETIME,
-                    toTimestamp: DATETIME
+                    properties: [Property]?
                 };
             """.trimIndent()
     }

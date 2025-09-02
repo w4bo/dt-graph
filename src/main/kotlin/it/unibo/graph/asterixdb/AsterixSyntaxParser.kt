@@ -257,7 +257,7 @@ fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
 fun parseValue(property: String, value: Any): String {
     //TODO: Fix this, ci saranno altri tipi da parsare
     return when {
-        property.lowercase().contains("timestamp") -> """datetime("${timestampToISO8601(value as Long)}")"""
+        //property.lowercase().contains("timestamp") -> """datetime("${timestampToISO8601(value as Long)}")"""
         value is Int -> "$value"
         value is Long -> "$value"
         else -> """ "$value" """
@@ -296,8 +296,14 @@ private fun parseFilter(filter: Filter): String {
     val property = filter.property
     val parsedValue = parseValue(property, filter.value)
 
-    val left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
-    val right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
+    var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
+    var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
+
+    left = if (left == "fromTimestamp" || left == "toTimestamp") "timestamp" else left
+    right = if (right == "fromTimestamp" || right == "toTimestamp") "timestamp" else right
+
+
+    right = if(left == "timestamp" && right.toLong() < 0) "0" else right
 
     return when (filter.operator) {
         Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {

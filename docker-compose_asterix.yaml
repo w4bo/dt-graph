@@ -10,8 +10,6 @@ services:
         cp /asterixsetup/cc.conf opt/local/conf/cc.conf
         opt/local/bin/start-sample-cluster.sh
         tail -f /dev/null
-    volumes:
-      - ./asterix_data:/workspace/apache-asterixdb-0.9.9/opt/local/data
     ports:
       - 19006:19006
       - 19002:19002

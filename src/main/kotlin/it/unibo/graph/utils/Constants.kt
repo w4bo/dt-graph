@@ -9,6 +9,7 @@ const val LOWPRIORITY = 1
 const val PROPERTY = "property"
 const val FROM_TIMESTAMP = "fromTimestamp"
 const val TO_TIMESTAMP = "toTimestamp"
+const val TIMESTAMP = "timestamp"
 const val VALUE = "value"
 const val GRAPH_SOURCE = 0L
 const val LOCATION = "location"

@@ -4,10 +4,6 @@
 IFS=',' read -r -a THREADS <<< "$THREAD"
 IFS=',' read -r -a DATASET_SIZES <<< "$DATASET_SIZE"
 
- # If more than one, it should follow the pattern nc1|nc2|...|ncn
-INGESTION_ITERATIONS_NUMBER=5
-QUERY_ITERATIONS_NUMBER=50
-
 mkdir -p dt_graph/logs
 
 # Test ingestion performances
@@ -17,9 +13,7 @@ do
 ./scripts/download_dataset.sh $DATASET
 
   export DATASET_SIZE="$DATASET"
-  export INGESTION_ITERATIONS=$INGESTION_ITERATIONS_NUMBER
-  export QUERY_ITERATIONS=$QUERY_ITERATIONS_NUMBER
-  export
+
   for EVALTHREAD in "${THREADS[@]}"
   do
     export THREAD=$EVALTHREAD
