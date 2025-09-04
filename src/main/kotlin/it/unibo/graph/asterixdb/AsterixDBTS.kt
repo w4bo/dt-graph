@@ -13,6 +13,8 @@ import org.json.JSONObject
 import java.io.OutputStream
 import java.io.PrintWriter
 import java.net.Socket
+import java.nio.file.Files
+import java.nio.file.Paths
 
 @OptIn(DelicateCoroutinesApi::class)
 class AsterixDBTS(
@@ -83,31 +85,34 @@ class AsterixDBTS(
         return min + normalized
     }
 
-    fun loadInitialData(path: String)  {
-        if(asterixHTTPClient.isDatasetEmpty(dataverse, dataset)){
-            val resource = this::class.java.classLoader.getResource(path)
-            if (resource != null) {
+    fun loadInitialData(path: String) {
+        if (asterixHTTPClient.isDatasetEmpty(dataverse, dataset)) {
+            val projectRoot = Paths.get("").toAbsolutePath().normalize()
+            val filePath = projectRoot.resolve(path).normalize()
+
+            if (Files.exists(filePath)) {
                 openDataFeedConnection()
-                resource.openStream().bufferedReader().useLines { lines ->
+                Files.newBufferedReader(filePath).useLines { lines ->
                     for (line in lines) {
                         if (line.isNotBlank()) {
                             val json: JsonNode = mapper.readTree(line)
-                            val label = if(json.get("type").textValue() == "Temperature") "temperature" else "presence"
+                            val label = if (json.get("type").textValue() == "Temperature")
+                                "temperature" else "presence"
+
                             add(
                                 label = labelFromString(json.get("type").textValue()),
                                 timestamp = dateToTimestamp(json.get("timestamp").textValue()),
                                 location = json.get("location").textValue(),
-                                //TODO: FIX THIS, E' FISSATO SULLA SINTASSI DI SMARTBENCH
+                                // TODO: attualmente è fissato sulla sintassi SmartBench
                                 value = json.get("payload").get(label).longValue(),
                                 isUpdate = false
-
                             )
                         }
                     }
                 }
                 closeDataFeedConnection()
-            }else{
-                println("Resource is null")
+            } else {
+                println("File not found: $filePath")
             }
         }
     }

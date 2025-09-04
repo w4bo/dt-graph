@@ -1,4 +1,0 @@
-[
-{"id": "presence", "name": "presence", "description": "Location Semantic Observation", "payloadSchema": "[{\"location\": \"STRING\"}]", "type": "SemanticObservationType"},
-{"id": "occupancy", "name": "occupancy", "description": "Occupancy Semantic Observation", "payloadSchema": "[{\"occupancy\": \"INTEGER\"}]", "type": "SemanticObservationType"}
-]

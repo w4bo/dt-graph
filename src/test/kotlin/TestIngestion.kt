@@ -1,10 +1,12 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
+import it.unibo.ingestion.SearchDataLoader
 import it.unibo.ingestion.SmartBenchDataLoader
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.nio.file.Paths
 import java.util.*
 import kotlin.math.round
 
@@ -22,7 +24,7 @@ class TestIngestion {
     // Test params set through env variables
     private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
     private val threads = System.getenv("THREAD")?.toInt() ?: 1
-    private val dataset_size = System.getenv("DATASET_SIZE") ?: "small"
+    private val dataset_size = System.getenv("DATASET_SIZE") ?: "large"
 
     // Folder path for storage consuption
     private val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "asterix_data"
@@ -45,7 +47,7 @@ class TestIngestion {
     }
 
     private fun loadSmartBench(graph: Graph, dataPath: List<String>): IngestionResult {
-        val loader = SmartBenchDataLoader(graph)
+        val loader = SearchDataLoader(graph)
         val startTimestamp = System.currentTimeMillis() / 1000
         val ingestionTime = loader.loadData(dataPath, threads)
         val endTimestamp = System.currentTimeMillis() / 1000
@@ -88,18 +90,20 @@ class TestIngestion {
 
     @Test
     fun testSmartBenchIngestion() {
+        val projectRoot = Paths.get("").toAbsolutePath().normalize()
+        val starting_path="$projectRoot/datasets"
         val data: List<String> = listOf(
-            "dataset/smartbench/$dataset_size/group.json",
-            "dataset/smartbench/$dataset_size/user.json",
-            "dataset/smartbench/$dataset_size/platformType.json",
-            "dataset/smartbench/$dataset_size/sensorType.json",
-            "dataset/smartbench/$dataset_size/platform.json",
-            "dataset/smartbench/$dataset_size/infrastructureType.json",
-            "dataset/smartbench/$dataset_size/infrastructure.json",
-            "dataset/smartbench/$dataset_size/sensor.json",
-            "dataset/smartbench/$dataset_size/virtualSensorType.json",
-            "dataset/smartbench/$dataset_size/virtualSensor.json",
-            "dataset/smartbench/$dataset_size/semanticObservationType.json",
+            "$starting_path/dataset/smartbench/$dataset_size/group.json",
+            "$starting_path/dataset/smartbench/$dataset_size/user.json",
+            "$starting_path/dataset/smartbench/$dataset_size/platformType.json",
+            "$starting_path/dataset/smartbench/$dataset_size/sensorType.json",
+            "$starting_path/dataset/smartbench/$dataset_size/platform.json",
+            "$starting_path/dataset/smartbench/$dataset_size/infrastructureType.json",
+            "$starting_path/dataset/smartbench/$dataset_size/infrastructure.json",
+            "$starting_path/dataset/smartbench/$dataset_size/sensor.json",
+            "$starting_path/dataset/smartbench/$dataset_size/virtualSensorType.json",
+            "$starting_path/dataset/smartbench/$dataset_size/virtualSensor.json",
+            "$starting_path/dataset/smartbench/$dataset_size/semanticObservationType.json",
         )
         repeat(iterations) { i ->
             logger.info("\n=== RUN INGESTION ITERATION #${i + 1} ===")

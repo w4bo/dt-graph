@@ -287,10 +287,10 @@ class TestQuerySmartBench {
         }
 
         val temporalConstraints : Map<String,Map<String,Pair<Long, Long>>> = mapOf(
-            "environmentAggregate" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
-            "maintenanceOwners" to mapOf("small" to Pair(1510700400000L,1514156400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
-            "environmentOutlier" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
-            "agentOutlier" to mapOf("small" to Pair(1510095600000L ,1516370586000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L) ),
+            "environmentAggregate" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L),"big_long" to Pair(1510700400000L,1756962633000L) ),
+            "maintenanceOwners" to mapOf("small" to Pair(1510700400000L,1514156400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L),"big_long" to Pair(1510700400000L,1756962633000L) ),
+            "environmentOutlier" to mapOf("small" to Pair(1510700400000L,1511564400000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L),"big_long" to Pair(1510700400000L,1756962633000L) ),
+            "agentOutlier" to mapOf("small" to Pair(1510095600000L ,1516370586000L), "large" to Pair(10L,11L), "big" to Pair(10L,11L),"big_long" to Pair(1510700400000L,1756962633000L) ),
         )
 
         repeat(testIterations) { i ->

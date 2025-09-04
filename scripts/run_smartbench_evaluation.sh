@@ -8,8 +8,8 @@ mkdir -p dt_graph/logs
 
 # Test ingestion performances
 for DATASET in "${DATASET_SIZES[@]}"
-do
 
+do
 ./scripts/download_dataset.sh $DATASET
 
   export DATASET_SIZE="$DATASET"
