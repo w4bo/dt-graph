@@ -33,7 +33,7 @@ dependencies {
     implementation 'org.apache.tinkerpop:gremlin-core:3.7.5'
     implementation 'org.apache.tinkerpop:gremlin-server:3.7.5' // Optional for Gremlin Server
     implementation 'org.apache.tinkerpop:gremlin-driver:3.7.5' // Gremlin client for remote queries
-    implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.7.4' // In-memory graph (for testing)
+    implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.7.5' // In-memory graph (for testing)
     implementation 'org.rocksdb:rocksdbjni:10.4.2'
     implementation 'org.json:json:20250517'
     implementation 'org.locationtech.jts:jts-core:1.20.0'
