@@ -24,7 +24,7 @@ class TestIngestion {
     // Test params set through env variables
     private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
     private val threads = System.getenv("THREAD")?.toInt() ?: 1
-    private val dataset_size = System.getenv("DATASET_SIZE") ?: "large"
+    private val dataset_size = System.getenv("DATASET_SIZE") ?: "small"
 
     // Folder path for storage consuption
     private val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "asterix_data"
@@ -47,7 +47,7 @@ class TestIngestion {
     }
 
     private fun loadSmartBench(graph: Graph, dataPath: List<String>): IngestionResult {
-        val loader = SearchDataLoader(graph)
+        val loader = SmartBenchDataLoader(graph)
         val startTimestamp = System.currentTimeMillis() / 1000
         val ingestionTime = loader.loadData(dataPath, threads)
         val endTimestamp = System.currentTimeMillis() / 1000

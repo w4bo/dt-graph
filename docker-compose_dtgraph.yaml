@@ -1,8 +1,8 @@
 services:
   dtgraph:
-    image: mp4sini/dtgraph
-    hostname: dtgraph
-    container_name: dtgraph
+    image: mp4sini/stgraph
+    hostname: stgraph
+    container_name: stgraph
     volumes:
       - "./results:/dt_graph/results"
       - "./logs:/dt_graph/logs"

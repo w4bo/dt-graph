@@ -4,7 +4,7 @@ set -exo
 DATASET_SIZE=$1
 LINK="https://big.csr.unibo.it/downloads/stgraph/stgraph/"
 INTERNAL_LINK="137.204.74.24/downloads/stgraph/stgraph/"
-OUTPUT_DIR="${2:-"/dt_graph/src/main/resources/dataset/smartbench"}"
+OUTPUT_DIR="${2:-"/dt_graph/datasets/dataset/smartbench"}"
 FILENAME="${DATASET_SIZE}.tar"
 
 mkdir -p "$OUTPUT_DIR"

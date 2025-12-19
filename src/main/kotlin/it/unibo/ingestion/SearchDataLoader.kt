@@ -12,6 +12,7 @@ import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
 import it.unibo.graph.utils.LIMIT
+import it.unibo.graph.utils.loadProps
 import it.unibo.graph.utils.propTypeFromValue
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
@@ -24,6 +25,13 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
+
+val props = loadProps()
+
+val TYPE_ATTRIBUTE = props["node_label_attribute"]?.toString() ?: "type"
+val ID_ATTRIBUTE = props["node_id_attribute"]?.toString() ?: "id"
+val SENSORS = props["sensors_labels"]?.toString()?.split(",") ?: listOf("Sensor")
+val TIMESERIES_TYPE_ATTR = props["timeseries_type_attribute"]?.toString()
 
 class SearchDataLoader(
     private val graph: Graph = MemoryGraphACID(),
@@ -62,9 +70,9 @@ class SearchDataLoader(
                     for (obj in loadJsonObjects(path.toUri(), mapper)) {
                         count++
 
-                        val typeVal = (obj["type"] as? String)
+                        val typeVal = (obj[TYPE_ATTRIBUTE] as? String)
                             ?: error("Missing 'type' in JSON object")
-                        val entityId = obj["id"] as? String
+                        val entityId = obj[ID_ATTRIBUTE] as? String
                             ?: error("Missing 'id' in JSON object")
                         val nodeLabel = labelFromString(typeVal.replaceFirstChar {
                             if (it.isLowerCase()) it.titlecase(
@@ -84,10 +92,10 @@ class SearchDataLoader(
                                 when (value) {
                                     is Map<*, *> -> {
                                         // if property value contains a JSON with a key "id", it's an edge
-                                        val destId = value["id"] as? String
+                                        val destId = value[ID_ATTRIBUTE] as? String
                                         if (destId != null) {
                                             val edgeLabel = hasLabel(key)
-                                            val destNodes = search(graph, listOf(Step(null, listOf(Filter("id", Operators.EQ, destId)))))
+                                            val destNodes = search(graph, listOf(Step(null, listOf(Filter(ID_ATTRIBUTE, Operators.EQ, destId)))))
                                             // If destination node is not present yet, store edge for later process
                                             if(destNodes.size == 0){
                                                 leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
@@ -121,11 +129,9 @@ class SearchDataLoader(
                                 }
                             }
                             // If it's a sensor, check if it has a TS attached
-                            if (typeVal == Labels.Sensor.toString() || typeVal == Labels.VirtualSensor.toString()) {
-                                val sensorId = obj["id"] as String
-                                val labelString =
-                                    if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
-
+                            if (SENSORS.contains(typeVal)) {
+                                val sensorId = obj[ID_ATTRIBUTE] as String
+                                val labelString = obj[TIMESERIES_TYPE_ATTR] as String
                                 val sensorTsFilePath = path.parent
                                     ?.resolve("timeseries")
                                     ?.resolve("$sensorId.json")
@@ -183,8 +189,8 @@ class SearchDataLoader(
     }
 
     private fun processProperty(property: Any, key: String, nodeId: Long) {
-        if (property is Map<*, *> && property["id"] is String) {
-            val destId = property["id"] as String
+        if (property is Map<*, *> && property[ID_ATTRIBUTE] is String) {
+            val destId = property[ID_ATTRIBUTE] as String
             val edgeLabel = hasLabel(key)
             val targetId = graphIdList[destId]
             if (targetId != null) {

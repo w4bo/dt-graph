@@ -52,6 +52,7 @@ class SmartBenchDataLoader(
                 println("Loading data from $file")
 
                 val path = Paths.get(file).toAbsolutePath().normalize()
+
                 require(Files.exists(path)) { "File not found: $file" }
 
                 var count = 0
@@ -156,9 +157,9 @@ class SmartBenchDataLoader(
                 }
             }
         }
-
         println("IT TOOK $tsLoadingTime ms to load TS data")
         println("TOTAL ingestion time: ${graphLoadingTime + tsLoadingTime} ms")
+        print("Graph contains ${graph.getNodes().size} nodes and  ${graph.getEdges().size} edge")
         return Pair(graphLoadingTime, tsLoadingTime)
     }
 
