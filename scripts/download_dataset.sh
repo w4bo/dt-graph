@@ -5,7 +5,7 @@ DATASET_SIZE=$1
 LINK="https://big.csr.unibo.it/downloads/stgraph/stgraph/"
 INTERNAL_LINK="137.204.74.24/downloads/stgraph/stgraph/"
 OUTPUT_DIR="${2:-"/dt_graph/datasets/dataset/smartbench"}"
-FILENAME="${DATASET_SIZE}.tar"
+FILENAME="${DATASET_SIZE}.tar.gz"
 
 mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR" || exit 1
@@ -20,11 +20,13 @@ if ! wget --no-check-certificate --tries=3 "${LINK}${FILENAME}"; then
     }
 fi
 
-if [[ -f "${DATASET_SIZE}.tar" ]]; then
-    echo "Downloaded: ${DATASET_SIZE}.tar"
-    tar -xvf "${DATASET_SIZE}.tar"
-    rm "${DATASET_SIZE}.tar"
+if [[ -f "${DATASET_SIZE}.tar.gz" ]]; then
+    echo "Downloaded: ${DATASET_SIZE}.tar.gz"
+    tar -xzvf "${DATASET_SIZE}.tar.gz"
+    rm "${DATASET_SIZE}.tar.gz"
 else
     echo "Error: Something went wrong while downloading dataset ${DATASET_SIZE}!"
     exit 1
 fi
+
+

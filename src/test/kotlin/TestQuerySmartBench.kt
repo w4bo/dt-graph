@@ -19,7 +19,7 @@ import kotlin.collections.ArrayList
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestQuerySmartBench {
     private val logger = LoggerFactory.getLogger(TestQuerySmartBench::class.java)
-    private val temporalConstraintMap = loadYamlAsMap("temporalConstraints.yaml")
+    private val temporalConstraintMap = loadYamlAsMap("time_constraints.yaml")
     private val resultFolder = "results/dt_graph/"
 
     // Test params set through env variables
@@ -38,7 +38,7 @@ class TestQuerySmartBench {
         return Yaml().load<Map<String, Any>>(yamlText) ?: emptyMap()
     }
 
-    private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int, temporalRangeIndex:Int) {
+    private fun logQueryResult(queryName: String, queryType:String, queryTime: Long, numEntities: Int, temporalRangeIndex: Int, iteration: Int) {
         logger.info("$queryName - $queryType executed in $queryTime ms and returned $numEntities items")
         val outputDir = File("$resultFolder/query_evaluation/")
         if (!outputDir.exists()) outputDir.mkdirs()
@@ -47,8 +47,8 @@ class TestQuerySmartBench {
         val writeHeader = !file.exists()
 
         file.appendText(buildString {
-            if (writeHeader) append("test_id,model,dataset,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines,querySelectivity,temporalRangeIndex\n")
-            append("${uuid},stgraph,$dataset,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1},${querySelectivity},$temporalRangeIndex\n")
+            if (writeHeader) append("test_id,model,dataset,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines,querySelectivity,temporalRangeIndex,iteration\n")
+            append("${uuid},STGraph,$dataset,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1},${querySelectivity},$temporalRangeIndex,$iteration\n")
         })
     }
 
@@ -72,7 +72,7 @@ class TestQuerySmartBench {
      * can generate measurements of a given type 𝜏 that can
      * cover the environments/locations specified in L.
      */
-    fun environmentCoverage(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0) {
+    fun environmentCoverage(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0, iteration: Int = 0) {
         val tau = Temperature
         val infrastructureId = "3042"
 
@@ -93,7 +93,7 @@ class TestQuerySmartBench {
         }
 
         logger.info("--- EnvironmentCoverage execution times ---")
-        logQueryResult("EnvironmentCoverage","edgesDirection", edgesDirectionTime, edgesDirectionResult.size,temporalConstraintIndex)
+        logQueryResult("EnvironmentCoverage","edgesDirection", edgesDirectionTime, edgesDirectionResult.size,temporalConstraintIndex, iteration)
 
 
     }
@@ -102,7 +102,7 @@ class TestQuerySmartBench {
      *  EnvironmentsAggregate(𝜖, 𝜏, 𝑡𝑎 , 𝑡𝑏 ): List, for each Environment during the period [𝑡𝑎, 𝑡𝑏 [, the average value of type 𝜏 during
      * the period [𝑡𝑎, 𝑡𝑏 [ for each agent.
      */
-    fun environmentAggregate(temporalConstraints: TimeRange, temporalRangeIndex: Int) {
+    fun environmentAggregate(temporalConstraints: TimeRange, temporalRangeIndex: Int, iteration: Int = 0) {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
         val tau = Temperature
@@ -134,14 +134,14 @@ class TestQuerySmartBench {
 
 
         logger.info("--- EnvironmentAggregate execution times ---")
-        logQueryResult("EnvironmentAggregate", "edgesDirection", edgesQueryTime, edgesDirectionResult.size,temporalRangeIndex)
+        logQueryResult("EnvironmentAggregate", "edgesDirection", edgesQueryTime, edgesDirectionResult.size,temporalRangeIndex, iteration)
     }
 
     /*
      * MaintenanceOwners(𝜏, alpha): List all owners of devices that measured took measurements
      * of type 𝜏 above a threshold alpha during the period [𝑡𝑎, 𝑡𝑏 [
     */ //TODO
-    fun maintenanceOwners(temporalConstraints: TimeRange, temporalRangeIndex: Int) {
+    fun maintenanceOwners(temporalConstraints: TimeRange, temporalRangeIndex: Int, iteration: Int = 0) {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
 
@@ -182,7 +182,7 @@ class TestQuerySmartBench {
         }
 
         logger.info("--- MaintenanceOwners execution times ---")
-        logQueryResult("MaintenanceOwners", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size, temporalRangeIndex)
+        logQueryResult("MaintenanceOwners", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size, temporalRangeIndex, iteration)
 
     }
 
@@ -190,7 +190,7 @@ class TestQuerySmartBench {
      * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during
      * the period [𝑡𝑎, 𝑡𝑏 [.
      */
-    fun environmentAlert(temporalConstraints: TimeRange, temporalRangeIndex: Int) {
+    fun environmentAlert(temporalConstraints: TimeRange, temporalRangeIndex: Int, iteration: Int = 0) {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
 
@@ -220,13 +220,13 @@ class TestQuerySmartBench {
         }
         edgesDirectionResult = edgesDirectionResult.filter { ((it as ArrayList<*>)[1]!! as Double) > minTemp }
         logger.info("--- EnvironmentOutlier execution times ---")
-        logQueryResult("EnvironmentOutlier", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size, temporalRangeIndex)
+        logQueryResult("EnvironmentOutlier", "edgesDirection", edgesDirectionQueryTime, edgesDirectionResult.size, temporalRangeIndex, iteration)
     }
 
     /*
      * AgentOutlier: List the max value measured for each agent in each environment
      */
-    fun agentOutlier(temporalConstraints: TimeRange, temporalRangeIndex: Int) {
+    fun agentOutlier(temporalConstraints: TimeRange, temporalRangeIndex: Int, iteration: Int = 0) {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
         val tau = Temperature
@@ -252,7 +252,7 @@ class TestQuerySmartBench {
         }
 
         logger.info("--- AgentOutlier execution times ---")
-        logQueryResult("AgentOutlier", "edgesDirection", edgesDirectionTime, edgesDirectionResult.size, temporalRangeIndex)
+        logQueryResult("AgentOutlier", "edgesDirection", edgesDirectionTime, edgesDirectionResult.size, temporalRangeIndex, iteration)
     }
 
     /*
@@ -260,7 +260,7 @@ class TestQuerySmartBench {
      * 𝛼 ∈ 𝐴, list all environments 𝜖 for which 𝛼 generated
      * measurements in.
      */
-    fun agentHistory(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0) {
+    fun agentHistory(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0, iteration: Int = 0) {
         val devices = listOf("thermometer3")
 
         var edgesDirectionEntitites = 0
@@ -290,7 +290,7 @@ class TestQuerySmartBench {
 
 
         logger.info("--- AgentHistory execution times ---")
-        logQueryResult("AgentHistory", "edgesDirection", edgesDirectionQueryTime, edgesDirectionEntitites, temporalConstraintIndex)
+        logQueryResult("AgentHistory", "edgesDirection", edgesDirectionQueryTime, edgesDirectionEntitites, temporalConstraintIndex, iteration)
     }
 
 
@@ -298,7 +298,6 @@ class TestQuerySmartBench {
     @Test
     fun runAllQueriesNTimes() {
         repeat(testIterations) { i ->
-            uuid = UUID.randomUUID()
             logger.info("\n=== RUN QUERY ITERATION #${i + 1} ===")
 
             fun <K, V> safeRun(name: String, ranges: Map<K, V>, block: (V, Int) -> Unit) {
@@ -311,28 +310,28 @@ class TestQuerySmartBench {
                 }
             }
 
-            safeRun("environmentCoverage", loadTemporalRanges(temporalConstraintMap, querySelectivity, "environmentCoverage", size)) { temporalRange, index ->
-                environmentCoverage(temporalRange, index)
+            safeRun("EnvironmentCoverage", loadTemporalRanges(temporalConstraintMap, querySelectivity, "EnvironmentCoverage", size)) { temporalRange, index ->
+                environmentCoverage(temporalRange, index, i)
             }
 
-            safeRun("environmentAggregate", loadTemporalRanges(temporalConstraintMap, querySelectivity, "environmentAggregate", size)) { temporalRange, index ->
-                environmentAggregate(temporalRange, index)
+            safeRun("EnvironmentAggregate", loadTemporalRanges(temporalConstraintMap, querySelectivity, "EnvironmentAggregate", size)) { temporalRange, index ->
+                environmentAggregate(temporalRange, index, i)
             }
 
-            safeRun("maintenanceOwners", loadTemporalRanges(temporalConstraintMap, querySelectivity, "maintenanceOwners", size)) { temporalRange, index ->
-                maintenanceOwners(temporalRange, index)
+            safeRun("MaintenanceOwners", loadTemporalRanges(temporalConstraintMap, querySelectivity, "MaintenanceOwners", size)) { temporalRange, index ->
+                maintenanceOwners(temporalRange, index, i)
             }
 
-            safeRun("environmentOutlier", loadTemporalRanges(temporalConstraintMap, querySelectivity, "environmentOutlier", size)) { temporalRange, index ->
-                environmentAlert(temporalRange, index)
+            safeRun("EnvironmentOutlier", loadTemporalRanges(temporalConstraintMap, querySelectivity, "EnvironmentOutlier", size)) { temporalRange, index ->
+                environmentAlert(temporalRange, index, i)
             }
 
-            safeRun("agentOutlier", loadTemporalRanges(temporalConstraintMap, querySelectivity, "agentOutlier", size)) { temporalRange, index ->
-                agentOutlier(temporalRange, index)
+            safeRun("AgentOutlier", loadTemporalRanges(temporalConstraintMap, querySelectivity, "AgentOutlier", size)) { temporalRange, index ->
+                agentOutlier(temporalRange, index, i)
             }
 
-            safeRun("agentHistory", loadTemporalRanges(temporalConstraintMap, querySelectivity, "agentHistory", size)) { temporalRange, index ->
-                agentHistory(temporalRange, index)
+            safeRun("AgentHistory", loadTemporalRanges(temporalConstraintMap, querySelectivity, "AgentHistory", size)) { temporalRange, index ->
+                agentHistory(temporalRange, index, i)
             }
         }
     }
