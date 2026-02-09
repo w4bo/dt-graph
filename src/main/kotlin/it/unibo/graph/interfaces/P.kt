@@ -68,11 +68,11 @@ open class P(
                 PropType.STRING -> {             // Serialize String (using your serializeString method)
                     val v = readString(buffer, MAX_LENGTH_VALUE)
                     v.ifEmpty {
-                        String(db.get("$id|$key".toByteArray()), Charsets.UTF_8)
+                        String(db.get("$id".toByteArray()), Charsets.UTF_8)
                     }
                 }
                 PropType.GEOMETRY -> {
-                    WKTReader().read(String(db.get("$id|$key".toByteArray()), Charsets.UTF_8))
+                    WKTReader().read(String(db.get("$id".toByteArray()), Charsets.UTF_8))
                 }
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
@@ -107,7 +107,7 @@ open class P(
             PropType.STRING -> {                                        // Serialize String
                 val value = value as String
                 if (value.length > MAX_LENGTH_VALUE) { // in place if the string is longer than 8 bytes
-                    db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+                    db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
                     repeat(8) { buffer.put(0.toByte()) } // Add 8 empty bytes (0x00)
                 } else { // in place if the string is shorter than or equal to 8 bytes
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
@@ -115,12 +115,12 @@ open class P(
             }
             PropType.GEOMETRY -> {
                 val value = value.toString()
-                db.put("$id|$key".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+                db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
             }
             else -> throw IllegalArgumentException("Unsupported type: $type")
         }
         buffer.putLong(next?: Long.MIN_VALUE)    // 8 bytes
-        return buffer.array()                           // 41 + MAX_LENGTH_KEY + MAX_LENGTH_VALUE
+        return buffer.array()                           // 45 + MAX_LENGTH_KEY + MAX_LENGTH_VALUE
     }
 
     init {
