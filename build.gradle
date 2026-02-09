@@ -3,6 +3,7 @@ plugins {
     id 'idea'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.10'
 }
 
 kotlin {
@@ -51,8 +52,8 @@ idea {
 
 dependencies {
     implementation "org.apache.commons:commons-lang3:3.14.0"
-    implementation 'org.rocksdb:rocksdbjni:10.4.2'
-    implementation 'org.json:json:20250517'
+    implementation 'org.rocksdb:rocksdbjni:9.10.0'
+    implementation 'org.json:json:20250107'
     implementation 'org.locationtech.jts:jts-core:1.20.0'
     implementation 'org.locationtech.jts.io:jts-io-common:1.20.0'
     implementation 'org.jetbrains.kotlinx:dataframe:0.15.0'
