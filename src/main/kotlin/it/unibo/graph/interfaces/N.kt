@@ -11,15 +11,18 @@ const val NODE_SIZE: Int = 37 // 48
 open class N(
     final override val id: Long, // node id
     final override val label: Label, // node label
-    var nextRel: Int? = null, // if graph node link to the next relationship, else null
-    final override var nextProp: Int? = null, // if graph node link to the next property, else null
-    final override val fromTimestamp: Long = Long.MIN_VALUE,
-    final override var toTimestamp: Long = Long.MAX_VALUE,
-    val isTs : Boolean = false,
+    final override val fromTimestamp: Long = Long.MIN_VALUE, // minimum validity
+    final override var toTimestamp: Long = Long.MAX_VALUE, // maximum validity
 
-    val value: Long? = null, // if TS snapshot: value of the measurement, else null
-    @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
-    @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
+    // if graph node...
+    var nextRel: Int? = null, // link to the next edge, else null
+    final override var nextProp: Int? = null, // link to the next property, else null
+    val isTs : Boolean = false, // whether the node refers to an external TS
+
+    // if TS event...
+    @Transient val value: Long? = null, // value of the measurement, else null
+    @Transient val relationships: MutableList<R> = mutableListOf(), // lists of edges towards the graph
+    @Transient final override val properties: MutableList<P> = mutableListOf(), // lists of node properties
     @Transient final override var g: Graph
 ) : ElemP {
 
