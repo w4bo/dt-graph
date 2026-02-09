@@ -6,18 +6,18 @@ import java.util.*
 
 enum class Direction { IN, OUT }
 
-val EDGE_SIZE: Int = 56
+val EDGE_SIZE: Int = 68
 
 open class R(
-    final override val id: Int, // id of the relationship
+    final override val id: Long, // id of the relationship
     final override val label: Label, // label
     val fromN: Long, // from node
     val toN: Long, // to node
-    var fromNextRel: Int? = null, // pointer to the next relationship of the `from node`
-    var toNextRel: Int? = null, // pointer to the next relationship of the `to node`
+    var fromNextRel: Long? = null, // pointer to the next relationship of the `from node`
+    var toNextRel: Long? = null, // pointer to the next relationship of the `to node`
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
-    final override var nextProp: Int? = null,
+    final override var nextProp: Long? = null,
     @Transient final override val properties: MutableList<P> = mutableListOf(),
     @Transient final override var g: Graph,
     @Transient val fromDisk: Boolean = false
@@ -26,16 +26,16 @@ open class R(
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): R {
             val buffer = ByteBuffer.wrap(bytes)
-            val id = buffer.long.toInt() // Read ID (stored as Long, convert to Int)
+            val id = buffer.long // Read ID (stored as Long, convert to Int)
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
             val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
-            val nextProp = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
+            val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val fromN = buffer.long
             val toN = buffer.long
-            val fromNextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
-            val toNextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
+            val fromNextRel = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
+            val toNextRel = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             return R(id, label, fromN, toN, fromNextRel, toNextRel, fromTimestamp, toTimestamp, nextProp, g = g, fromDisk = true)
         }
 
@@ -44,16 +44,16 @@ open class R(
 
     fun serialize(): ByteArray {
         val buffer = ByteBuffer.allocate(EDGE_SIZE)
-        buffer.putLong(id.toLong())                       // 8 bytes
-        buffer.putLong(fromTimestamp)                     // 8 bytes
-        buffer.putLong(toTimestamp)                       // 8 bytes
-        buffer.putInt((label as Labels).ordinal)          // 4 bytes
-        buffer.putInt(nextProp?: Int.MIN_VALUE)     // 4 bytes
-        buffer.putLong(fromN)                             // 8 bytes
-        buffer.putLong(toN)                               // 8 bytes
-        buffer.putInt(fromNextRel?: Int.MIN_VALUE)  // 4 bytes
-        buffer.putInt(toNextRel?: Int.MIN_VALUE)    // 4 bytes
-        return buffer.array()                             // Total: 56 bytes
+        buffer.putLong(id.toLong())                  // 8 bytes
+        buffer.putLong(fromTimestamp)                // 8 bytes
+        buffer.putLong(toTimestamp)                  // 8 bytes
+        buffer.putInt((label as Labels).ordinal)     // 4 bytes
+        buffer.putLong(nextProp?: Long.MIN_VALUE)    // 8 bytes
+        buffer.putLong(fromN)                        // 8 bytes
+        buffer.putLong(toN)                          // 8 bytes
+        buffer.putLong(fromNextRel?: Long.MIN_VALUE) // 8 bytes
+        buffer.putLong(toNextRel?: Long.MIN_VALUE)   // 8 bytes
+        return buffer.array()                               // Total: 68 bytes
     }
 
     init {

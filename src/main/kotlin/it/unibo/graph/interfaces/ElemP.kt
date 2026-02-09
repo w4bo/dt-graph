@@ -2,10 +2,10 @@ package it.unibo.graph.interfaces
 
 interface ElemP : Elem {
     val label: Label
-    var nextProp: Int?
+    var nextProp: Long?
     val properties: MutableList<P>
     fun getProps(
-        next: Int? = nextProp,
+        next: Long? = nextProp,
         filter: PropType? = null,
         name: String? = null,
         fromTimestamp: Long = Long.MIN_VALUE,

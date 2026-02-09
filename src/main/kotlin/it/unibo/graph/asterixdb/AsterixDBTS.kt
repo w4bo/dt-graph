@@ -302,9 +302,8 @@ class AsterixDBTS(
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.length() > 0) {
                     return selectNodeFromJsonObject((result.entities[0] as JSONObject).get(dataset) as JSONObject)
-
                 } else {
-                    throw IllegalArgumentException()
+                    throw IllegalArgumentException("Result is empty")
                 }
             }
 

@@ -11,15 +11,15 @@ interface Graph {
     fun getTSM(): TSManager = tsm!!
     fun close() {}
     fun clear()
-    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
+    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long, isTs: Boolean): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, isTs = isTs, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
-    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
+    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
     fun addNode(n: N): N
-    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P =
+    fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Long = nextPropertyId(), from: Long, to: Long): P =
         P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)
-    fun nextPropertyId(): Int
-    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Int = nextPropertyId()): P  {
+    fun nextPropertyId(): Long
+    fun addProperty(sourceId: Long, key: String, value: Any, type: PropType, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, sourceType: Boolean = NODE, id: Long = nextPropertyId()): P  {
         return if (type == PropType.GEOMETRY) {
             addProperty(createProperty(sourceId, sourceType, key,  WKTReader().read(value as String), type, from = from, to = to, id = id))
         } else {
@@ -50,8 +50,8 @@ interface Graph {
         }
     }
 
-    fun createEdge(label: Label, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
-    fun nextEdgeId(): Int
+    fun createEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
+    fun nextEdgeId(): Long
     fun addEdge(r: R): R {
         val (source, key) = decodeBitwise(r.fromN)
         return if (source == GRAPH_SOURCE) {
@@ -70,11 +70,11 @@ interface Graph {
         return r
     }
 
-    fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Int = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
+    fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>
-    fun getProp(id: Int): P
+    fun getProp(id: Long): P
     fun getNode(id: Long): N
-    fun getEdge(id: Int): R
+    fun getEdge(id: Long): R
 }

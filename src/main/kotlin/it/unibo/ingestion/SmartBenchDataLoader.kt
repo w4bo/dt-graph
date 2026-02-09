@@ -118,10 +118,9 @@ class SmartBenchDataLoader(
                                     ?.normalize()
 
                                 if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
-                                    val newTs = tsm.addTS()
-                                    val newNode = graph.addNode(labelFromString(labelString), value = newTs.getTSId())
+                                    val newNode = graph.addNode(labelFromString(labelString), isTs = true)
+                                    val newTs = tsm.addTS(newNode.id)
                                     graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
-
                                     tsList[newTs] = sensorTsFilePath.toString()
                                 }
                             }

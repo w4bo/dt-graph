@@ -499,7 +499,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                             val r = (curElem.e as R)
                             if (curElem.e.label === HasTS) { // ... to time series
                                 launched++
-                                if(LIMIT == 1){
+                                if (LIMIT == 1) {
                                     try {
                                         g.getTSM()
                                             .getTS(r.toN)

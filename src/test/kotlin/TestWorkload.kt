@@ -92,8 +92,8 @@ class TestWorkload{
             g.addProperty(erranoDrone.id, "name", "Errano Drone" ,PropType.STRING)
             g.addProperty(erranoDrone.id, "location", POINT_IN_T1, PropType.GEOMETRY, from = 0, to = 2)
 
-            val droneTs = g.getTSM().addTS()
-            val droneNDVI = g.addNode(NDVI, value = droneTs.getTSId())
+            val droneNDVI = g.addNode(NDVI, isTs = true)
+            val droneTs = g.getTSM().addTS(droneNDVI.id)
 
             g.addEdge(HasDevice, erranoT1.id, erranoDrone.id, from = 0, to = 2)
             g.addEdge(HasNDVI, erranoDrone.id, droneNDVI.id)
@@ -119,25 +119,20 @@ class TestWorkload{
         g.addEdge(HasDevice, erranoT2.id, t2Moisture.id)
 
         // Time series
-        val t1TS = g.getTSM().addTS()
-        val t2TS = g.getTSM().addTS()
-        val weatherTS = g.getTSM().addTS()
-
+        val t1Humidity = g.addNode(Humidity, isTs = true)
+        val t1TS = g.getTSM().addTS(t1Humidity.id)
+        val t2Humidity = g.addNode(Humidity, isTs = true)
+        val t2TS = g.getTSM().addTS(t2Humidity.id)
+        val weatherTemperature = g.addNode(Humidity, isTs = true)
+        val weatherTS = g.getTSM().addTS(weatherTemperature.id)
         for (timestamp in 0L..5){
             t1TS.add(Measurement, timestamp = timestamp, value = timestamp, location = POINT_IN_T1)
             t2TS.add(Measurement, timestamp = timestamp, value = timestamp, location = POINT_IN_T2)
             weatherTS.add(Measurement, timestamp = timestamp, value = timestamp, location = METEO_POINT)
         }
-
-        val weatherTemperature = g.addNode(Humidity, value = weatherTS.getTSId())
-        val t1Humidity = g.addNode(Humidity, value = t1TS.getTSId())
-        val t2Humidity = g.addNode(Humidity, value = t2TS.getTSId())
-
-
         g.addEdge(HasHumidity, t1Moisture.id, t1Humidity.id)
         g.addEdge(HasHumidity, t2Moisture.id, t2Humidity.id)
         g.addEdge(HasHumidity, weatherStation.id, weatherTemperature.id)
-
         return g
     }
 
@@ -487,10 +482,9 @@ class TestWorkload{
         val t0Device = g.addNode(Device)
         g.addEdge(HasDevice,erranoT0.id,t0Device.id)
 
-        val t0TS = g.getTSM().addTS()
+        val t0Hum = g.addNode(Humidity, isTs = true)
+        val t0TS = g.getTSM().addTS(t0Hum.id)
         t0TS.add(Measurement, 4,4,"POINT (11.798998 44.235024)")
-
-        val t0Hum = g.addNode(Humidity, value = t0TS.getTSId())
         g.addEdge(HasHumidity, t0Device.id, t0Hum.id)
 
         val oldMeasurementsLocationPattern = listOf(

@@ -3,7 +3,6 @@ package it.unibo.graph.utils
 import it.unibo.graph.interfaces.Elem
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
-import org.yaml.snakeyaml.Yaml
 import java.io.*
 import java.util.*
 

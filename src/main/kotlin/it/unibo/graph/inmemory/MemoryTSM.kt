@@ -5,19 +5,18 @@ import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 
 class MemoryTSM(override val g: Graph): TSManager {
-    private val tss: MutableList<TS> = ArrayList()
+    private val tss: MutableMap<Long, TS> = mutableMapOf()
 
     override fun getTS(id: Long): TS {
-        return tss[(id as Number).toInt() - 1]
+        return tss[id]!!
     }
 
-    override fun addTS(): TS {
-        val ts = MemoryTS(g, nextTSId())
-        tss += ts
+    override fun addTS(id: Long): TS {
+        var cId = id + 1
+        val ts = MemoryTS(g, cId)
+        tss[cId] = ts
         return ts
     }
-
-    override fun nextTSId(): Long = tss.size.toLong() + 1
 
     override fun clear() {
         tss.clear()
