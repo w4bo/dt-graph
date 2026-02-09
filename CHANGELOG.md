@@ -1,3 +1,169 @@
+## [1.2.13](https://github.com/w4bo/dt-graph/compare/1.2.12...1.2.13) (2025-11-20)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:tinkergraph-gremlin to v3.7.5 ([#118](https://github.com/w4bo/dt-graph/issues/118)) ([cf0786d](https://github.com/w4bo/dt-graph/commit/cf0786d8948051607a4a86ef78a890676e8f2fc2))
+
+## [1.2.12](https://github.com/w4bo/dt-graph/compare/1.2.11...1.2.12) (2025-11-19)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-server to v3.7.5 ([#117](https://github.com/w4bo/dt-graph/issues/117)) ([3687435](https://github.com/w4bo/dt-graph/commit/368743525bd87ab1241470d03389750a0135d1d4))
+
+## [1.2.11](https://github.com/w4bo/dt-graph/compare/1.2.10...1.2.11) (2025-11-19)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-driver to v3.7.5 ([#116](https://github.com/w4bo/dt-graph/issues/116)) ([03a3212](https://github.com/w4bo/dt-graph/commit/03a321205b1664824c64551d1e9da3aab28b5ce5))
+
+## [1.2.10](https://github.com/w4bo/dt-graph/compare/1.2.9...1.2.10) (2025-11-19)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.141 ([#93](https://github.com/w4bo/dt-graph/issues/93)) ([d898edf](https://github.com/w4bo/dt-graph/commit/d898edfadf267ba0a4503c3f1e6d1785ee7aba7f))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.142 ([#95](https://github.com/w4bo/dt-graph/issues/95)) ([8d876b5](https://github.com/w4bo/dt-graph/commit/8d876b55571b748cfb0f89679bf3835e812d2a75))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.143 ([#96](https://github.com/w4bo/dt-graph/issues/96)) ([3fd19ab](https://github.com/w4bo/dt-graph/commit/3fd19ab89ab6517aa0f575cad912ab642d97e173))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.145 ([#98](https://github.com/w4bo/dt-graph/issues/98)) ([a64cafd](https://github.com/w4bo/dt-graph/commit/a64cafd54f96d2868c4cf44ebdb56682b20b691f))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.146 ([#99](https://github.com/w4bo/dt-graph/issues/99)) ([5e0fbb8](https://github.com/w4bo/dt-graph/commit/5e0fbb8ebde269046b07a5bb658eefab3a746a9a))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.147 ([#101](https://github.com/w4bo/dt-graph/issues/101)) ([9534418](https://github.com/w4bo/dt-graph/commit/9534418fb764dea8c43722c30005431351ab6881))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.148 ([#103](https://github.com/w4bo/dt-graph/issues/103)) ([1bcccc0](https://github.com/w4bo/dt-graph/commit/1bcccc0eff0fb358c33cc9baedf405bfe780cbd0))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.149 ([#104](https://github.com/w4bo/dt-graph/issues/104)) ([e68353c](https://github.com/w4bo/dt-graph/commit/e68353c8e12a4420d2b471fa3fcc141aae7c299b))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.152 ([#106](https://github.com/w4bo/dt-graph/issues/106)) ([aa29020](https://github.com/w4bo/dt-graph/commit/aa2902041da7cc2c0383b78817115b9869645b82))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.153 ([#109](https://github.com/w4bo/dt-graph/issues/109)) ([c821c1f](https://github.com/w4bo/dt-graph/commit/c821c1f89040ea16d17689ad3279a33009004662))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.154 ([#110](https://github.com/w4bo/dt-graph/issues/110)) ([a41c289](https://github.com/w4bo/dt-graph/commit/a41c289468cd7168e2eeb69617be84459f8f1abf))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.155 ([#111](https://github.com/w4bo/dt-graph/issues/111)) ([ff3d2ce](https://github.com/w4bo/dt-graph/commit/ff3d2ceaede4a4f9dac9c3a2504da4a6c8578355))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.156 ([#112](https://github.com/w4bo/dt-graph/issues/112)) ([d73baff](https://github.com/w4bo/dt-graph/commit/d73baff7cb1ffdb9d15d09df5a21d3b4b9b40fc3))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.157 ([#113](https://github.com/w4bo/dt-graph/issues/113)) ([596c078](https://github.com/w4bo/dt-graph/commit/596c078bff8586f5e28849a27be3b4b377a3eeab))
+* **deps:** update node.js to 22.19 ([#92](https://github.com/w4bo/dt-graph/issues/92)) ([2a55fc5](https://github.com/w4bo/dt-graph/commit/2a55fc58931c60a4028d827398be00dd11b5a28d))
+* **deps:** update node.js to 22.20 ([#100](https://github.com/w4bo/dt-graph/issues/100)) ([70b010b](https://github.com/w4bo/dt-graph/commit/70b010b2ec44c6e00e95070977049f9d5ad4f86d))
+* **deps:** update node.js to 22.21 ([#105](https://github.com/w4bo/dt-graph/issues/105)) ([a51f19f](https://github.com/w4bo/dt-graph/commit/a51f19f02ef4a635176ab801e6dd68aa24c6d4c8))
+* **deps:** update node.js to v24 ([#108](https://github.com/w4bo/dt-graph/issues/108)) ([2034276](https://github.com/w4bo/dt-graph/commit/20342768d87ef411a48188f452849ec12cb51412))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.2.20 ([#97](https://github.com/w4bo/dt-graph/issues/97)) ([d66e899](https://github.com/w4bo/dt-graph/commit/d66e8998da84ac5c6afca70bae2f64a63aa827ec))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.2.21 ([#107](https://github.com/w4bo/dt-graph/issues/107)) ([8489a75](https://github.com/w4bo/dt-graph/commit/8489a754067ce775f9f8c3823ae274fbf2d58701))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-core to v3.7.5 ([#115](https://github.com/w4bo/dt-graph/issues/115)) ([563353e](https://github.com/w4bo/dt-graph/commit/563353e22411117b6b30fc9481f94306ec8a544a))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v5.0.1 ([#114](https://github.com/w4bo/dt-graph/issues/114)) ([1427a04](https://github.com/w4bo/dt-graph/commit/1427a04064177b6505d237ee54ab5177efef3aa4))
+* **deps:** update actions/setup-java action to v5 ([#91](https://github.com/w4bo/dt-graph/issues/91)) ([92f6723](https://github.com/w4bo/dt-graph/commit/92f672392f4dd7595ef476022ebdefde09143fa4))
+* **deps:** update actions/setup-node action to v5 ([#94](https://github.com/w4bo/dt-graph/issues/94)) ([c468062](https://github.com/w4bo/dt-graph/commit/c46806207c1ae39990156d20e70027e5866ca3dd))
+* **deps:** update actions/setup-node action to v6 ([#102](https://github.com/w4bo/dt-graph/issues/102)) ([b910277](https://github.com/w4bo/dt-graph/commit/b91027779bb6acdf48250379b6f5d74b2ce11356))
+
+## [1.2.9](https://github.com/w4bo/dt-graph/compare/1.2.8...1.2.9) (2025-08-20)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.140 ([#88](https://github.com/w4bo/dt-graph/issues/88)) ([59c3acf](https://github.com/w4bo/dt-graph/commit/59c3acf5a42e53633ce917fa634705dd38c6f312))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.2.10 ([#89](https://github.com/w4bo/dt-graph/issues/89)) ([0288118](https://github.com/w4bo/dt-graph/commit/0288118f062333ce3e702f7f8e2eb4483b77dcbe))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.4.2 ([#90](https://github.com/w4bo/dt-graph/issues/90)) ([1782e80](https://github.com/w4bo/dt-graph/commit/1782e807e04283c8b7235f473ed7ef81e297173c))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v4.3.0 ([#86](https://github.com/w4bo/dt-graph/issues/86)) ([44d102f](https://github.com/w4bo/dt-graph/commit/44d102f2e65dc25c8e494128306219fffa815dbb))
+* **deps:** update actions/checkout action to v5 ([#87](https://github.com/w4bo/dt-graph/issues/87)) ([f4ad8a9](https://github.com/w4bo/dt-graph/commit/f4ad8a90fe49d6d29dd325a94af719f72d7a7ba6))
+
+## [1.2.8](https://github.com/w4bo/dt-graph/compare/1.2.7...1.2.8) (2025-08-10)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:tinkergraph-gremlin to v3.7.4 ([#85](https://github.com/w4bo/dt-graph/issues/85)) ([5cd8296](https://github.com/w4bo/dt-graph/commit/5cd8296a9f1b6ae2865c3780133653d2688e25d2))
+
+## [1.2.7](https://github.com/w4bo/dt-graph/compare/1.2.6...1.2.7) (2025-08-09)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-server to v3.7.4 ([#84](https://github.com/w4bo/dt-graph/issues/84)) ([e517c8d](https://github.com/w4bo/dt-graph/commit/e517c8d0ef9d10d4187dae8c28fad35f56455288))
+
+## [1.2.6](https://github.com/w4bo/dt-graph/compare/1.2.5...1.2.6) (2025-08-09)
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-driver to v3.7.4 ([#83](https://github.com/w4bo/dt-graph/issues/83)) ([c3b3c7a](https://github.com/w4bo/dt-graph/commit/c3b3c7ae17d0c8f6750ba975684eecb4aac722fe))
+
+## [1.2.5](https://github.com/w4bo/dt-graph/compare/1.2.4...1.2.5) (2025-08-09)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v8.14.1 ([#66](https://github.com/w4bo/dt-graph/issues/66)) ([b0b3a04](https://github.com/w4bo/dt-graph/commit/b0b3a043c60af5bca4a8d675fc47fec2d2fa2c30))
+* **deps:** update dependency gradle to v8.14.2 ([#70](https://github.com/w4bo/dt-graph/issues/70)) ([4803d00](https://github.com/w4bo/dt-graph/commit/4803d00b789804263240856ee2161a08501b66c3))
+* **deps:** update dependency gradle to v8.14.3 ([#76](https://github.com/w4bo/dt-graph/issues/76)) ([54e9945](https://github.com/w4bo/dt-graph/commit/54e99452def24ea3c95a880a1b35eb4019ab97db))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.129 ([#64](https://github.com/w4bo/dt-graph/issues/64)) ([07e5b34](https://github.com/w4bo/dt-graph/commit/07e5b34b4effe863e04982836b6fdec6cc75d052))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.131 ([#67](https://github.com/w4bo/dt-graph/issues/67)) ([ecc93e3](https://github.com/w4bo/dt-graph/commit/ecc93e3f2cc7a050d51524bddc736e9f28d51b13))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.132 ([#68](https://github.com/w4bo/dt-graph/issues/68)) ([61d29bc](https://github.com/w4bo/dt-graph/commit/61d29bc0f99ac1591136bf9acb1c8d2598fd2a62))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.133 ([#69](https://github.com/w4bo/dt-graph/issues/69)) ([d5b5521](https://github.com/w4bo/dt-graph/commit/d5b552155c5b395ab7b173c6ff3ad3cb6a679614))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.134 ([#73](https://github.com/w4bo/dt-graph/issues/73)) ([9859ca8](https://github.com/w4bo/dt-graph/commit/9859ca855deeebcf002ebae4099d509efb5d6883))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.135 ([#74](https://github.com/w4bo/dt-graph/issues/74)) ([a678e98](https://github.com/w4bo/dt-graph/commit/a678e9891e163ceb0d1e10d45531dd08e2e5ffac))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.136 ([#75](https://github.com/w4bo/dt-graph/issues/75)) ([3b42a6c](https://github.com/w4bo/dt-graph/commit/3b42a6cad05d49e6e8e2f4d02ee2d20cad775d93))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.137 ([#77](https://github.com/w4bo/dt-graph/issues/77)) ([0f8a2b6](https://github.com/w4bo/dt-graph/commit/0f8a2b6988cfb7e0c80be53d59859d8e540c3709))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.138 ([#78](https://github.com/w4bo/dt-graph/issues/78)) ([29a47cb](https://github.com/w4bo/dt-graph/commit/29a47cb2ecd9f0a88d6562dd55652ba63271ccbd))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.139 ([#81](https://github.com/w4bo/dt-graph/issues/81)) ([0567c20](https://github.com/w4bo/dt-graph/commit/0567c20e451ce3e9a83f9cad689c930867edd217))
+* **deps:** update node.js to 22.16 ([#65](https://github.com/w4bo/dt-graph/issues/65)) ([0301d46](https://github.com/w4bo/dt-graph/commit/0301d46b5bd02412d6d2f4a58f013ce61ad65382))
+* **deps:** update node.js to 22.17 ([#72](https://github.com/w4bo/dt-graph/issues/72)) ([9d58826](https://github.com/w4bo/dt-graph/commit/9d58826e2a44e0804221a751d4e66fcc9990222c))
+* **deps:** update node.js to 22.18 ([#79](https://github.com/w4bo/dt-graph/issues/79)) ([c4625ed](https://github.com/w4bo/dt-graph/commit/c4625ed7f9a8837c0c7d72b8aa74dc965dbfa0c4))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.2.0 ([#71](https://github.com/w4bo/dt-graph/issues/71)) ([6aca86e](https://github.com/w4bo/dt-graph/commit/6aca86e566bfb27c5129faa68ab38c2d992da65b))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.tinkerpop:gremlin-core to v3.7.4 ([#82](https://github.com/w4bo/dt-graph/issues/82)) ([d544bfa](https://github.com/w4bo/dt-graph/commit/d544bfa5664230405b2c2163be853d84e7d68d35))
+
+## [1.2.4](https://github.com/w4bo/dt-graph/compare/1.2.3...1.2.4) (2025-05-17)
+
+### Bug Fixes
+
+* **deps:** update dependency org.json:json to v20250517 ([#63](https://github.com/w4bo/dt-graph/issues/63)) ([100696d](https://github.com/w4bo/dt-graph/commit/100696d994db7542ba529672663bc55cbf346baf))
+
+## [1.2.3](https://github.com/w4bo/dt-graph/compare/1.2.2...1.2.3) (2025-05-13)
+
+### Dependency updates
+
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.128 ([#60](https://github.com/w4bo/dt-graph/issues/60)) ([5b84aca](https://github.com/w4bo/dt-graph/commit/5b84acada7602cfe1d026e896a32cb68055ccf1b))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.1.21 ([#61](https://github.com/w4bo/dt-graph/issues/61)) ([21641a8](https://github.com/w4bo/dt-graph/commit/21641a8caf4ea3468c64012fd999776d9db91dc8))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.2.1 ([#62](https://github.com/w4bo/dt-graph/issues/62)) ([70d96b1](https://github.com/w4bo/dt-graph/commit/70d96b13457861c16e94fec24c8d452607f409d0))
+
+## [1.2.2](https://github.com/w4bo/dt-graph/compare/1.2.1...1.2.2) (2025-05-13)
+
+### Dependency updates
+
+* **deps:** update dependency gradle to v8.14 ([#57](https://github.com/w4bo/dt-graph/issues/57)) ([e8343de](https://github.com/w4bo/dt-graph/commit/e8343de4b4add9ab530b02e13cc5ca4efc3eabac))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.126 ([#56](https://github.com/w4bo/dt-graph/issues/56)) ([2cb0a13](https://github.com/w4bo/dt-graph/commit/2cb0a13fcb3ccd6569862465e099d5041e54539d))
+* **deps:** update dependency semantic-release-preconfigured-conventional-commits to v1.1.127 ([#58](https://github.com/w4bo/dt-graph/issues/58)) ([925d052](https://github.com/w4bo/dt-graph/commit/925d0524cf396221580211e995669698f02d3f02))
+* **deps:** update node.js to 22.15 ([#55](https://github.com/w4bo/dt-graph/issues/55)) ([b513eab](https://github.com/w4bo/dt-graph/commit/b513eabed0888f11ded44431cd6d731ee316c396))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10.1.3 ([#59](https://github.com/w4bo/dt-graph/issues/59)) ([b53dca6](https://github.com/w4bo/dt-graph/commit/b53dca680526257cc172916b4808ce3d87699995))
+
+## [1.2.1](https://github.com/w4bo/dt-graph/compare/1.2.0...1.2.1) (2025-04-17)
+
+### Dependency updates
+
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.1.20 ([#51](https://github.com/w4bo/dt-graph/issues/51)) ([fdaf9f0](https://github.com/w4bo/dt-graph/commit/fdaf9f041593c9706a3aab14f30da3191bcdd088))
+
+### Bug Fixes
+
+* **deps:** update dependency org.rocksdb:rocksdbjni to v10 ([#54](https://github.com/w4bo/dt-graph/issues/54)) ([ece3a58](https://github.com/w4bo/dt-graph/commit/ece3a58426dbf76f9bcc1d675561db56bce85340))
+
+### Build and continuous integration
+
+* **deps:** update actions/setup-java action to v4.7.1 ([#52](https://github.com/w4bo/dt-graph/issues/52)) ([51d26d2](https://github.com/w4bo/dt-graph/commit/51d26d2629250f8f38ec8fd84310c6e4149e9330))
+* **deps:** update actions/setup-node action to v4.3.0 ([#50](https://github.com/w4bo/dt-graph/issues/50)) ([71f4be3](https://github.com/w4bo/dt-graph/commit/71f4be304b7082c32e84d3b8cb6007fedcae4d57))
+* **deps:** update actions/setup-node action to v4.4.0 ([#53](https://github.com/w4bo/dt-graph/issues/53)) ([3b134f2](https://github.com/w4bo/dt-graph/commit/3b134f26d2b3758634886cc77b6744ab51981d9f))
+
+## [1.2.0](https://github.com/w4bo/dt-graph/compare/1.1.1...1.2.0) (2025-03-10)
+
+### Features
+
+* added property and edge timestamp closure upon updates ([808b566](https://github.com/w4bo/dt-graph/commit/808b566a1ad47623f3bab6fd319d727cd3fd8618))
+
 ## [1.1.1](https://github.com/w4bo/dt-graph/compare/1.1.0...1.1.1) (2025-03-05)
 
 ### Bug Fixes
