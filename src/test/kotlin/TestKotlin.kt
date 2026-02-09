@@ -38,6 +38,7 @@ class TestKotlin {
                             g.tsm = tsm // Reassign the TSM (not persisted)
                         }
                         // Apply the test function to the prepared graph
+                        println("Graph: ${g1.javaClass}, TSM: ${tsm.javaClass}")
                         f(g)
                         // Clean up and release resources
                         g.close()
@@ -78,33 +79,33 @@ class TestKotlin {
 
         var timestamp = 0L
 
-        val ts1: TS = g.getTSM().addTS()
+        val n6 = g.addNode(Humidity, isTs = true)
+        val ts1: TS = g.getTSM().addTS(n6.id)
         val m1 = ts1.add(Measurement, timestamp = timestamp, value = 10)
         g.addProperty(m1.id, "unit", "Celsius", PropType.STRING, id = DUMMY_ID, from = timestamp, to = timestamp)
         timestamp += 1
         ts1.add(Measurement, timestamp = timestamp++, value = 11)
         ts1.add(Measurement, timestamp = timestamp++, value = 12)
-        val n6 = g.addNode(Humidity, value = ts1.getTSId())
         g.addEdge(HasHumidity, n3.id, n6.id)
         g.addEdge(HasOwner, m1.id, n4.id, id = DUMMY_ID)
         g.addEdge(HasManutentor, m1.id, n4.id, id = DUMMY_ID)
 
-        val ts2 = g.getTSM().addTS()
+        val n7 = g.addNode(Temperature, isTs = true)
+        val ts2 = g.getTSM().addTS(n7.id)
         ts2.add(Measurement, timestamp = timestamp++, value = 10)
         ts2.add(Measurement, timestamp = timestamp++, value = 11)
         ts2.add(Measurement, timestamp = timestamp++, value = 12)
-        val n7 = g.addNode(Temperature, value = ts2.getTSId())
         g.addEdge(HasTemperature, n3.id, n7.id)
 
         ts1.add(Measurement, timestamp = timestamp++, value = 13)
         ts1.add(Measurement, timestamp = timestamp++, value = 14)
         ts1.add(Measurement, timestamp = timestamp++, value = 15)
 
-        val ts3 = g.getTSM().addTS()
+        val n8 = g.addNode(SolarRadiation, isTs = true)
+        val ts3 = g.getTSM().addTS(n8.id)
         val m2 = ts3.add(Measurement, timestamp = timestamp++, value = 23, location = "POINT (11.799328 44.235394)")
         ts3.add(Measurement, timestamp = timestamp++, value = 24, location = "POINT (11.799328 44.235394)")
         ts3.add(Measurement, timestamp = timestamp, value = 25, location = "POINT (11.799328 44.235394)")
-        val n8 = g.addNode(SolarRadiation, value = ts3.getTSId())
         g.addEdge(HasSolarRadiation, n2.id, n8.id)
         g.addEdge(HasManutentor, m2.id, n4.id, id = DUMMY_ID)
 
@@ -196,8 +197,12 @@ class TestKotlin {
     @Test
     fun testProps() {
         matrix { g ->
-            val m1 = g.getTSM().getTS(1).get(0)
-            listOf(Pair(g.getNode(N0), 2), Pair(g.getNode(N1), 2), Pair(g.getNode(N2), 2), Pair(m1, 1)).forEach {
+            listOf(
+                Pair(g.getNode(N0), 2),
+                Pair(g.getNode(N1), 2),
+                Pair(g.getNode(N2), 2),
+                Pair(g.getTSM().getTS(N6 + 1).get(0), 1) // first measurement of the TS corresponding to N6
+            ).forEach {
                 assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
             }
         }
@@ -206,8 +211,12 @@ class TestKotlin {
     @Test
     fun testTS() {
         matrix { g ->
-            listOf(Pair(g.getNode(N6), 6), Pair(g.getNode(N7), 3), Pair(g.getNode(N8), 3)).forEach {
-                assertTrue(it.first.value != null)
+            listOf(
+                Pair(g.getNode(N6), 6),
+                Pair(g.getNode(N7), 3),
+                Pair(g.getNode(N8), 3)
+            ).forEach {
+                assertTrue(it.first.isTs, "The node should be a time series")
                 assertEquals(it.second, it.first.getTS().size, it.first.getTS().toString())
             }
         }
@@ -318,7 +327,7 @@ class TestKotlin {
                 listOf(12.5 as Any),
                 query(g,
                     listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, alias = "Measurement")),
-                    by = listOf(Aggregate("Measurement", "value", AggOperator.AVG))
+                    by = listOf(Aggregate("Measurement", VALUE, AggOperator.AVG))
                 )
             )
 
@@ -326,7 +335,7 @@ class TestKotlin {
                 listOf(15.0 as Any),
                 query(g,
                     listOf(Step(AgriParcel), null, Step(Device), null, null, Step(HasTS), Step(Measurement, alias = "Measurement")),
-                    by = listOf(Aggregate("Measurement", "value", AggOperator.AVG))
+                    by = listOf(Aggregate("Measurement", VALUE, AggOperator.AVG))
                 )
             )
         }
@@ -358,7 +367,7 @@ class TestKotlin {
         matrix { g ->
             assertEquals(
                 listOf(24.0),
-                query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m")), by= listOf(Aggregate("m", "value", AggOperator.AVG)))
+                query(g, listOf(Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m")), by= listOf(Aggregate("m", VALUE, AggOperator.AVG)))
             )
         }
     }
@@ -437,17 +446,18 @@ class TestKotlin {
             assertEquals(0, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w1).size)
             assertEquals(1, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w2).size)
 
-            val ts = g.getTSM().addTS()
+            val n12 = g.addNode(C, isTs = true)
+            val ts = g.getTSM().addTS(n12.id)
             ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
-            g.addEdge(Foo, n11.id, g.addNode(C, value = ts.getTSId()).id)
+            g.addEdge(Foo, n11.id, n12.id)
 
             assertEquals(1, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w1).size)
             assertEquals(0, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w2).size)
             assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
             assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
 
-            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter("value", Operators.GTE, 22.toLong(), attrFirst = true))))).size)
-            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter("value", Operators.GTE, 25.toLong(), attrFirst = true))))).size)
+            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22.toLong(), attrFirst = true))))).size)
+            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25.toLong(), attrFirst = true))))).size)
         }
     }
 
@@ -457,13 +467,15 @@ class TestKotlin {
             g.clear()
             g.getTSM().clear()
 
-            val ts1 = g.getTSM().addTS()
+            val b1 = g.addNode(B, isTs = true)
+            val ts1 = g.getTSM().addTS(b1.id)
             var timestamp = 0L
             ts1.add(C, timestamp = timestamp++, value = 1, location = POINT_IN_T0)
             ts1.add(C, timestamp = timestamp++, value = 2, location = POINT_IN_T0)
             ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0)
 
-            val ts2 = g.getTSM().addTS()
+            val b2 = g.addNode(B, isTs = true)
+            val ts2 = g.getTSM().addTS(b2.id)
             timestamp = 0L
             ts2.add(C, timestamp = timestamp++, value = 10, location = POINT_IN_T0)
             ts2.add(C, timestamp = timestamp++, value = 20, location = POINT_IN_T0)
@@ -471,10 +483,8 @@ class TestKotlin {
 
             val a1 = g.addNode(A)
             g.addProperty(a1.id, "name", "a", PropType.STRING)
-            val b1 = g.addNode(B, value = ts1.getTSId())
             g.addProperty(b1.id, "name", "foo", PropType.STRING)
             g.addProperty(b1.id, "lastname", "b", PropType.STRING)
-            val b2 = g.addNode(B, value = ts2.getTSId())
             g.addProperty(b2.id, "name", "foo", PropType.STRING)
             g.addProperty(b2.id, "lastname", "c", PropType.STRING)
             g.addEdge(Foo, a1.id, b1.id)
@@ -482,18 +492,18 @@ class TestKotlin {
 
             val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
 
-            val gb1 = listOf(Aggregate("c", property = "value", operator = AggOperator.SUM))
+            val gb1 = listOf(Aggregate("c", property = VALUE, operator = AggOperator.SUM))
             assertEquals(listOf(66.0), query(g, pattern1, by=gb1))
-            val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
             assertEquals(listOf(listOf("foo", 66.0)), query(g, pattern1, by=gb2))
-            val gb3 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            val gb3 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
             assertEquals(setOf(listOf("b", 6.0), listOf("c", 60.0)), query(g, pattern1, by=gb3).toSet())
-            val gb4 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = "value", operator = AggOperator.SUM))
+            val gb4 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
             assertEquals(listOf(listOf("a", 66.0)), query(g, pattern1, by=gb4))
 
-            val gb5 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            val gb5 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
             assertEquals(listOf(listOf("a", 11.0)), query(g, pattern1, by=gb5))
-            val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
             assertEquals(setOf(listOf("b", 2.0), listOf("c", 20.0)), query(g, pattern1, by=gb6).toSet())
         }
     }
@@ -504,7 +514,8 @@ class TestKotlin {
             g.clear()
             g.getTSM().clear()
 
-            val ts1 = g.getTSM().addTS()
+            val b1 = g.addNode(B, isTs = true)
+            val ts1 = g.getTSM().addTS(b1.id)
             var timestamp = 0L
             val m1 = ts1.add(C, timestamp = timestamp, value = 1, location = POINT_IN_T0)
             g.addProperty(m1.id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
@@ -517,7 +528,8 @@ class TestKotlin {
             timestamp++
             g.addProperty(ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
 
-            val ts2 = g.getTSM().addTS()
+            val b2 = g.addNode(B, isTs = true)
+            val ts2 = g.getTSM().addTS(b2.id)
             timestamp = 0L
             g.addProperty(ts2.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
             timestamp++
@@ -526,14 +538,12 @@ class TestKotlin {
             g.addProperty(ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
 
             val a1 = g.addNode(A)
-            val b1 = g.addNode(B, value = ts1.getTSId())
-            val b2 = g.addNode(B, value = ts2.getTSId())
             g.addEdge(Foo, a1.id, b1.id)
             g.addEdge(Foo, a1.id, b2.id)
 
             val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
 
-            val gb1 = listOf(Aggregate("c", property = "name"), Aggregate("c", property = "value", operator = AggOperator.AVG))
+            val gb1 = listOf(Aggregate("c", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
             assertEquals(setOf(listOf("a", 8.0), listOf("b", 14.0)), query(g, pattern1, by=gb1).toSet())
         }
     }
@@ -573,14 +583,14 @@ class TestKotlin {
              assertEquals(setOf(listOf("a", 1.0), listOf("null", 1.5)), query(g, pattern1, by=gb1, timeaware = true).toSet())
              assertEquals(setOf(listOf("a", 1.5)), query(g, pattern1, by=gb1, timeaware = false).toSet())
 
-            val ts1 = g.getTSM().addTS()
+            val b1 = g.addNode(B, isTs = true)
+            val ts1 = g.getTSM().addTS(b1.id)
             var timestamp = 0L
             g.addProperty(ts1.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id, "v", 2, PropType.INT, from = timestamp, to = timestamp)
             timestamp++
             g.addProperty(ts1.add(C, timestamp = timestamp, value = 20, location = POINT_IN_T0).id, "v", 20, PropType.INT, from = timestamp, to = timestamp)
             timestamp++
             g.addProperty(ts1.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id, "v", 20, PropType.INT, from = timestamp, to = timestamp)
-            val b1 = g.addNode(B, value = ts1.getTSId())
             g.addProperty(b1.id, "name", "foo", PropType.STRING, from = 0, to = 4)
 
             val pattern2 = listOf(Step(B, alias = "b"), null, Step(C, alias = "c"))
@@ -628,11 +638,11 @@ class TestKotlin {
         g.tsm = AsterixDBTSM.createDefault(g)
         (g.tsm as AsterixDBTSM).clear()
 
-        val ts = g.getTSM().addTS()
+        val n11 = g.addNode(C, isTs = true)
+        val ts = g.getTSM().addTS(n11.id)
         ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
 
         val n10 = g.addNode(A)
-        val n11 = g.addNode(C, value = ts.getTSId())
 
         g.addProperty(n10.id, "location", T0_LOCATION, PropType.GEOMETRY)
         g.addEdge(Foo, n10.id, n11.id)

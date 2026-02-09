@@ -25,7 +25,6 @@ class AsterixDBTSM private constructor(
     val datatype: String,
 ) : TSManager {
     val clusterControllerHost: String = "http://$host:$port/query/service"
-    var id = 1
 
     init {
         if (!checkRestore(dataverse)) {
@@ -47,23 +46,16 @@ class AsterixDBTSM private constructor(
         return queryAsterixDB(clusterControllerHost, query, checkResults = true)
     }
 
-    override fun addTS(): TS {
-        val tsId = nextTSId()
-        val newTS =
-            AsterixDBTS(g, tsId, clusterControllerHost, nodeControllersIPs, dataverse, datatype)
+    override fun addTS(id: Long): TS {
+        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype)
         return newTS
     }
-
-
-
-    override fun nextTSId(): Long = id++.toLong()
 
     override fun getTS(id: Long): TS {
         return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true)
     }
 
     override fun clear() {
-        id = 1
         queryAsterixDB(clusterControllerHost, getDataverseCreationQuery(dataverse))
     }
 

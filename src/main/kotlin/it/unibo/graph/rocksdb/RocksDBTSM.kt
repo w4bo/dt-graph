@@ -9,7 +9,6 @@ import org.rocksdb.RocksDB
 class RocksDBTSM(override val g: Graph): TSManager {
     val db: RocksDB
     val DB_NAME = "db_ts"
-    var id = 1
 
     init {
         val options = Options()
@@ -22,11 +21,9 @@ class RocksDBTSM(override val g: Graph): TSManager {
         return RocksDBTS(g, id, db)
     }
 
-    override fun addTS(): TS {
-        return RocksDBTS(g, nextTSId(), db)
+    override fun addTS(id: Long): TS {
+        return RocksDBTS(g, id + 1, db)
     }
-
-    override fun nextTSId(): Long = id++.toLong()
 
     override fun clear() {
         val iterator = db.newIterator()
@@ -35,6 +32,5 @@ class RocksDBTSM(override val g: Graph): TSManager {
             db.delete(iterator.key())
             iterator.next()
         }
-        id = 1
     }
 }

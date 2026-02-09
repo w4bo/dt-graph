@@ -44,16 +44,16 @@ open class R(
 
     fun serialize(): ByteArray {
         val buffer = ByteBuffer.allocate(EDGE_SIZE)
-        buffer.putLong(id.toLong())                       // 8 bytes
-        buffer.putLong(fromTimestamp)                     // 8 bytes
-        buffer.putLong(toTimestamp)                       // 8 bytes
-        buffer.putInt((label as Labels).ordinal)          // 4 bytes
+        buffer.putLong(id.toLong())                 // 8 bytes
+        buffer.putLong(fromTimestamp)               // 8 bytes
+        buffer.putLong(toTimestamp)                 // 8 bytes
+        buffer.putInt((label as Labels).ordinal)    // 4 bytes
         buffer.putInt(nextProp?: Int.MIN_VALUE)     // 4 bytes
-        buffer.putLong(fromN)                             // 8 bytes
-        buffer.putLong(toN)                               // 8 bytes
+        buffer.putLong(fromN)                       // 8 bytes
+        buffer.putLong(toN)                         // 8 bytes
         buffer.putInt(fromNextRel?: Int.MIN_VALUE)  // 4 bytes
         buffer.putInt(toNextRel?: Int.MIN_VALUE)    // 4 bytes
-        return buffer.array()                             // Total: 56 bytes
+        return buffer.array()                              // Total: 56 bytes
     }
 
     init {

@@ -11,10 +11,10 @@ interface Graph {
     fun getTSM(): TSManager = tsm!!
     fun close() {}
     fun clear()
-    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, g = this)
+    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long, isTs: Boolean): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, isTs = isTs, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
-    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): N = addNode(createNode(label, value, from = from, to = to))
+    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Int = nextPropertyId(), from: Long, to: Long): P =
         P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)

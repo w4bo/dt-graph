@@ -46,20 +46,20 @@ class TestTemporal {
         g.addProperty(h1.id, "address", "Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(h1.id, "address", "Bar", PropType.STRING, from = 2)
 
-        val ts1: TS = g.getTSM().addTS()
+        val t1 = g.addNode(Temperature, isTs = true)
+        val ts1: TS = g.getTSM().addTS(t1.id)
         val m1 = ts1.add(Measurement, timestamp = 0, value = 0)
         ts1.add(Measurement, timestamp = 1, value = 1)
         ts1.add(Measurement, timestamp = 2, value = 2)
-        val t1 = g.addNode(Temperature, value = ts1.getTSId())
         g.addEdge(HasTemperature, d1.id, t1.id)
         g.addEdge(HasOwner, m1.id, h1.id, from = 0, to = 2, id = DUMMY_ID)
         g.addEdge(HasOwner, m1.id, h2.id, from = 2, to = 4, id = DUMMY_ID)
 
-        val ts2 = g.getTSM().addTS()
+        val t2 = g.addNode(Temperature, isTs = true)
+        val ts2 = g.getTSM().addTS(t2.id)
         ts2.add(Measurement, timestamp = 0, value = 10)
         ts2.add(Measurement, timestamp = 1, value = 11)
         ts2.add(Measurement, timestamp = 2, value = 12)
-        val t2 = g.addNode(Temperature, value = ts2.getTSId())
         g.addEdge(HasTemperature, d2.id, t2.id)
 
         return g

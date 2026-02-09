@@ -6,18 +6,20 @@ import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
 import java.util.*
 
-const val NODE_SIZE: Int = 48
+const val NODE_SIZE: Int = 37 // 48
 
 open class N(
     final override val id: Long, // node id
     final override val label: Label, // node label
-    var nextRel: Int? = null, // if graph node, link to the next relationship
-    final override var nextProp: Int? = null, // if graph node, link to the next property
-    val value: Long? = null, // if TS snapshot: value of the measurement, else if TS node: id of the TS
-    @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
-    @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
+    var nextRel: Int? = null, // if graph node link to the next relationship, else null
+    final override var nextProp: Int? = null, // if graph node link to the next property, else null
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
+    val isTs : Boolean = false,
+
+    val value: Long? = null, // if TS snapshot: value of the measurement, else null
+    @Transient val relationships: MutableList<R> = mutableListOf(), // if TS snapshot, lists of relationships towards the graph
+    @Transient final override val properties: MutableList<P> = mutableListOf(), // if TS snapshot, lists of properties
     @Transient final override var g: Graph
 ) : ElemP {
 
@@ -31,13 +33,13 @@ open class N(
             val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
             val nextProp = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
             val nextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
-            val value = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
-            return N(id, label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, value = value, g = g)
+            val isTs = buffer.get() != 0.toByte()
+            return N(id = id, label = label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, isTs = isTs, g = g)
         }
 
         fun createVirtualN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph, properties: List<P> = emptyList()) = createVirtualN(label, mutableListOf(P(DUMMY_ID, DUMMY_ID.toLong(), NODE, key = VALUE, value = aggregatedValue, type = PropType.DOUBLE, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)) + properties, fromTimestamp, toTimestamp, g)
 
-        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(DUMMY_ID.toLong(), label, null, null, null, mutableListOf(), properties.toMutableList(), fromTimestamp, toTimestamp, g)
+        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(id = DUMMY_ID.toLong(), label = label, nextRel = null, nextProp = null, relationships = mutableListOf(), properties = properties.toMutableList(), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
     }
 
     fun serialize(): ByteArray {
@@ -46,10 +48,10 @@ open class N(
         buffer.putLong(fromTimestamp)                     // 8 bytes
         buffer.putLong(toTimestamp)                       // 8 bytes
         buffer.putInt((label as Labels).ordinal)          // 4 bytes
-        buffer.putInt(nextProp?: Int.MIN_VALUE)     // 4 bytes
-        buffer.putInt(nextRel?: Int.MIN_VALUE)      // 4 bytes
-        buffer.putLong(value?: Long.MIN_VALUE)      // 8 bytes
-        return buffer.array()                             // Total: 48 bytes
+        buffer.putInt(nextProp?: Int.MIN_VALUE)           // 4 bytes
+        buffer.putInt(nextRel?: Int.MIN_VALUE)            // 4 bytes
+        buffer.put(if (isTs) 1 else 0)                       // 1 byte
+        return buffer.array()                                    // Total: 48 bytes
     }
 
     override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
@@ -62,7 +64,7 @@ open class N(
     }
 
     fun getTS(): List<N> {
-        return g.getTSM().getTS(value!!).getValues(emptyList(), emptyList())
+        return g.getTSM().getTS(id + 1).getValues(emptyList(), emptyList())
     }
 
     fun getRels(
@@ -71,26 +73,18 @@ open class N(
         label: Label? = null,
         includeHasTs: Boolean = false
     ): List<R> {
-        // Caso speciale: label == HasTS
-        if (label == HasTS) {
-            return listOf(R(DUMMY_ID, HasTS, id, value!!, g = g))
-        }
-
         val result = mutableListOf<R>()
-
-        // Caso snapshot (relazioni già presenti)
+        // Caso evento TS (relazioni già presenti)
         if (relationships != null && relationships.isNotEmpty()) {
             when (direction) {
                 Direction.IN -> throw NotImplementedException()
                 else -> return relationships.filter { label == null || it.label == label }
             }
         }
-
-        // Caso nodo grafico: itera sulle relazioni collegate
+        // Caso nodo grafo: itera sulle relazioni collegate
         var current = next
         while (current != null) {
             val r = g.getEdge(current)
-
             if (label == null || r.label == label) {
                 when (direction) {
                     Direction.IN -> if (r.toN == id) result.add(r)
@@ -98,15 +92,12 @@ open class N(
                     else -> result.add(r)
                 }
             }
-
             current = if (r.fromN == id) r.fromNextRel else r.toNextRel
         }
-
         // Se richiesto, aggiungi relazione HasTS
-        if (includeHasTs && value != null) {
-            result.add(R(DUMMY_ID, HasTS, id, value, g = g))
+        if (includeHasTs && isTs) {
+            result.add(R(DUMMY_ID, HasTS, id, id + 1, g = g))
         }
-
         return result
     }
 
@@ -116,10 +107,10 @@ open class N(
 
     override fun equals(other: Any?): Boolean {
         if (other !is N) return false
-        return id == other.id && label == other.label && nextRel == other.nextRel && nextProp == other.nextProp && value == other.value
+        return id == other.id && label == other.label && nextRel == other.nextRel && nextProp == other.nextProp && value == other.value && isTs == other.isTs
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(id, label, nextRel, nextProp, value)
+        return Objects.hash(id, label, nextRel, nextProp, value, isTs)
     }
 }
