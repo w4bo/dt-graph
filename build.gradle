@@ -2,7 +2,6 @@ plugins {
     id 'java-library'
     id 'idea'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'org.jetbrains.kotlin.jvm' version '2.2.10'
     id 'org.jetbrains.kotlin.jvm' version '2.3.10'
 }
 
@@ -66,8 +65,6 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.slf4j:slf4j-simple:2.0.17"
     implementation "org.yaml:snakeyaml:2.2"
-    // implementation "ch.qos.logback:logback-classic:1.4.14"
-
     testImplementation "org.jetbrains.kotlin:kotlin-test"
     testImplementation "org.junit.jupiter:junit-jupiter-api:5.10.0"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.10.0"
@@ -81,7 +78,7 @@ if (hasProperty('buildScan')) {
 }
 
 jar {
-    exclude 'dataset/**'
+    exclude 'datasets/**'
 }
 
 defaultTasks 'clean', 'build', 'check', 'shadowJar'
