@@ -38,8 +38,8 @@ class RocksDBGraph : Graph {
     override var tsm: TSManager? = null
     private val db = getInstance()
     private var nodeId = 0L
-    private var edgeId = 0
-    private var propId = 0
+    private var edgeId = 0L
+    private var propId = 0L
 
     override fun clear() {
         listOf(nodes, edges, properties).forEach {
@@ -62,9 +62,9 @@ class RocksDBGraph : Graph {
 
     override fun nextNodeId(): Long = nodeId++
 
-    override fun nextPropertyId(): Int = propId++
+    override fun nextPropertyId(): Long = propId++
 
-    override fun nextEdgeId(): Int = edgeId++
+    override fun nextEdgeId(): Long = edgeId++
 
     override fun addNode(n: N): N {
         db.put(nodes, "${n.id}".toByteArray(), n.serialize())
@@ -100,7 +100,7 @@ class RocksDBGraph : Graph {
         throw NotImplementedException()
     }
 
-    override fun getProp(id: Int): P {
+    override fun getProp(id: Long): P {
         val b = db.get(properties, "$id".toByteArray())
         return P.fromByteArray(b, this)
     }
@@ -110,7 +110,7 @@ class RocksDBGraph : Graph {
         return N.fromByteArray(b, this)
     }
 
-    override fun getEdge(id: Int): R {
+    override fun getEdge(id: Long): R {
         val b = db.get(edges, "$id".toByteArray())
         return R.fromByteArray(b, this)
     }

@@ -39,24 +39,24 @@ open class MemoryGraph(
         return n
     }
 
-    override fun nextPropertyId(): Int = props.size
+    override fun nextPropertyId(): Long = props.size.toLong()
 
     override fun addPropertyLocal(key: Long, p: P): P {
         if (p.id >= props.size) {
             props += p
         } else {
-            props[p.id] = p
+            props[p.id.toInt()] = p
         }
         return p
     }
 
-    override fun nextEdgeId(): Int = rels.size
+    override fun nextEdgeId(): Long = rels.size.toLong()
 
     override fun addEdgeLocal(key: Long, r: R): R {
         if (r.id >= rels.size) {
             rels += r
         } else {
-            rels[(r.id as Number).toInt()] = r
+            rels[r.id.toInt()] = r
         }
         return r
     }
@@ -73,15 +73,15 @@ open class MemoryGraph(
         return rels
     }
 
-    override fun getProp(id: Int): P {
-        return props[id]
+    override fun getProp(id: Long): P {
+        return props[id.toInt()]
     }
 
     override fun getNode(id: Long): N {
-        return nodes[(id as Number).toInt()]
+        return nodes[id.toInt()]
     }
 
-    override fun getEdge(id: Int): R {
-        return rels[id]
+    override fun getEdge(id: Long): R {
+        return rels[id.toInt()]
     }
 }

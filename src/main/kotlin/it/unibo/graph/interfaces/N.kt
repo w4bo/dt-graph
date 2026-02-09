@@ -6,7 +6,7 @@ import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
 import java.util.*
 
-const val NODE_SIZE: Int = 37 // 48
+const val NODE_SIZE: Int = 45 // byte
 
 open class N(
     final override val id: Long, // node id
@@ -15,8 +15,8 @@ open class N(
     final override var toTimestamp: Long = Long.MAX_VALUE, // maximum validity
 
     // if graph node...
-    var nextRel: Int? = null, // link to the next edge, else null
-    final override var nextProp: Int? = null, // link to the next property, else null
+    var nextRel: Long? = null, // link to the next edge, else null
+    final override var nextProp: Long? = null, // link to the next property, else null
     val isTs : Boolean = false, // whether the node refers to an external TS
 
     // if TS event...
@@ -34,8 +34,8 @@ open class N(
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
             val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
-            val nextProp = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
-            val nextRel = buffer.int.let { if (it == Int.MIN_VALUE) null else it }
+            val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
+            val nextRel = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val isTs = buffer.get() != 0.toByte()
             return N(id = id, label = label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, isTs = isTs, g = g)
         }
@@ -51,13 +51,13 @@ open class N(
         buffer.putLong(fromTimestamp)                     // 8 bytes
         buffer.putLong(toTimestamp)                       // 8 bytes
         buffer.putInt((label as Labels).ordinal)          // 4 bytes
-        buffer.putInt(nextProp?: Int.MIN_VALUE)           // 4 bytes
-        buffer.putInt(nextRel?: Int.MIN_VALUE)            // 4 bytes
-        buffer.put(if (isTs) 1 else 0)                       // 1 byte
-        return buffer.array()                                    // Total: 48 bytes
+        buffer.putLong(nextProp?: Long.MIN_VALUE)         // 8 bytes
+        buffer.putLong(nextRel?: Long.MIN_VALUE)          // 8 bytes
+        buffer.put(if (isTs) 1 else 0)                       // 5 byte
+        return buffer.array()                                    // Total: 45 bytes
     }
 
-    override fun getProps(next: Int?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
+    override fun getProps(next: Long?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
         return when (name) {
             FROM_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, FROM_TIMESTAMP, this.fromTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
             TO_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, TO_TIMESTAMP, this.toTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
@@ -71,7 +71,7 @@ open class N(
     }
 
     fun getRels(
-        next: Int? = nextRel,
+        next: Long? = nextRel,
         direction: Direction? = null,
         label: Label? = null,
         includeHasTs: Boolean = false
@@ -85,7 +85,7 @@ open class N(
             }
         }
         // Caso nodo grafo: itera sulle relazioni collegate
-        var current = next
+        var current: Long? = next
         while (current != null) {
             val r = g.getEdge(current)
             if (label == null || r.label == label) {

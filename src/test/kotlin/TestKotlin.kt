@@ -175,8 +175,8 @@ class TestKotlin {
         val tsm = MemoryTSM(g)
         setup(g, tsm)
         assertEquals(NODE_SIZE, g.getNode(N0).serialize().size)
-        assertEquals(EDGE_SIZE, g.getEdge(N0.toInt()).serialize().size)
-        assertEquals(PROPERTY_SIZE, g.getProp(N0.toInt()).serialize().size)
+        assertEquals(EDGE_SIZE, g.getEdge(N0).serialize().size)
+        assertEquals(PROPERTY_SIZE, g.getProp(N0).serialize().size)
     }
 
     @Test
