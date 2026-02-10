@@ -5,7 +5,7 @@ import it.unibo.graph.query.Filter
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.LOCATION
 import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.encodeBitwise
 import org.locationtech.jts.io.WKTReader
 import java.io.Serializable
 

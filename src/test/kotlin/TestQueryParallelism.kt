@@ -1,21 +1,10 @@
-import it.unibo.ingestion.SmartBenchDataLoader
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.utils.loadProps
-import kotlinx.coroutines.*
-import org.json.JSONObject
+import it.unibo.ingestion.SmartBenchDataLoader
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import java.nio.file.Paths
 import kotlin.system.measureTimeMillis
-import kotlin.test.Test
-import kotlin.test.fail
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

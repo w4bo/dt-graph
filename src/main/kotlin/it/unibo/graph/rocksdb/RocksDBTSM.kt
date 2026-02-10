@@ -6,9 +6,10 @@ import it.unibo.graph.interfaces.TSManager
 import org.rocksdb.Options
 import org.rocksdb.RocksDB
 
+const val DB_NAME = "db_ts"
+
 class RocksDBTSM(override val g: Graph): TSManager {
     val db: RocksDB
-    val DB_NAME = "db_ts"
 
     init {
         val options = Options()

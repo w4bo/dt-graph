@@ -71,10 +71,10 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                         groupby // Add properties for each group-by key and their corresponding value
                             .zip(it.key)
                             .map {
-                                P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = it.first.property!!, value = it.second, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
+                                P(DUMMY_ID, sourceId = DUMMY_ID, key = it.first.property!!, value = it.second, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)
                             } + (
                                 if (aggregationOperator.property != VALUE) // Add a property for the aggregation value if it's not the default property "VALUE"
-                                    listOf(P(DUMMY_ID, sourceId = DUMMY_ID.toLong(), key = aggregationOperator.property!!, value = value, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp))
+                                    listOf(P(DUMMY_ID, sourceId = DUMMY_ID, key = aggregationOperator.property!!, value = value, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp))
                                 else
                                     emptyList()
                             )

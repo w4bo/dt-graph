@@ -6,7 +6,10 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.*
+import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.Label
+import it.unibo.graph.interfaces.TS
+import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.Filter
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
@@ -87,8 +90,6 @@ class SearchDataLoader(
                             graphIdList[entityId] = nodeId
                             // Parse its properties
                             for ((key, value) in obj) {
-                                //if (key === "type" || key === "id") continue
-
                                 when (value) {
                                     is Map<*, *> -> {
                                         // if property value contains a JSON with a key "id", it's an edge
@@ -97,24 +98,22 @@ class SearchDataLoader(
                                             val edgeLabel = hasLabel(key)
                                             val destNodes = search(graph, listOf(Step(null, listOf(Filter(ID_ATTRIBUTE, Operators.EQ, destId)))))
                                             // If destination node is not present yet, store edge for later process
-                                            if(destNodes.size == 0){
+                                            if (destNodes.isEmpty()) {
                                                 leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
-                                            }else{
+                                            } else {
                                                 // Else, build the edge
-                                                destNodes.forEach { destnode -> destnode.result.forEach{
-                                                    graph.addEdge(edgeLabel, nodeId, it.id.toLong())
-                                                } }
+                                                destNodes.forEach { destnode ->
+                                                    destnode.result.forEach {
+                                                        graph.addEdge(edgeLabel, nodeId, it.id.toLong())
+                                                    }
+                                                }
                                             }
-
                                             val targetId = graphIdList[destId]
                                             if (targetId != null) {
                                                 graph.addEdge(edgeLabel, nodeId, targetId)
-                                            } else {
-
                                             }
                                         }
                                     }
-
                                     is List<*> -> {
                                         // elif it's a list, parse each value
                                         for (subVal in value) {

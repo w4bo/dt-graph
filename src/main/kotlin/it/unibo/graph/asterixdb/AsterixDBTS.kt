@@ -8,7 +8,6 @@ import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Job
 import org.json.JSONObject
 import java.io.OutputStream
 import java.io.PrintWriter
@@ -143,7 +142,7 @@ class AsterixDBTS(
                 println("Errore durante la scrittura nel file!")
                 throw Exception("Coudln't insert data into AsterixDB")
             }
-            if(closeFeed){
+            if (closeFeed) {
                 closeDataFeedConnection()
             }
         }
@@ -173,8 +172,7 @@ class AsterixDBTS(
         var selectQuery: String
         val groupByClause: List<String>
         val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
-        val defaultGroupByAggregators =
-            ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
+        val defaultGroupByAggregators = ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
 
         // Select *each where predicate*
         var whereAggregators = filters
@@ -192,7 +190,7 @@ class AsterixDBTS(
                     FROM $dataset
                     ${applyFilters(filters)}
                 """.trimIndent()
-            if(isGroupBy){
+            if (isGroupBy) {
                 selectQuery = "$selectQuery LIMIT 1;"
             }
         } else {
@@ -230,7 +228,7 @@ class AsterixDBTS(
             // If we are aggregating
             is AsterixDBResult.GroupByResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                val aggOperator = by.first { it.operator != null }.property!!.toString()
+                val aggOperator = by.first { it.operator != null }.property!!
 
                 val fromTimestamp = (0 until result.entities.length()).minOf {
                     result.entities.getJSONObject(
@@ -266,7 +264,7 @@ class AsterixDBTS(
                                     listOf(
                                         P(
                                             DUMMY_ID,
-                                            sourceId = DUMMY_ID.toLong(),
+                                            sourceId = DUMMY_ID,
                                             key = aggOperator,
                                             value = aggValue,
                                             type = PropType.STRING,
@@ -288,7 +286,6 @@ class AsterixDBTS(
                 println("Error occurred while performing query \n $selectQuery")
                 return emptyList()
             }
-
         }
     }
 

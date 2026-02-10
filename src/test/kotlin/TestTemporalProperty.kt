@@ -79,8 +79,8 @@ class TestTemporalProperty {
         val a1 = g.addNode(A)
         val b1 = g.addNode(B)
         val e1 = g.addEdge(Foo, a1.id, b1.id, from = 0, to = 2)
-        g.addProperty(e1.id.toLong(), "name", "Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
-        g.addProperty(e1.id.toLong(), "name", "Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
         val pattern = listOf(Step(A), Step(Foo, alias = "e"), Step(B))
         val pattern1 = listOf(Step(A), Step(Foo, alias = "e", properties = listOf(Filter("name", Operators.EQ, "Foo"))), Step(B))
@@ -120,8 +120,8 @@ class TestTemporalProperty {
         g.addProperty(a1.id, "name", "A1", PropType.STRING)
         g.addProperty(b1.id, "name", "B1-Foo", PropType.STRING, from = 0, to = 1)
         g.addProperty(b1.id, "name", "B1-Bar", PropType.STRING, from = 1, to = 2)
-        g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
-        g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
         assertEquals(Long.MIN_VALUE, a1.getProps(name="name").first().fromTimestamp)
         assertEquals(Long.MAX_VALUE, a1.getProps(name="name").first().toTimestamp)
@@ -210,8 +210,8 @@ class TestTemporalProperty {
         val e1 = g.addEdge(Foo, a1.id, b1.id)
         g.addProperty(a1.id, "name", "A1", PropType.STRING)
         g.addProperty(b1.id, "name", "B1", PropType.STRING)
-        g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
-        g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "E1-Foo", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(e1.id, "name", "E1-Bar", PropType.STRING, from = 1, to = 2, sourceType = EDGE)
 
         val pattern1 = listOf(Step(A, alias = "a1"), Step(Foo, alias = "e1"), Step(B, alias = "b1"))
         val pattern2 = listOf(Step(A, alias = "a2"), Step(Foo, alias = "e2"), Step(B, alias = "b2"))
@@ -254,8 +254,8 @@ class TestTemporalProperty {
         g.addProperty(a1.id, "name", "A1-Foo", PropType.STRING, to = 1) // Change wrt test7
         g.addProperty(a1.id, "name", "A1-Bar", PropType.STRING, from = 1) // Change wrt test7
         g.addProperty(b1.id, "name", "B1", PropType.STRING)
-        g.addProperty(e1.id.toLong(), "name", "E1-Foo", PropType.STRING, from = 0, to = 2, sourceType = EDGE) // Change wrt test7
-        g.addProperty(e1.id.toLong(), "name", "E1-Bar", PropType.STRING, from = 2, to = 3, sourceType = EDGE) // Change wrt test7
+        g.addProperty(e1.id, "name", "E1-Foo", PropType.STRING, from = 0, to = 2, sourceType = EDGE) // Change wrt test7
+        g.addProperty(e1.id, "name", "E1-Bar", PropType.STRING, from = 2, to = 3, sourceType = EDGE) // Change wrt test7
 
         val pattern1 = listOf(Step(A, alias = "a1"), Step(Foo, alias = "e1"), Step(B, alias = "b1"))
         val pattern2 = listOf(Step(A, alias = "a2"), Step(Foo, alias = "e2"), Step(B, alias = "b2"))

@@ -410,20 +410,20 @@ class TestKotlin {
         val e1 = g.addEdge(HasDevice, n0.id, n1.id)
         val p1 = g.addProperty(n0.id, "name", "N0", PropType.STRING)
         val p2 = g.addProperty(n1.id, "name", "N1", PropType.STRING)
-        val p3 = g.addProperty(e1.id.toLong(), "name", "E1", PropType.STRING, sourceType = EDGE)
-        val p4 = g.addProperty(e1.id.toLong(), "p4", 1, PropType.INT, sourceType = EDGE)
-        val p5 = g.addProperty(e1.id.toLong(), "p5", "A".repeat(MAX_LENGTH_VALUE + 1), PropType.STRING, sourceType = EDGE)
-        val p6 = g.addProperty(e1.id.toLong(), "p6", 1L, PropType.LONG, sourceType = EDGE)
-        val p7 = g.addProperty(e1.id.toLong(), "p7", 1.0, PropType.DOUBLE, sourceType = EDGE)
-        val p8 = g.addProperty(e1.id.toLong(), "location", "POINT (11.799328 44.235394)", PropType.GEOMETRY, sourceType = EDGE)
-        val p9 = g.addProperty(e1.id.toLong(), "p9", "A".repeat(MAX_LENGTH_VALUE), PropType.STRING, sourceType = EDGE)
-        val p10 = g.addProperty(e1.id.toLong(), "p10", "A".repeat(MAX_LENGTH_VALUE / 2), PropType.STRING, sourceType = EDGE)
+        val p3 = g.addProperty(e1.id, "name", "E1", PropType.STRING, sourceType = EDGE)
+        val p4 = g.addProperty(e1.id, "p4", 1, PropType.INT, sourceType = EDGE)
+        val p5 = g.addProperty(e1.id, "p5", "A".repeat(MAX_LENGTH_VALUE + 1), PropType.STRING, sourceType = EDGE)
+        val p6 = g.addProperty(e1.id, "p6", 1L, PropType.LONG, sourceType = EDGE)
+        val p7 = g.addProperty(e1.id, "p7", 1.0, PropType.DOUBLE, sourceType = EDGE)
+        val p8 = g.addProperty(e1.id, "location", "POINT (11.799328 44.235394)", PropType.GEOMETRY, sourceType = EDGE)
+        val p9 = g.addProperty(e1.id, "p9", "A".repeat(MAX_LENGTH_VALUE), PropType.STRING, sourceType = EDGE)
+        val p10 = g.addProperty(e1.id, "p10", "A".repeat(MAX_LENGTH_VALUE / 2), PropType.STRING, sourceType = EDGE)
         g.flushToDisk()
         assertEquals(g.getNode(N0), g.getNodeFromDisk(N0))
         assertEquals(n1, g.getNodeFromDisk(N1))
-        assertEquals(e1, g.getEdgeFromDisk(e1.id.toLong()))
+        assertEquals(e1, g.getEdgeFromDisk(e1.id))
         listOf(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10).forEachIndexed {
-            i, p -> assertEquals(p, g.getPropertyFromDisk(p.id.toLong()), "p${i + 1}")
+            i, p -> assertEquals(p, g.getPropertyFromDisk(p.id), "p${i + 1}")
         }
     }
 
@@ -456,8 +456,8 @@ class TestKotlin {
             assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
             assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
 
-            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22.toLong(), attrFirst = true))))).size)
-            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25.toLong(), attrFirst = true))))).size)
+            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22, attrFirst = true))))).size)
+            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25, attrFirst = true))))).size)
         }
     }
 

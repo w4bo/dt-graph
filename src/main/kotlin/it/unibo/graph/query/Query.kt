@@ -209,7 +209,7 @@ fun replaceTemporalProperties(row: Path, match: List<List<Step?>>, by: List<Aggr
     fun createVirtual(replace: List<Pair<Aggregate, P?>>, from: Long, to: Long, elem: ElemP): ElemP {
         val virtualP: List<P> = replace.map { pair->
             val p = pair.second
-            p?: P(DUMMY_ID, sourceType = NODE, key = pair.first.property!!, value = "null", type = PropType.NULL, fromTimestamp = from, toTimestamp = to, sourceId = DUMMY_ID.toLong(), g = elem.g)
+            p?: P(DUMMY_ID, sourceType = NODE, key = pair.first.property!!, value = "null", type = PropType.NULL, fromTimestamp = from, toTimestamp = to, sourceId = DUMMY_ID, g = elem.g)
         }
         val maxFrom = max(from, virtualP.maxOf { it.fromTimestamp })
         val minTo = min(to, virtualP.minOf { it.toTimestamp })
@@ -343,10 +343,10 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 if (lastAggregation) v.first / v.second else v
             }
             AggOperator.SUM -> {
-                cNumbers.map{it.first}.sum()
+                cNumbers.sumOf { it.first }
             }
             AggOperator.MAX -> {
-                cNumbers.map{it.first}.max()
+                cNumbers.maxOf { it.first }
             }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
