@@ -456,8 +456,8 @@ class TestKotlin {
             assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
             assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
 
-            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22, attrFirst = true))))).size)
-            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25, attrFirst = true))))).size)
+            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22L, attrFirst = true))))).size)
+            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25L, attrFirst = true))))).size)
         }
     }
 
