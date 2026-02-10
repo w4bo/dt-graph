@@ -81,7 +81,7 @@ class TestIngestion {
                 "$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.graphLoadingTime},${ingestionStats.tsLoadingTime},${ingestionStats.graphLoadingTime + ingestionStats.tsLoadingTime},${
                     System.getenv(
                         "DEFAULT_NC_POOL"
-                    )?.toString()?.split(',')?.size ?: 1
+                    )?.split(',')?.size ?: 1
                 },${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n"
             )
         })

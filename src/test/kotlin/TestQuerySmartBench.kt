@@ -49,7 +49,7 @@ class TestQuerySmartBench {
 
         file.appendText(buildString {
             if (writeHeader) append("test_id,model,dataset,datasetSize,threads,queryName,queryType,elapsedTime,numEntities,numMachines,querySelectivity,temporalRangeIndex,iteration\n")
-            append("${uuid},STGraph,$dataset,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',')?.size ?: 1},${querySelectivity},$temporalRangeIndex,$iteration\n")
+            append("${uuid},STGraph,$dataset,$size,$LIMIT,$queryName,$queryType,$queryTime,$numEntities,${System.getenv("DEFAULT_NC_POOL")?.split(',')?.size ?: 1},${querySelectivity},$temporalRangeIndex,$iteration\n")
         })
     }
 
@@ -68,12 +68,12 @@ class TestQuerySmartBench {
     }
 
     /*
-     * EnvironmentCoverage(L, 𝜏), where L is a loca-
-     * tion, and 𝜏 is a measurement type: lists all agents that
+     * EnvironmentCoverage(L, 𝜏), where L is a location,
+     * and 𝜏 is a measurement type: lists all agents that
      * can generate measurements of a given type 𝜏 that can
      * cover the environments/locations specified in L.
      */
-    fun environmentCoverage(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0, iteration: Int = 0) {
+    fun environmentCoverage(temporalConstraintIndex: Int = 0, iteration: Int = 0) {
         val tau = Temperature
         val infrastructureId = "3042"
 
@@ -261,7 +261,7 @@ class TestQuerySmartBench {
      * 𝛼 ∈ 𝐴, list all environments 𝜖 for which 𝛼 generated
      * measurements in.
      */
-    fun agentHistory(temporalConstraints: TimeRange? = null, temporalConstraintIndex: Int = 0, iteration: Int = 0) {
+    fun agentHistory(temporalConstraintIndex: Int = 0, iteration: Int = 0) {
         val devices = listOf("thermometer3")
 
         var edgesDirectionEntitites = 0
@@ -312,7 +312,7 @@ class TestQuerySmartBench {
             }
 
             safeRun("EnvironmentCoverage", loadTemporalRanges(temporalConstraintMap, querySelectivity, "EnvironmentCoverage", size)) { temporalRange, index ->
-                environmentCoverage(temporalRange, index, i)
+                environmentCoverage(index, i)
             }
 
             safeRun("EnvironmentAggregate", loadTemporalRanges(temporalConstraintMap, querySelectivity, "EnvironmentAggregate", size)) { temporalRange, index ->
@@ -332,7 +332,7 @@ class TestQuerySmartBench {
             }
 
             safeRun("AgentHistory", loadTemporalRanges(temporalConstraintMap, querySelectivity, "AgentHistory", size)) { temporalRange, index ->
-                agentHistory(temporalRange, index, i)
+                agentHistory(index, i)
             }
         }
     }
