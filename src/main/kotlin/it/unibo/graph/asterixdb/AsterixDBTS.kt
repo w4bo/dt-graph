@@ -142,7 +142,7 @@ class AsterixDBTS(
                 println("Errore durante la scrittura nel file!")
                 throw Exception("Coudln't insert data into AsterixDB")
             }
-            if(closeFeed){
+            if (closeFeed) {
                 closeDataFeedConnection()
             }
         }
@@ -172,8 +172,7 @@ class AsterixDBTS(
         var selectQuery: String
         val groupByClause: List<String>
         val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
-        val defaultGroupByAggregators =
-            ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
+        val defaultGroupByAggregators = ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
 
         // Select *each where predicate*
         var whereAggregators = filters
@@ -191,7 +190,7 @@ class AsterixDBTS(
                     FROM $dataset
                     ${applyFilters(filters)}
                 """.trimIndent()
-            if(isGroupBy){
+            if (isGroupBy) {
                 selectQuery = "$selectQuery LIMIT 1;"
             }
         } else {
@@ -287,7 +286,6 @@ class AsterixDBTS(
                 println("Error occurred while performing query \n $selectQuery")
                 return emptyList()
             }
-
         }
     }
 

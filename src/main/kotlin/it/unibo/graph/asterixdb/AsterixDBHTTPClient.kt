@@ -23,12 +23,12 @@ class AsterixDBHTTPClient(
     private val dataset: String = "$DATASET_PREFIX$tsId"
 
 
-    fun getDataset() : String = dataset
+    fun getDataset(): String = dataset
     fun getDataFeedPort(): Int = dataFeedPort
 
-    init{
-        if(!get){
-            //If it's not, just try to use the old port
+    init {
+        if (!get) {
+            // If it's not, just try to use the old port
             initializeTS(dataFeedIp, dataFeedPort, datatype)
             Random(seed)
         }
@@ -80,7 +80,7 @@ class AsterixDBHTTPClient(
         var datasetSetup = false
 
         // IF dataset does not exist, create it
-        if(!datasetExists){
+        if (!datasetExists) {
             datasetSetup = queryAsterixDB(datasetSetupQuery)
         }
         try{
@@ -91,7 +91,7 @@ class AsterixDBHTTPClient(
                 var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
                 // Try to connect to it
                 socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
-                // Until I've succesffully created a DataFeed and I can actually connect to it
+                // Until I've successfully created a DataFeed and I can actually connect to it
                 while(!datafeedSetup || !socketConnect){
                     // TODO: cap the number of retries and fail if it doesn't work
                     // TODO: Update this new port generation, should be more deterministic
@@ -107,13 +107,11 @@ class AsterixDBHTTPClient(
             }else{
                 return false
             }
-        }catch(e: Exception){
+        } catch(_: Exception){
             newDataFeedPort = randomDataFeedPort()
             return initializeTS(dataFeedIp, newDataFeedPort, dataType)
         }
-
     }
-
 
     private fun setupDataFeed(dataFeedIp: String, dataFeedPort: Int, dataverse: String, feedName: String, dataset: String, dataType: String) : Boolean{
         val dataFeedSetupQuery = """
