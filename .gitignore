@@ -1,9 +1,15 @@
 outputs/*.csv
 results/dummy.pdf
 metastore_db/
-testdb*
-db_graph
-db_ts
+db_*
+*.log
+*.dat
+.kotlin/
+src/main/resources/dataset/smartbench/big
+src/main/resources/dataset/smartbench/large
+/asterix_data
+datasets/dataset/smartbench/large/
+datasets/dataset/smartbench/big/
 
 # These are useless since we use gradle import
 .idea/
@@ -426,7 +432,6 @@ dmypy.json
 [Ll]ib
 [Ll]ib64
 [Ll]ocal
-[Ss]cripts
 pyvenv.cfg
 pip-selfcheck.json
 

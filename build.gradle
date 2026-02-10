@@ -3,6 +3,19 @@ plugins {
     id 'idea'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.2.10'
+}
+
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
 }
 
 test {
@@ -15,10 +28,18 @@ test {
         showStandardStreams = false
     }
     useJUnitPlatform()
-    maxHeapSize = '1G'
+    maxHeapSize = '10G'
 }
 
 shadowJar { zip64 = true }
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'AsterixDataSource'
+        )
+    }
+}
 
 repositories { mavenCentral() }
 
@@ -30,16 +51,24 @@ idea {
 }
 
 dependencies {
-    implementation 'org.apache.tinkerpop:gremlin-core:3.7.5'
-    implementation 'org.apache.tinkerpop:gremlin-server:3.7.5' // Optional for Gremlin Server
-    implementation 'org.apache.tinkerpop:gremlin-driver:3.7.5' // Gremlin client for remote queries
-    implementation 'org.apache.tinkerpop:tinkergraph-gremlin:3.7.5' // In-memory graph (for testing)
-    implementation 'org.rocksdb:rocksdbjni:10.4.2'
-    implementation 'org.json:json:20250517'
+    implementation "org.apache.commons:commons-lang3:3.14.0"
+    implementation 'org.rocksdb:rocksdbjni:9.10.0'
+    implementation 'org.json:json:20250107'
     implementation 'org.locationtech.jts:jts-core:1.20.0'
     implementation 'org.locationtech.jts.io:jts-io-common:1.20.0'
     implementation 'org.jetbrains.kotlinx:dataframe:0.15.0'
-    testImplementation 'org.jetbrains.kotlin:kotlin-test' // :2.1.10
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
+    implementation "org.openjdk.jol:jol-core:0.16"
+    implementation "io.lettuce:lettuce-core:6.3.0.RELEASE"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.17.1"
+    implementation "com.fasterxml.jackson.core:jackson-core:2.17.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
+    implementation "org.slf4j:slf4j-simple:2.0.17"
+    implementation "org.yaml:snakeyaml:2.2"
+    testImplementation "org.jetbrains.kotlin:kotlin-test"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:5.10.0"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.10.0"
 }
 
 if (hasProperty('buildScan')) {
@@ -47,6 +76,10 @@ if (hasProperty('buildScan')) {
         termsOfServiceUrl = 'https://gradle.com/terms-of-service'
         termsOfServiceAgree = 'yes'
     }
+}
+
+jar {
+    exclude 'datasets/**'
 }
 
 defaultTasks 'clean', 'build', 'check', 'shadowJar'

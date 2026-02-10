@@ -1,0 +1,3 @@
+test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,storage
+03751f26-c995-46b1-8e9c-36684924d075,stgraph,1756376296,1756376831,smartbench,small,1,436867,98196,535063,1825
+8ae367c2-f8ae-4533-9583-6258b51f7d50,stgraph,1756385097,1756385110,smartbench,small,1,6746,6844,13590,18
