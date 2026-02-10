@@ -5,16 +5,17 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.LIMIT
+import it.unibo.graph.utils.TimeRange
+import it.unibo.graph.utils.loadTemporalRanges
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
-import java.util.*
-import java.io.File
-import kotlin.system.measureTimeMillis
-import kotlin.test.Test
 import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.Yaml
-import kotlin.collections.ArrayList
+import java.io.File
+import java.util.*
+import kotlin.system.measureTimeMillis
+import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestQuerySmartBench {

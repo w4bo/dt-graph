@@ -33,8 +33,8 @@ class TestTemporal {
         val h2 = g.addNode(Person, from = 2)
 
         val r1 = g.addEdge(HasParcel, f1.id, p1.id)
-        g.addProperty(r1.id.toLong(),"dateChanged", "today", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
-        g.addProperty(r1.id.toLong(),"dateChanged", "yesterday", PropType.STRING, from = 2, sourceType = EDGE)
+        g.addProperty(r1.id,"dateChanged", "today", PropType.STRING, from = 0, to = 1, sourceType = EDGE)
+        g.addProperty(r1.id,"dateChanged", "yesterday", PropType.STRING, from = 2, sourceType = EDGE)
         g.addEdge(HasParcel, f1.id, p2.id)
         g.addEdge(HasDevice, p1.id, d1.id, from = 0, to = 2)
         g.addEdge(HasDevice, p1.id, d2.id, from = 2, to = 4)

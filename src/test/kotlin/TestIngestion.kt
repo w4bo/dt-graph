@@ -1,7 +1,6 @@
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.ingestion.SearchDataLoader
 import it.unibo.ingestion.SmartBenchDataLoader
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
