@@ -1,3 +1,5 @@
+package it.unibo.evaluation.asterixdb
+
 import io.lettuce.core.RedisClient
 import io.lettuce.core.api.sync.RedisCommands
 import org.apache.commons.csv.CSVFormat
@@ -6,6 +8,7 @@ import org.locationtech.jts.geom.Coordinate
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.geom.GeometryFactory
 import org.locationtech.jts.geom.Point
+import org.locationtech.jts.geom.Polygon
 import org.locationtech.jts.io.geojson.GeoJsonReader
 import java.io.*
 import java.lang.Thread.sleep
@@ -90,7 +93,7 @@ class AsterixDataSource(
         val timestamp = System.currentTimeMillis()
         val instant = Instant.ofEpochMilli(timestamp)
         val formatter = DateTimeFormatter.ISO_INSTANT
-        val formattedTimestamp =  formatter.format(instant)
+        // val formattedTimestamp =  formatter.format(instant)
         return """
         {
             "timestamp": $iteration,
@@ -128,7 +131,7 @@ class AsterixDataSource(
                 rows.add(newRow)
                 if(iteration != 0 && iteration % 1000 == 0){
                     appendRowsToCSV(outputPath, rows, isFirstRow = !File(outputPath).exists())
-                    rows = mutableListOf<Map<String, Any>>()
+                    rows = mutableListOf()
                 }
                 sleep(ingestionLatency.toLong())
             }
@@ -178,9 +181,7 @@ class AsterixDataSource(
             "insertionTimestamp" to insertionTimestamp,
             "elapsedTime" to selectResult
         )
-
         appendRowsToCSV(outputPath, listOf(newRow), isFirstRow = false)
-
     }
 
     companion object {
@@ -241,8 +242,8 @@ class AsterixDataSource(
             return try {
                 val reader = GeoJsonReader(GeometryFactory())
                 val geometry = reader.read(geojson)
-                if (geometry is org.locationtech.jts.geom.Polygon) geometry else null
-            } catch (e: Exception) {
+                geometry as? Polygon
+            } catch (_: Exception) {
                 println("Invalid GeoJSON Polygon: $geojson")
                 null
             }

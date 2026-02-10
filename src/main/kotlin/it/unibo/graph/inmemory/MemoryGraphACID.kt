@@ -11,7 +11,6 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.locks.ReentrantLock
 
 const val PATH = "db_graphm"
 
@@ -76,7 +75,7 @@ class MemoryGraphACID(
                 channel.position(offset)
                 val buffer = ByteArray(objectSize)
                 while (true) {
-                    val bytesRead = channel.read(java.nio.ByteBuffer.wrap(buffer))
+                    val bytesRead = channel.read(ByteBuffer.wrap(buffer))
                     if (bytesRead < objectSize) break
                     result.add(deserializer(buffer.copyOf())) // Defensive copy
                 }
@@ -121,7 +120,7 @@ class MemoryGraphACID(
     @Throws(IOException::class)
     override fun addEdge(r: R): R {
         if (r.id != DUMMY_ID) { // if this is an edge belonging to the graph (and not to a TS)...
-            wal.log(WALSource.Edges, r.id.toLong() * EDGE_SIZE, r.serialize())
+            wal.log(WALSource.Edges, r.id * EDGE_SIZE, r.serialize())
         }
         return super.addEdge(r)
     }
@@ -134,7 +133,7 @@ class MemoryGraphACID(
 
     @Throws(IOException::class)
     override fun addPropertyLocal(key: Long, p: P): P {
-        wal.log(WALSource.Properties, p.id.toLong() * PROPERTY_SIZE, p.serialize())
+        wal.log(WALSource.Properties, p.id * PROPERTY_SIZE, p.serialize())
         return super.addPropertyLocal(key, p)
     }
 }

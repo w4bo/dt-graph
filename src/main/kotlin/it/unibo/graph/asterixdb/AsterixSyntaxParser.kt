@@ -19,14 +19,14 @@ sealed class AsterixDBResult {
     data class SelectResult(val entities: JSONArray) : AsterixDBResult()
     data class GroupByResult(val entities: JSONArray) : AsterixDBResult()
     object InsertResult : AsterixDBResult()
-    object ErrorResult : AsterixDBResult()
+    // object ErrorResult : AsterixDBResult()
 }
 
 fun checkAndparseTimestampToString(label: String, timestamp: Long): String {
-    if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
-        return """"$label": datetime("${timestampToISO8601(timestamp)}"),"""
+    return if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
+        """"$label": datetime("${timestampToISO8601(timestamp)}"),"""
     } else {
-        return ""
+        ""
     }
 }
 
@@ -62,9 +62,9 @@ fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: St
             Pair(PropType.GEOMETRY, hashMapToGeometry(value as HashMap<String, Any>)!!)
         } else {
             when (value) {
-                is Int -> Pair(PropType.INT, value.toInt())
-                is Long -> Pair(PropType.LONG, value.toLong())
-                is Double -> Pair(PropType.DOUBLE, value.toDouble())
+                is Int -> Pair(PropType.INT, value)
+                is Long -> Pair(PropType.LONG, value)
+                is Double -> Pair(PropType.DOUBLE, value)
                 is HashMap<*, *> -> {
                     if (it.keys.contains(listOf("type", "coordinates"))) {
                         Pair(PropType.GEOMETRY, hashMapToGeometry(value as HashMap<String, Any>)!!)
@@ -81,7 +81,7 @@ fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: St
     val propType = parsePropType(key, it[key]!!)
     return P(
         DUMMY_ID,
-        sourceId = DUMMY_ID.toLong(),
+        sourceId = DUMMY_ID,
         key = key,
         value = propType.second,
         type = propType.first,
@@ -108,13 +108,10 @@ fun dateToTimestamp(date: String): Long {
     var localDateTime: LocalDateTime
     try {
         localDateTime = LocalDateTime.parse(date, formatterWithMillis2)
-    }catch(e: Exception) {
-         localDateTime = LocalDateTime.parse(date, formatterWithMillis)
+    } catch (_: Exception) {
+        localDateTime = LocalDateTime.parse(date, formatterWithMillis)
     }
-
-
     val instant = localDateTime.toInstant(ZoneOffset.UTC)
-
     return instant.toEpochMilli()
 }
 
@@ -144,7 +141,7 @@ fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
 fun relationshipToAsterixCitizen(rels: List<R>): String {
     return when (rels.size) {
         0 -> ""
-        else -> """ "relationships": [${rels.map(::relToJson).joinToString(", ")}],"""
+        else -> """ "relationships": [${rels.joinToString(", ", transform = ::relToJson)}],"""
     }
 }
 
@@ -152,7 +149,7 @@ fun propertiesToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
         else -> """ "properties":  [${
-            props.map(::propToJson).joinToString(", ")
+            props.joinToString(", ", transform = ::propToJson)
         }], """ + propertyToAsterixCitizen(props)
     }
 }
@@ -160,7 +157,7 @@ fun propertiesToAsterixCitizen(props: List<P>): String {
 fun propertyToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> props.map { """ "${it.key}" : ${parseValue(it.key, it.value)}""" }.joinToString(",\n ")
+        else -> props.joinToString(",\n ") { """ "${it.key}" : ${parseValue(it.value)}""" }
             .let { if (it.isNotEmpty()) "$it,\n" else "" }
     }
 }
@@ -254,12 +251,11 @@ fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
     }
 }
 
-fun parseValue(property: String, value: Any): String {
+fun parseValue(value: Any): String {
     //TODO: Fix this, ci saranno altri tipi da parsare
-    return when {
-        //property.lowercase().contains("timestamp") -> """datetime("${timestampToISO8601(value as Long)}")"""
-        value is Int -> "$value"
-        value is Long -> "$value"
+    return when (value) {
+        is Int -> "$value"
+        is Long -> "$value"
         else -> """ "$value" """
     }
 }
@@ -267,7 +263,7 @@ fun parseValue(property: String, value: Any): String {
 fun applyFilters(filters: List<Filter>): String {
     return when {
         filters.isEmpty() -> ""
-        else -> "WHERE ${filters.map(::parseFilter).joinToString(separator = "\n AND ")}"
+        else -> "WHERE ${filters.joinToString(separator = "\n AND ", transform = ::parseFilter)}"
     }
 }
 
@@ -294,7 +290,7 @@ private fun parseFilter(filter: Filter): String {
     }
 
     val property = filter.property
-    val parsedValue = parseValue(property, filter.value)
+    val parsedValue = parseValue(filter.value)
 
     var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
     var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)

@@ -6,7 +6,7 @@ import java.util.*
 
 enum class Direction { IN, OUT }
 
-val EDGE_SIZE: Int = 68
+const val EDGE_SIZE: Int = 68
 
 open class R(
     final override val id: Long, // id of the relationship
@@ -39,12 +39,12 @@ open class R(
             return R(id, label, fromN, toN, fromNextRel, toNextRel, fromTimestamp, toTimestamp, nextProp, g = g, fromDisk = true)
         }
 
-        fun createVirtualR(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = R(DUMMY_ID, label, DUMMY_ID.toLong(), DUMMY_ID.toLong(), null, null, fromTimestamp, toTimestamp, null, properties.toMutableList(), g)
+        fun createVirtualR(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = R(DUMMY_ID, label, DUMMY_ID, DUMMY_ID, null, null, fromTimestamp, toTimestamp, null, properties.toMutableList(), g)
     }
 
     fun serialize(): ByteArray {
         val buffer = ByteBuffer.allocate(EDGE_SIZE)
-        buffer.putLong(id.toLong())                  // 8 bytes
+        buffer.putLong(id)                  // 8 bytes
         buffer.putLong(fromTimestamp)                // 8 bytes
         buffer.putLong(toTimestamp)                  // 8 bytes
         buffer.putInt((label as Labels).ordinal)     // 4 bytes

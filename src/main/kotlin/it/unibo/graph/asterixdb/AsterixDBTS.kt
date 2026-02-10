@@ -8,7 +8,6 @@ import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Job
 import org.json.JSONObject
 import java.io.OutputStream
 import java.io.PrintWriter
@@ -230,7 +229,7 @@ class AsterixDBTS(
             // If we are aggregating
             is AsterixDBResult.GroupByResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                val aggOperator = by.first { it.operator != null }.property!!.toString()
+                val aggOperator = by.first { it.operator != null }.property!!
 
                 val fromTimestamp = (0 until result.entities.length()).minOf {
                     result.entities.getJSONObject(
@@ -266,7 +265,7 @@ class AsterixDBTS(
                                     listOf(
                                         P(
                                             DUMMY_ID,
-                                            sourceId = DUMMY_ID.toLong(),
+                                            sourceId = DUMMY_ID,
                                             key = aggOperator,
                                             value = aggValue,
                                             type = PropType.STRING,

@@ -40,9 +40,9 @@ open class N(
             return N(id = id, label = label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, isTs = isTs, g = g)
         }
 
-        fun createVirtualN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph, properties: List<P> = emptyList()) = createVirtualN(label, mutableListOf(P(DUMMY_ID, DUMMY_ID.toLong(), NODE, key = VALUE, value = aggregatedValue, type = PropType.DOUBLE, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)) + properties, fromTimestamp, toTimestamp, g)
+        fun createVirtualN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph, properties: List<P> = emptyList()) = createVirtualN(label, mutableListOf(P(DUMMY_ID, DUMMY_ID, NODE, key = VALUE, value = aggregatedValue, type = PropType.DOUBLE, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)) + properties, fromTimestamp, toTimestamp, g)
 
-        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(id = DUMMY_ID.toLong(), label = label, nextRel = null, nextProp = null, relationships = mutableListOf(), properties = properties.toMutableList(), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(id = DUMMY_ID, label = label, nextRel = null, nextProp = null, relationships = mutableListOf(), properties = properties.toMutableList(), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
     }
 
     fun serialize(): ByteArray {

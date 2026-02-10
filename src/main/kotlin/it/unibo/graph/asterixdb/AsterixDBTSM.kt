@@ -3,16 +3,11 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.utils.LIMIT
 import it.unibo.graph.utils.loadProps
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.runBlocking
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.Executors
-import kotlinx.coroutines.launch
 
 val props = loadProps()
 
@@ -157,7 +152,7 @@ class AsterixDBTSM private constructor(
                 System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
                 props["default_cc_port"].toString(),
                 props["default_dataverse"].toString(),
-                System.getenv("DEFAULT_NC_POOL")?.toString()?.split(',') ?: listOf("localhost"),
+                System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
                 props["default_datatype"].toString(),
             )
         }

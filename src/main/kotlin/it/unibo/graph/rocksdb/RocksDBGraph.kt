@@ -17,7 +17,7 @@ class RocksDBGraph : Graph {
         @Synchronized
         fun getInstance(): RocksDB {
             if (db == null) {
-                val options: DBOptions = DBOptions()
+                val options = DBOptions()
                 options.setCreateIfMissing(true)
                 options.setCreateMissingColumnFamilies(true)
                 val cfDescriptors = listOf(

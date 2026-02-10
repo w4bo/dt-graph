@@ -1,6 +1,9 @@
-package it.unibo.graph.asterixdb;
+package it.unibo.graph.asterixdb
 
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.DATAFEED_PREFIX
+import it.unibo.graph.utils.DATASET_PREFIX
+import it.unibo.graph.utils.FIRSTFEEDPORT
+import it.unibo.graph.utils.LASTFEEDPORT
 import org.json.JSONObject
 import java.net.*
 import java.nio.charset.StandardCharsets
@@ -84,7 +87,7 @@ class AsterixDBHTTPClient(
             //If dataset already existed or I've successfully created it
             if(datasetSetup || datasetExists){
                 var socketConnect: Boolean
-                // Try to setup a DataFeed
+                // Try to set up a DataFeed
                 var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
                 // Try to connect to it
                 socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
@@ -228,13 +231,13 @@ class AsterixDBHTTPClient(
             statusCode in 200..299 -> {
                 val cleanedQuery = queryStatement.substringAfter(";").trimStart()
                 if (cleanedQuery.startsWith("SELECT", ignoreCase = true)) {
-                    try {
+                    return try {
                         val jsonResponse = JSONObject(responseText)
                         val resultArray = jsonResponse.getJSONArray("results")
                         if(!isGroupBy){
-                            return AsterixDBResult.SelectResult(resultArray)
+                            AsterixDBResult.SelectResult(resultArray)
                         }else{
-                            return AsterixDBResult.GroupByResult(resultArray)
+                            AsterixDBResult.GroupByResult(resultArray)
                         }
                     } catch (e: Exception) {
                         println(e)
@@ -254,19 +257,19 @@ class AsterixDBHTTPClient(
 
     fun deleteTs(deleteDataset: Boolean = true){
         val sqlStatement : String
-        if(deleteDataset) {
-            sqlStatement = """
-                USE $dataverse;
-                STOP FEED $feedName;
-                DROP FEED $feedName;
-                DROP dataset $dataset;
+        sqlStatement = if(deleteDataset) {
+            """
+            USE $dataverse;
+            STOP FEED $feedName;
+            DROP FEED $feedName;
+            DROP dataset $dataset;
             """.trimIndent()
         }else{
-            sqlStatement = """ 
-                USE $dataverse;
-                STOP FEED $feedName;
-                DROP FEED $feedName;
-                """.trimIndent()
+            """ 
+            USE $dataverse;
+            STOP FEED $feedName;
+            DROP FEED $feedName;
+            """.trimIndent()
         }
         queryAsterixDB(sqlStatement)
     }

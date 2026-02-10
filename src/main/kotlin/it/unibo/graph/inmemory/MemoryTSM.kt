@@ -12,7 +12,7 @@ class MemoryTSM(override val g: Graph): TSManager {
     }
 
     override fun addTS(id: Long): TS {
-        var cId = id + 1
+        val cId = id + 1
         val ts = MemoryTS(g, cId)
         tss[cId] = ts
         return ts
