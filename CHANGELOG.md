@@ -1,3 +1,13 @@
+## [1.2.15](https://github.com/w4bo/dt-graph/compare/1.2.14...1.2.15) (2026-02-11)
+
+### Dependency updates
+
+* **deps:** update plugin org.jetbrains.kotlin.plugin.serialization to v2.2.21 ([#138](https://github.com/w4bo/dt-graph/issues/138)) ([ec8036c](https://github.com/w4bo/dt-graph/commit/ec8036cb8ffa6c69e84bc85ee939ee6760bcc033))
+
+### Bug Fixes
+
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-serialization-json to v1.8.1 ([#140](https://github.com/w4bo/dt-graph/issues/140)) ([8e31406](https://github.com/w4bo/dt-graph/commit/8e31406ab164a3e2bdf1dbcfbd56f5a638e57421))
+
 ## [1.2.14](https://github.com/w4bo/dt-graph/compare/1.2.13...1.2.14) (2026-02-10)
 
 ### Dependency updates
