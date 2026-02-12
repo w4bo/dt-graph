@@ -1,3 +1,10 @@
+## [1.2.17](https://github.com/w4bo/dt-graph/compare/1.2.16...1.2.17) (2026-02-12)
+
+### Bug Fixes
+
+* **deps:** update jackson monorepo ([#141](https://github.com/w4bo/dt-graph/issues/141)) ([45d0564](https://github.com/w4bo/dt-graph/commit/45d0564729e045887de7abce76f84ebac982e557))
+* **deps:** update junit-framework monorepo to v5.10.5 ([#142](https://github.com/w4bo/dt-graph/issues/142)) ([91b76d2](https://github.com/w4bo/dt-graph/commit/91b76d2048a371ae0810d1a412706884f1cb6d68))
+
 ## [1.2.16](https://github.com/w4bo/dt-graph/compare/1.2.15...1.2.16) (2026-02-11)
 
 ### Bug Fixes
