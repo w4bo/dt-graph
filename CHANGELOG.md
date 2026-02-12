@@ -1,3 +1,15 @@
+## [1.2.18](https://github.com/w4bo/dt-graph/compare/1.2.17...1.2.18) (2026-02-12)
+
+### Dependency updates
+
+* **deps:** update gradle to v8.14 ([#143](https://github.com/w4bo/dt-graph/issues/143)) ([1fb370e](https://github.com/w4bo/dt-graph/commit/1fb370e2f6600e8c9dbe93e9cdb4be113a42a5a3))
+* **deps:** update plugin org.gradle.toolchains.foojay-resolver-convention to v0.10.0 ([#144](https://github.com/w4bo/dt-graph/issues/144)) ([91983b9](https://github.com/w4bo/dt-graph/commit/91983b99df83548e2d6e97726bd5c25eb7529ce1))
+* **deps:** update plugin org.jetbrains.kotlin.plugin.serialization to v2.3.10 ([#145](https://github.com/w4bo/dt-graph/issues/145)) ([6b21759](https://github.com/w4bo/dt-graph/commit/6b217591b4657fd6be3e9e62aa73c04688fc248e))
+
+### Bug Fixes
+
+* **deps:** update dependency org.apache.commons:commons-lang3 to v3.20.0 ([#147](https://github.com/w4bo/dt-graph/issues/147)) ([a653c5f](https://github.com/w4bo/dt-graph/commit/a653c5fedef0ba4419952ce6b313c1091cde690e))
+
 ## [1.2.17](https://github.com/w4bo/dt-graph/compare/1.2.16...1.2.17) (2026-02-12)
 
 ### Bug Fixes
