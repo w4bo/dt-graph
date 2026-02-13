@@ -109,24 +109,39 @@ class TestQuerySmartBench {
         val tau = Temperature
 
         val edgesDirectionPattern = listOf(
-            Step(Infrastructure, alias = "Environment"),
-            EdgeStep(hasCoverage, direction = Direction.IN),
-            Step(Sensor, alias = "Device"),
-            null,
-            Step(tau),
-            Step(HasTS),
-            Step(tau, alias = "Measurement")
+            listOf(
+                Step(Sensor, alias = "Sensor"),
+                Step(hasOwner),
+                Step(User, alias = "Owner"),
+                EdgeStep(hasOwner, direction = Direction.IN ),
+                Step(Platform, alias = "Platform"),
+                Step(hasType_),
+                Step(PlatformType, alias = "PlatformType"),
+            ),
+            listOf(
+                Step(InfrastructureType),
+                EdgeStep(hasType_, direction = Direction.IN ),
+                Step(Infrastructure, alias = "Environment"),
+                EdgeStep(hasCoverage, direction = Direction.IN ),
+                Step(Sensor, alias = "Device"),
+                null,
+                null,
+                Step(HasTS),
+                Step(tau, alias = "Measurement")
+            ),
         )
 
         val edgesDirectionResult: List<Any>
 
 
         val edgesQueryTime = measureTimeMillis {
-             edgesDirectionResult = query(
+            edgesDirectionResult = query(
                 graph, edgesDirectionPattern,
+                where = listOf(Compare("Device","Sensor","id",Operators.EQ)),
                 by = listOf(
+                    Aggregate("PlatformType", "id"),
+                    Aggregate("Owner", "id"),
                     Aggregate("Environment","id"),
-                    Aggregate("Device", "id"),
                     Aggregate("Measurement","value", AggOperator.AVG)
                 ),
                 from = tA, to = tB, timeaware = true
