@@ -1,3 +1,9 @@
+## [1.2.19](https://github.com/w4bo/dt-graph/compare/1.2.18...1.2.19) (2026-02-13)
+
+### Bug Fixes
+
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-coroutines-core to v1.10.2 ([#148](https://github.com/w4bo/dt-graph/issues/148)) ([a049c08](https://github.com/w4bo/dt-graph/commit/a049c0891448665a77f2302572e97b2b50c38b5c))
+
 ## [1.2.18](https://github.com/w4bo/dt-graph/compare/1.2.17...1.2.18) (2026-02-12)
 
 ### Dependency updates
