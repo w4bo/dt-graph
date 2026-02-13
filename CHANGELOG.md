@@ -1,3 +1,10 @@
+## [1.2.20](https://github.com/w4bo/dt-graph/compare/1.2.19...1.2.20) (2026-02-13)
+
+### Bug Fixes
+
+* **deps:** update dependency io.lettuce:lettuce-core to v6.8.2.release ([#146](https://github.com/w4bo/dt-graph/issues/146)) ([941adcb](https://github.com/w4bo/dt-graph/commit/941adcb65cca29fc380ec71ab9dfe91b1c169039))
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-serialization-json to v1.10.0 ([#149](https://github.com/w4bo/dt-graph/issues/149)) ([b6541bc](https://github.com/w4bo/dt-graph/commit/b6541bc000cbc981b5a1ec1433dcdef326173029))
+
 ## [1.2.19](https://github.com/w4bo/dt-graph/compare/1.2.18...1.2.19) (2026-02-13)
 
 ### Bug Fixes
