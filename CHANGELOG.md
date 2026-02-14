@@ -1,3 +1,9 @@
+## [1.2.21](https://github.com/w4bo/dt-graph/compare/1.2.20...1.2.21) (2026-02-14)
+
+### Bug Fixes
+
+* **deps:** update dependency org.openjdk.jol:jol-core to v0.17 ([#150](https://github.com/w4bo/dt-graph/issues/150)) ([0320ec7](https://github.com/w4bo/dt-graph/commit/0320ec7188b98fda822cb41202f7cea6a6df76c5))
+
 ## [1.2.20](https://github.com/w4bo/dt-graph/compare/1.2.19...1.2.20) (2026-02-13)
 
 ### Bug Fixes
