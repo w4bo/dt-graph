@@ -1,3 +1,10 @@
+## [1.2.23](https://github.com/w4bo/dt-graph/compare/1.2.22...1.2.23) (2026-02-14)
+
+### Bug Fixes
+
+* **deps:** update dependency org.yaml:snakeyaml to v2.5 ([#152](https://github.com/w4bo/dt-graph/issues/152)) ([0b86f86](https://github.com/w4bo/dt-graph/commit/0b86f861a667871c77d48ac24e995077bb31c1fd))
+* **deps:** update jackson monorepo to v2.21.0 ([#153](https://github.com/w4bo/dt-graph/issues/153)) ([acf1af2](https://github.com/w4bo/dt-graph/commit/acf1af2f289b57136207c3f4c8add1700cd32ae5))
+
 ## [1.2.22](https://github.com/w4bo/dt-graph/compare/1.2.21...1.2.22) (2026-02-14)
 
 ### Bug Fixes
