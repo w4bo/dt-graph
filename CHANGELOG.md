@@ -1,3 +1,9 @@
+## [1.2.25](https://github.com/w4bo/dt-graph/compare/1.2.24...1.2.25) (2026-02-15)
+
+### Bug Fixes
+
+* **deps:** update junit-framework monorepo to v5.14.3 ([#161](https://github.com/w4bo/dt-graph/issues/161)) ([a8fbf3f](https://github.com/w4bo/dt-graph/commit/a8fbf3f248f1db7f9a186f52d580a000283a68c1))
+
 ## [1.2.24](https://github.com/w4bo/dt-graph/compare/1.2.23...1.2.24) (2026-02-15)
 
 ### Dependency updates
