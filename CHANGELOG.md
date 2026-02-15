@@ -1,3 +1,13 @@
+## [1.2.24](https://github.com/w4bo/dt-graph/compare/1.2.23...1.2.24) (2026-02-15)
+
+### Dependency updates
+
+* **deps:** update openjdk docker tag to v25 ([#155](https://github.com/w4bo/dt-graph/issues/155)) ([503ed6c](https://github.com/w4bo/dt-graph/commit/503ed6c3645395519f0aa96c17f688be62aa6aa6))
+
+### Bug Fixes
+
+* **deps:** update junit-framework monorepo to v5.14.2 ([#154](https://github.com/w4bo/dt-graph/issues/154)) ([db01732](https://github.com/w4bo/dt-graph/commit/db017325730db9dd69ae7648930eb8fb298a052e))
+
 ## [1.2.23](https://github.com/w4bo/dt-graph/compare/1.2.22...1.2.23) (2026-02-14)
 
 ### Bug Fixes
