@@ -1,5 +1,5 @@
 # Use the official OpenJDK 21 image (slim variant) as the base image
-FROM openjdk:21-jdk-slim
+FROM openjdk:25-jdk-slim
 
 # Set the maintainer label
 LABEL maintainer="MP <manuele.pasini@unibo.it>"
