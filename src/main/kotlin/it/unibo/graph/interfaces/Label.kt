@@ -17,7 +17,7 @@ enum class Labels : Label {
     AgriFarm, AgriParcel, Device, Person, Humidity, SolarRadiation, Measurement, Environment, A, B, C, D, E, F, G,
     HasTS, HasParcel, HasDevice, HasOwner, HasManutentor, HasFriend, HasHumidity, HasTemperature, HasSolarRadiation, Foo, TargetLocation, NDVI, HasNDVI, Drone, HasDrone, User, Infrastructure, InfrastructureType, Group,
     Observation, Platform, PlatformType, Sensor, SensorType, hasOwner, hasType, hasInfrastructure, hasSensor, hasObservation, hasGroups, hasCoverage, Presence, Occupancy, SemanticObservationType, VirtualSensorType,
-    hasInputType, hasSemanticObservationType, VirtualSensor, hasPresence, hasLocation, location, hasOccupancy, occupancy, hasType_, hasTemperature, Temperature
+    hasInputType, hasSemanticObservationType, VirtualSensor, hasPresence, hasLocation, location, hasOccupancy, occupancy, hasType_, hasTemperature, Temperature, Comment, Post
 }
 
 // Custom serializer for numbers

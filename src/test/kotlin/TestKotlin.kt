@@ -659,6 +659,5 @@ class TestKotlin {
         )
         assertEquals(1, query(g, pattern1, where = w1).size)
         assertEquals(1, query(g, pattern2, where = w1).size)
-
     }
 }

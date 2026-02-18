@@ -4,6 +4,7 @@ import it.unibo.graph.utils.DATAFEED_PREFIX
 import it.unibo.graph.utils.DATASET_PREFIX
 import it.unibo.graph.utils.FIRSTFEEDPORT
 import it.unibo.graph.utils.LASTFEEDPORT
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.*
 import java.nio.charset.StandardCharsets
@@ -62,7 +63,23 @@ class AsterixDBHTTPClient(
             CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
         """.trimIndent()
         val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
-        val dataFeedSetupQuery = """
+        val datasetExists = checkDatasetExists(dataverse, dataset)
+        var datasetSetup = false
+
+        // IF dataset does not exist, create it
+        if (!datasetExists) {
+            datasetSetup = queryAsterixDB(datasetSetupQuery)
+        }
+        try {
+            //If dataset already existed or I've successfully created it
+            if (datasetSetup || datasetExists) {
+                var socketConnect: Boolean
+                try {
+                    queryAsterixDB("USE $dataverse; STOP FEED $feedName;".trimIndent())
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                val dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
@@ -76,38 +93,28 @@ class AsterixDBHTTPClient(
                     CONNECT FEED MeasurementsFeed_$tsId TO DATASET $dataset;
                     START FEED $feedName;
                 """.trimIndent()
-        val datasetExists = checkDatasetExists(dataverse, dataset)
-        var datasetSetup = false
 
-        // IF dataset does not exist, create it
-        if (!datasetExists) {
-            datasetSetup = queryAsterixDB(datasetSetupQuery)
-        }
-        try{
-            //If dataset already existed or I've successfully created it
-            if(datasetSetup || datasetExists){
-                var socketConnect: Boolean
                 // Try to set up a DataFeed
                 var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
                 // Try to connect to it
                 socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
                 // Until I've successfully created a DataFeed and I can actually connect to it
-                while(!datafeedSetup || !socketConnect){
+                while (!datafeedSetup || !socketConnect) {
                     // TODO: cap the number of retries and fail if it doesn't work
                     // TODO: Update this new port generation, should be more deterministic
                     newDataFeedPort = randomDataFeedPort()
                     datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
-
-                    if(datafeedSetup){
+                    if (datafeedSetup) {
                         socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
                     }
                 }
                 dataFeedPort = newDataFeedPort
                 return true
-            }else{
+            } else {
                 return false
             }
-        } catch(_: Exception){
+        } catch (e: Exception) {
+            e.printStackTrace()
             newDataFeedPort = randomDataFeedPort()
             return initializeTS(dataFeedIp, newDataFeedPort, dataType)
         }
@@ -131,12 +138,13 @@ class AsterixDBHTTPClient(
         return queryAsterixDB(dataFeedSetupQuery)
     }
 
-    private fun tryDataFeedConnection(dataFeedIp: String, dataFeedPort: Int): Boolean{
+    private fun tryDataFeedConnection(dataFeedIp: String, dataFeedPort: Int): Boolean {
         try {
             val testSocket = Socket(dataFeedIp, dataFeedPort)
             testSocket.close()
             return true
-        }catch(e: Exception){
+        } catch (e: Exception) {
+            e.printStackTrace()
             println("Failed to open a socket, stopping datafeed and will try to open a new one")
             deleteTs(deleteDataset = false)
             return false
@@ -176,21 +184,18 @@ class AsterixDBHTTPClient(
             throw UnsupportedOperationException(e)
         }
 
-        if(connection.responseCode in 200..299) {
-            // If I just want the request to return successfully
-            if(!checkResults){
+        if (connection.responseCode in 200..299) {
+            if (!checkResults) { // If I just want the request to return successfully
                 return true
-            }else{
+            } else {
                 // Check if it returned something
                 val isEmpty = Regex("\"results\"\\s*:\\s*\\[\\s*]").containsMatchIn(responseText)
                 return !isEmpty
             }
-        }
-        else {
+        } else {
             println(responseText)
             return false
         }
-
     }
 
     fun updateTs(upsertStatement: String) {
@@ -202,27 +207,27 @@ class AsterixDBHTTPClient(
         connection.requestMethod = "POST"
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
         connection.doOutput = true
-
         val params = mapOf(
             "statement" to queryStatement,
             "pretty" to "true",
             "mode" to "immediate",
             "dataverse" to dataverse
         )
-
         val postData = params.entries.joinToString("&") {
             "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
         }
-
         connection.outputStream.use { it.write(postData.toByteArray()) }
-
         val statusCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            println(e)
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw Exception()
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned TS yet
+                throw Exception(e)
+            } else {
+                // println("errMsg: $errMsg")
+                errMsg
+            }
         }
 
         return when {
@@ -232,41 +237,38 @@ class AsterixDBHTTPClient(
                     return try {
                         val jsonResponse = JSONObject(responseText)
                         val resultArray = jsonResponse.getJSONArray("results")
-                        if(!isGroupBy){
+                        if (!isGroupBy) {
                             AsterixDBResult.SelectResult(resultArray)
-                        }else{
+                        } else {
                             AsterixDBResult.GroupByResult(resultArray)
                         }
                     } catch (e: Exception) {
-                        println(e)
-                        println("Error parsing JSON response: ${e.message}")
                         throw Exception("Error parsing JSON response: ${e.message}")
                     }
                 } else {
                     AsterixDBResult.InsertResult
                 }
             }
+            statusCode == 400 -> AsterixDBResult.SelectResult(JSONArray())
             else -> {
-                println("Query failed with status code $statusCode")
                 throw Exception("Query failed with status code $statusCode")
             }
         }
     }
 
-    fun deleteTs(deleteDataset: Boolean = true){
-        val sqlStatement : String
-        sqlStatement = if(deleteDataset) {
+    fun deleteTs(deleteDataset: Boolean = true) {
+        val sqlStatement: String = if (deleteDataset) {
             """
-            USE $dataverse;
-            STOP FEED $feedName;
-            DROP FEED $feedName;
-            DROP dataset $dataset;
+                USE $dataverse;
+                STOP FEED $feedName;
+                DROP FEED $feedName;
+                DROP dataset $dataset;
             """.trimIndent()
-        }else{
+        } else {
             """ 
-            USE $dataverse;
-            STOP FEED $feedName;
-            DROP FEED $feedName;
+                USE $dataverse;
+                STOP FEED $feedName;
+                DROP FEED $feedName;
             """.trimIndent()
         }
         queryAsterixDB(sqlStatement)

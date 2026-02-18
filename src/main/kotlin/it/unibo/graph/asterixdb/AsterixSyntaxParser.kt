@@ -19,10 +19,9 @@ sealed class AsterixDBResult {
     data class SelectResult(val entities: JSONArray) : AsterixDBResult()
     data class GroupByResult(val entities: JSONArray) : AsterixDBResult()
     object InsertResult : AsterixDBResult()
-    // object ErrorResult : AsterixDBResult()
 }
 
-fun checkAndparseTimestampToString(label: String, timestamp: Long): String {
+fun checkAndParseTimestampToString(label: String, timestamp: Long): String {
     return if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
         """"$label": datetime("${timestampToISO8601(timestamp)}"),"""
     } else {
@@ -43,21 +42,18 @@ fun hashMapToGeometry(location: Map<String, Any>): Geometry? {
         }
 
         "POLYGON" -> {
-            val points = (coordinates[0] as List<List<Double>>)
-                .joinToString(", ") { (lon, lat) -> "$lon $lat" }
+            val points = (coordinates[0] as List<List<Double>>).joinToString(", ") { (lon, lat) -> "$lon $lat" }
             "POLYGON(($points))"
         }
 
-        else -> return null
+        else -> throw IllegalArgumentException("Unknown geometry type: $type")
     }
-
     val reader = WKTReader()
     return reader.read(wkt)
 }
 
 fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: String, g: Graph): P {
     fun parsePropType(key: String, value: Any): Pair<PropType, Any> {
-        //TODO: HANDLING ONLY SIMPLE PROP TYPES
         return if (key == LOCATION) {
             Pair(PropType.GEOMETRY, hashMapToGeometry(value as HashMap<String, Any>)!!)
         } else {
@@ -73,7 +69,8 @@ fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: St
                     }
                 }
 
-                else -> Pair(PropType.STRING, value.toString())
+                is String -> Pair(PropType.STRING, value)
+                else -> throw IllegalArgumentException("Unrecognized prop type: $value")
             }
         }
     }
@@ -119,21 +116,21 @@ private fun parsePropertyValue(value: JSONObject, type: PropType): Any {
     return when (type) {
         PropType.INT -> value.getInt("intValue")
         PropType.DOUBLE -> value.getDouble("doubleValue")
+        PropType.LONG -> value.getDouble("longValue")
         PropType.STRING -> value.getString("stringValue")
         PropType.GEOMETRY -> WKTReader().read(value.getString("geometryValue"))
-        else -> ""
+        else -> throw IllegalArgumentException("Unknown property type: $type")
     }
 }
-
 
 fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
     return when (locationProp) {
         null -> ""
         else -> {
             if (isUpdate)
-                """ "location": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
+                """"location": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
             else
-                """ "location": "${WKTWriter().write((locationProp.value as Geometry))}","""
+                """"location": "${WKTWriter().write((locationProp.value as Geometry))}","""
         }
     }
 }
@@ -141,49 +138,41 @@ fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
 fun relationshipToAsterixCitizen(rels: List<R>): String {
     return when (rels.size) {
         0 -> ""
-        else -> """ "relationships": [${rels.joinToString(", ", transform = ::relToJson)}],"""
+        else -> """"relationships": [${rels.joinToString(", ", transform = ::relToJson)}],"""
     }
 }
 
 fun propertiesToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> """ "properties":  [${
-            props.joinToString(", ", transform = ::propToJson)
-        }], """ + propertyToAsterixCitizen(props)
+        else -> """"properties":  [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
     }
 }
 
 fun propertyToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> props.joinToString(",\n ") { """ "${it.key}" : ${parseValue(it.value)}""" }
-            .let { if (it.isNotEmpty()) "$it,\n" else "" }
+        else -> props.joinToString(",\n ") { """"${it.key}": ${parseValue(it.value)}""" }.let { if (it.isNotEmpty()) "$it,\n" else "" }
     }
 }
 
-
 fun relToJson(relationship: R): String {
-    val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", relationship.fromTimestamp)
-    val toTimestampStr = checkAndparseTimestampToString("toTimestamp", relationship.toTimestamp)
-    return """
-        {
+    val fromTimestampStr = checkAndParseTimestampToString("fromTimestamp", relationship.fromTimestamp)
+    val toTimestampStr = checkAndParseTimestampToString("toTimestamp", relationship.toTimestamp)
+    return """{
             "type": "${relationship.label}",
             "fromN": ${relationship.fromN},
             "toN": ${relationship.toN},
             $fromTimestampStr
             $toTimestampStr
             "properties": ${relationship.getProps().map(::propToJson)}
-        }
-        """
+        }""".trimIndent()
 }
 
 fun propToJson(property: P): String {
-    val fromTimestampStr = checkAndparseTimestampToString("fromTimestamp", property.fromTimestamp)
-    val toTimestampStr = checkAndparseTimestampToString("toTimestamp", property.toTimestamp)
-
-    return """
-        {
+    val fromTimestampStr = checkAndParseTimestampToString("fromTimestamp", property.fromTimestamp)
+    val toTimestampStr = checkAndParseTimestampToString("toTimestamp", property.toTimestamp)
+    return """{
             "sourceId": ${property.sourceId},
             "sourceType": ${property.sourceType},
             "key": "${property.key}",
@@ -191,8 +180,7 @@ fun propToJson(property: P): String {
             $fromTimestampStr
             $toTimestampStr
             "type": ${property.type.ordinal}
-        }
-    """
+        }""".trimIndent()
 }
 
 fun jsonToProp(json: JSONObject, g: Graph): P {
@@ -228,13 +216,17 @@ fun jsonToRel(json: JSONObject, g: Graph): R {
 }
 
 fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
-    return when (valueType) {
+    when (valueType) {
         PropType.DOUBLE -> return JSONObject().apply {
             put("doubleValue", value)
         }
 
         PropType.STRING -> return JSONObject().apply {
             put("stringValue", value)
+        }
+
+        PropType.LONG -> return JSONObject().apply {
+            put("longValue", value)
         }
 
         PropType.INT -> return JSONObject().apply {
@@ -245,18 +237,19 @@ fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
             put("geometryValue", WKTWriter().write(value as Geometry))
         }
 
-        else -> JSONObject().apply {
-            put("stringValue", value)
+        else -> {
+            throw IllegalArgumentException("Unknown prop type ${valueType.name}")
         }
     }
 }
 
 fun parseValue(value: Any): String {
-    //TODO: Fix this, ci saranno altri tipi da parsare
     return when (value) {
         is Int -> "$value"
         is Long -> "$value"
-        else -> """ "$value" """
+        is Double -> "$value"
+        is String -> """"$value""""
+        else -> throw IllegalArgumentException("Unknown prop type ${value::class.qualifiedName}")
     }
 }
 
@@ -291,28 +284,20 @@ private fun parseFilter(filter: Filter): String {
 
     val property = filter.property
     val parsedValue = parseValue(filter.value)
-
     var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
     var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
-
     left = if (left == "fromTimestamp" || left == "toTimestamp") "timestamp" else left
     right = if (right == "fromTimestamp" || right == "toTimestamp") "timestamp" else right
-
-
-    right = if(left == "timestamp" && right.toLong() < 0) "0" else right
+    right = if (left == "timestamp" && right.toLong() < 0) "0" else right
 
     return when (filter.operator) {
         Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {
             val arg1Raw = remove3DfromWkt(if (filter.attrFirst) right else left)
             val arg2Raw = remove3DfromWkt(if (filter.attrFirst) left else right)
-
-
             val arg1 = normalizeWkt(arg1Raw)?.let { "st_geom_from_text('$it')" } ?: arg1Raw
             val arg2 = normalizeWkt(arg2Raw)?.let { "st_geom_from_text('$it')" } ?: arg2Raw
-
             "${parseOperator(filter.operator)}($arg1, $arg2)"
         }
-
         else -> "$left ${parseOperator(filter.operator)} $right"
     }
 }

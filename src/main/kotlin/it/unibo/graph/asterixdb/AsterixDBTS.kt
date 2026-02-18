@@ -122,25 +122,21 @@ class AsterixDBTS(
         if (isUpdate) {
             updateTs(n)
         } else {
-            if(!isFeedConnectionOpen){
+            if (!isFeedConnectionOpen) {
                 openDataFeedConnection()
                 closeFeed = true
             }
-
-            val measurement = """
-            {
+            val measurement = """{
                 "timestamp": ${n.fromTimestamp},
                 "property": "${n.label}",
                 ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull())}
                 ${relationshipToAsterixCitizen(n.relationships)}
-                ${propertiesToAsterixCitizen(n.getProps())}
-                "value": ${n.value}
-            }
-            """
+                ${propertiesToAsterixCitizen(n.properties)}
+                "value": ${n.value?: 0}
+            }""".trimIndent()// .replace("\\s+".toRegex(), " ")
             writer.println(measurement)
             if (writer.checkError()) {
-                println("Errore durante la scrittura nel file!")
-                throw Exception("Coudln't insert data into AsterixDB")
+                throw Exception("Couldn't insert data into AsterixDB")
             }
             if (closeFeed) {
                 closeDataFeedConnection()
