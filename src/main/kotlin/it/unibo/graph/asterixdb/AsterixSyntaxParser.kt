@@ -248,8 +248,8 @@ fun parseValue(value: Any): String {
         is Int -> "$value"
         is Long -> "$value"
         is Double -> "$value"
-        is String -> """"$value""""
-        else -> throw IllegalArgumentException("Unknown prop type ${value::class.qualifiedName}")
+        else -> """"$value""""
+        // else -> throw IllegalArgumentException("Unknown prop type ${value::class.qualifiedName}")
     }
 }
 

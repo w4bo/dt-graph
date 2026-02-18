@@ -71,14 +71,10 @@ class AsterixDBHTTPClient(
             datasetSetup = queryAsterixDB(datasetSetupQuery)
         }
         try {
-            //If dataset already existed or I've successfully created it
+            // If dataset already existed or I've successfully created it
             if (datasetSetup || datasetExists) {
                 var socketConnect: Boolean
-                try {
-                    queryAsterixDB("USE $dataverse; STOP FEED $feedName;".trimIndent())
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
                 val dataFeedSetupQuery = """
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
@@ -157,7 +153,7 @@ class AsterixDBHTTPClient(
             .firstOrNull() ?: throw IllegalStateException("No available port found")
     }
 
-    private fun queryAsterixDB(query: String, checkResults: Boolean = false): Boolean {
+    private fun queryAsterixDB(query: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
         val uri = URI(clusterControllerHost)
         val connection = uri.toURL().openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -176,15 +172,16 @@ class AsterixDBHTTPClient(
         }
 
         connection.outputStream.use { it.write(postData.toByteArray()) }
-
+        val responseCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(e)
+        } catch (_: Exception) {
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            if (blockOnError) throw UnsupportedOperationException(errMsg)
+            errMsg
         }
 
-        if (connection.responseCode in 200..299) {
+        if (responseCode in 200..299) {
             if (!checkResults) { // If I just want the request to return successfully
                 return true
             } else {
@@ -193,7 +190,6 @@ class AsterixDBHTTPClient(
                 return !isEmpty
             }
         } else {
-            println(responseText)
             return false
         }
     }
@@ -222,7 +218,7 @@ class AsterixDBHTTPClient(
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
             val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned TS yet
+            if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned ts in TS yet
                 throw Exception(e)
             } else {
                 // println("errMsg: $errMsg")

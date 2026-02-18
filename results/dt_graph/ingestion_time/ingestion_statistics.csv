@@ -1,3 +1,6 @@
 test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,storage
 03751f26-c995-46b1-8e9c-36684924d075,stgraph,1756376296,1756376831,smartbench,small,1,436867,98196,535063,1825
 8ae367c2-f8ae-4533-9583-6258b51f7d50,stgraph,1756385097,1756385110,smartbench,small,1,6746,6844,13590,18
+85c5af46-44e2-4c53-a516-7fbcd3576b65,stgraph,1770656347,1770656359,smartbench,small,1,5019,7752,12771,1,18
+c29aec33-d461-4049-b068-c93b45ed3ea8,stgraph,1770733419,1770733431,smartbench,small,1,5021,6892,11913,1,18
+d01f7409-d07c-4811-980c-65a8ef71c514,stgraph,1771406656,1771406667,smartbench,small,1,4411,7000,11411,1,18
