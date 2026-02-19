@@ -81,17 +81,13 @@ class AsterixDBTSM private constructor(
                 )
             }"
         }
-
         connection.outputStream.use { it.write(postData.toByteArray()) }
-
-
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(e)
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            throw UnsupportedOperationException(errMsg)
         }
-
         if (connection.responseCode in 200..299) {
             // If I just want the request to return successfully
             if (!checkResults) {
@@ -117,12 +113,7 @@ class AsterixDBTSM private constructor(
                 CREATE DATAVERSE $dataverse;
                 USE $dataverse;
 
-                CREATE TYPE PropertyValue AS OPEN {
-                    stringValue: string?,
-                    doubleValue: double?,
-                    intValue: int?,
-                    geometryValue: string?
-                };
+                CREATE TYPE PropertyValue AS OPEN {};
 
                 CREATE TYPE Property AS CLOSED {
                     `$KEY`: string,

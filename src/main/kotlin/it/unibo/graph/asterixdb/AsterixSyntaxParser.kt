@@ -34,7 +34,7 @@ fun hashMapToGeometry(location: Map<String, Any>): Geometry? {
         }
 
         "POLYGON" -> {
-            val points = (coordinates[0] as List<List<Double>>).joinToString(", ") { (lon, lat) -> "$lon $lat" }
+            val points = (coordinates[0] as List<List<Double>>).joinToString(",") { (lon, lat) -> "$lon $lat" }
             "POLYGON(($points))"
         }
 
@@ -54,7 +54,7 @@ fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: St
                 is Long -> Pair(PropType.LONG, value)
                 is Double -> Pair(PropType.DOUBLE, value)
                 is HashMap<*, *> -> {
-                    if (it.keys.contains(listOf("type", "coordinates"))) {
+                    if (it.keys.contains(listOf("type","coordinates"))) {
                         Pair(PropType.GEOMETRY, hashMapToGeometry(value as HashMap<String, Any>)!!)
                     } else {
                         Pair(PropType.STRING, value.toString())
@@ -81,16 +81,6 @@ fun parseProp(it: HashMap<*, *>, fromTimestamp: Long, toTimestamp: Long, key: St
     )
 }
 
-fun timestampToISO8601(timestamp: Long): String {
-    val instant = Instant.ofEpochMilli(timestamp)
-    val formatter = DateTimeFormatter.ISO_INSTANT
-    return when {
-        timestamp <= 0 -> formatter.format(Instant.ofEpochMilli(0))
-        timestamp == Long.MAX_VALUE -> formatter.format(Instant.ofEpochMilli(MAX_ASTERIX_DATE))
-        else -> formatter.format(instant)
-    }
-}
-
 fun dateToTimestamp(date: String): Long {
     val formatterWithMillis = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss")
     val formatterWithMillis2 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS")
@@ -106,11 +96,11 @@ fun dateToTimestamp(date: String): Long {
 
 private fun parsePropertyValue(value: JSONObject, type: PropType): Any {
     return when (type) {
-        PropType.INT -> value.getInt("intValue")
-        PropType.DOUBLE -> value.getDouble("doubleValue")
-        PropType.LONG -> value.getDouble("longValue")
-        PropType.STRING -> value.getString("stringValue")
-        PropType.GEOMETRY -> WKTReader().read(value.getString("geometryValue"))
+        PropType.INT -> value.getInt(VALUE)
+        PropType.DOUBLE -> value.getDouble(VALUE)
+        PropType.LONG -> value.getLong(VALUE)
+        PropType.STRING -> value.getString(VALUE)
+        PropType.GEOMETRY -> WKTReader().read(value.getString(VALUE))
         else -> throw IllegalArgumentException("Unknown property type: $type")
     }
 }
@@ -130,21 +120,21 @@ fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
 fun edgesToAsterixCitizen(edges: List<R>): String {
     return when (edges.size) {
         0 -> ""
-        else -> """"$EDGES": [${edges.joinToString(", ", transform = ::edgeToJson)}],"""
+        else -> """"$EDGES": [${edges.joinToString(",", transform = ::edgeToJson)}],"""
     }
 }
 
 fun propertiesToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> """"$PROPERTIES": [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
+        else -> """"$PROPERTIES": [${props.joinToString(",", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
     }
 }
 
 fun propertyToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> props.joinToString(",\n ") { """"${it.key}": ${parseValue(it.value)}""" }.let { if (it.isNotEmpty()) "$it,\n" else "" }
+        else -> props.joinToString(",") { """"${it.key}": ${parseValue(it.value)}""" }.let { if (it.isNotEmpty()) "$it," else "" }
     }
 }
 
@@ -153,7 +143,7 @@ fun edgeToJson(edge: R): String {
             "$LABEL": "${edge.label}",
             "fromN": ${edge.fromN},
             "toN": ${edge.toN},
-            "$PROPERTIES": ${edge.getProps().map(::propToJson)}
+            "$PROPERTIES": ${edge.properties.map(::propToJson)}
         }""".trimIndent()
 }
 
@@ -191,29 +181,13 @@ fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Grap
 }
 
 fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
-    when (valueType) {
-        PropType.DOUBLE -> return JSONObject().apply {
-            put("doubleValue", value)
+    return when (valueType) {
+        PropType.GEOMETRY -> JSONObject().apply {
+            put(VALUE, WKTWriter().write(value as Geometry))
         }
 
-        PropType.STRING -> return JSONObject().apply {
-            put("stringValue", value)
-        }
-
-        PropType.LONG -> return JSONObject().apply {
-            put("longValue", value)
-        }
-
-        PropType.INT -> return JSONObject().apply {
-            put("intValue", value)
-        }
-
-        PropType.GEOMETRY -> return JSONObject().apply {
-            put("geometryValue", WKTWriter().write(value as Geometry))
-        }
-
-        else -> {
-            throw IllegalArgumentException("Unknown prop type ${valueType.name}")
+        else -> JSONObject().apply {
+            put(VALUE, value)
         }
     }
 }
