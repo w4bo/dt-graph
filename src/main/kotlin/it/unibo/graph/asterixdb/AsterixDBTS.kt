@@ -126,15 +126,15 @@ class AsterixDBTS(
                 openDataFeedConnection()
                 closeFeed = true
             }
-            val measurement = """{
-                "timestamp": ${n.fromTimestamp},
-                "property": "${n.label}",
+            val event = """{
+                "$ID": ${n.fromTimestamp},
+                "$LABEL": "${n.label}",
                 ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull())}
-                ${relationshipToAsterixCitizen(n.relationships)}
+                ${edgesToAsterixCitizen(n.edges)}
                 ${propertiesToAsterixCitizen(n.properties)}
-                "value": ${n.value?: 0}
+                "$VALUE": ${n.value?: 0}
             }""".trimIndent()// .replace("\\s+".toRegex(), " ")
-            writer.println(measurement)
+            writer.println(event)
             if (writer.checkError()) {
                 throw Exception("Couldn't insert data into AsterixDB")
             }
@@ -154,7 +154,7 @@ class AsterixDBTS(
             else -> {
                 val selectClause = by.filter { it.operator != null }
                     .map {
-                        val prop = if (it.property == "value") "`value`" else it.property
+                        val prop = if (it.property == VALUE) "`$VALUE`" else it.property
                         "${AggOperator.SUM.name}($prop) as $prop"
                     }
 
@@ -167,22 +167,22 @@ class AsterixDBTS(
     override fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean): List<N> {
         var selectQuery: String
         val groupByClause: List<String>
-        val defaultAggregatorsList = listOf(PROPERTY, FROM_TIMESTAMP, TO_TIMESTAMP)
-        val defaultGroupByAggregators = ", $PROPERTY, COUNT(*) as count, MIN($TIMESTAMP) as $FROM_TIMESTAMP, MAX($TIMESTAMP) as $TO_TIMESTAMP"
 
-        // Select *each where predicate*
-        var whereAggregators = filters
-            .filter { !defaultAggregatorsList.contains(it.property) && it.property != VALUE }.joinToString(
-                ",",
-                prefix = if (filters.any { !defaultGroupByAggregators.contains(it.property) && it.property != VALUE }) "," else ""
-            ) { it.property }
+        val defaultAggregatorsList: List<String> = listOf(ID, LABEL, "`$VALUE`", PROPERTIES, EDGES)
+        val defaultGroupByAggregators: List<String>  = listOf(LABEL, "COUNT(*) as count", "MIN($ID) as $FROM_TIMESTAMP", "MAX($ID) as $TO_TIMESTAMP")
+
+        val filters = filters.map { if (it.property == FROM_TIMESTAMP || it.property == TO_TIMESTAMP) Filter(ID, it.operator, it.value, it.attrFirst) else it }
+
+        val whereAggregators: List<String> = filters
+            .filter { f -> f.property != VALUE }
+            .filter { f -> defaultAggregatorsList.none { it.contains(f.property) }  }
+            .map { f -> f.property }
 
         if (by.isEmpty()) {
             // If not group by, add mandatory attributes for graph representation
-            whereAggregators += ", `value`, timestamp, properties, relationships"
             selectQuery = """
                     USE $dataverse;
-                    SELECT ${defaultAggregatorsList.joinToString(",")} $whereAggregators
+                    SELECT ${(defaultAggregatorsList + whereAggregators).joinToString(",")}
                     FROM $dataset
                     ${applyFilters(filters)}
                 """.trimIndent()
@@ -193,22 +193,13 @@ class AsterixDBTS(
             val groupBy = groupby(by)!!
             val selectClause = groupBy.first
             groupByClause = groupBy.second
-            val groupByPredicates = groupByClause.joinToString(",")
-
             // GROUP BY property + all GROUP BY predicates + WHERE predicates
-            val groupByPart =
-                if (groupByPredicates.isNotEmpty()) "GROUP BY $groupByPredicates, $PROPERTY $whereAggregators" else "GROUP BY $PROPERTY $whereAggregators"
-
             selectQuery = """
                 USE $dataverse;
-                SELECT ${
-                groupByClause.joinToString(",").let { if (it.isNotEmpty()) "$it," else "" }
-            } ${selectClause.joinToString(",")} 
-              $defaultGroupByAggregators 
-              $whereAggregators
+                SELECT ${(groupByClause + selectClause + defaultGroupByAggregators + whereAggregators).joinToString(",")}
                 FROM $dataset
                 ${applyFilters(filters)}
-                $groupByPart;
+                GROUP BY ${(groupByClause + listOf(LABEL) + whereAggregators).joinToString(",")};
             """.trimIndent()
         }
         val outNodes : List<N>
@@ -225,55 +216,28 @@ class AsterixDBTS(
             is AsterixDBResult.GroupByResult -> {
                 if (result.entities.isEmpty) return emptyList()
                 val aggOperator = by.first { it.operator != null }.property!!
-
                 val fromTimestamp = (0 until result.entities.length()).minOf {
-                    result.entities.getJSONObject(
-                        it
-                    ).getLong(FROM_TIMESTAMP)
+                    result.entities.getJSONObject(it).getLong(FROM_TIMESTAMP)
                 }
-
                 val toTimestamp = (0 until result.entities.length()).maxOf {
-                    result.entities.getJSONObject(
-                        it
-                    ).getLong(TO_TIMESTAMP)
+                    result.entities.getJSONObject(it).getLong(TO_TIMESTAMP)
                 }
-
                 outNodes =  result.entities.toList().map { it as HashMap<*, *> }.map {
                     val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it["count"] as? Number)?.toDouble())
                     N.createVirtualN(
-                        labelFromString(it[PROPERTY]!!.toString()),
+                        labelFromString(it[LABEL]!!.toString()),
                         aggregatedValue = aggValue,
                         fromTimestamp = fromTimestamp,
                         toTimestamp = toTimestamp,
                         g = g,
                         properties = it.keys.filter { key -> key != aggOperator && !defaultAggregatorsList.contains(key.toString()) }
-                            .map { key ->
-                                parseProp(
-                                    it,
-                                    fromTimestamp = fromTimestamp,
-                                    toTimestamp = toTimestamp,
-                                    key = key.toString(),
-                                    g = g
-                                )
-                            } + (
+                            .map { key -> parseProp(it, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, key = key.toString(), g = g) } + (
                                 if (aggOperator != VALUE) {
-                                    listOf(
-                                        P(
-                                            DUMMY_ID,
-                                            sourceId = DUMMY_ID,
-                                            key = aggOperator,
-                                            value = aggValue,
-                                            type = PropType.STRING,
-                                            sourceType = NODE,
-                                            g = g,
-                                            fromTimestamp = fromTimestamp,
-                                            toTimestamp = toTimestamp
-                                        )
-                                    )
+                                    listOf(P(DUMMY_ID, sourceId = DUMMY_ID, key = aggOperator, value = aggValue, type = PropType.STRING, sourceType = NODE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp))
                                 } else {
                                     emptyList()
                                 }
-                                )
+                            )
                     )
                 }
                 return outNodes
@@ -285,12 +249,12 @@ class AsterixDBTS(
         }
     }
 
-    override fun get(timestamp: Long): N {
+    override fun get(id: Long): N {
         val selectQuery = """
-        USE $dataverse;
-        SELECT * FROM $dataset
-        WHERE timestamp = $timestamp
-        """
+            USE $dataverse;
+            SELECT * FROM $dataset
+            WHERE $ID = $id
+        """.trimIndent()
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery)) {
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.length() > 0) {
@@ -310,38 +274,35 @@ class AsterixDBTS(
         val upsertStatement = """
             USE $dataverse;
             UPSERT INTO $dataset ([{
-                "timestamp": ${n.fromTimestamp},
-                "property": "${n.label}",
+                "$ID": ${n.fromTimestamp},
+                "$LABEL": "${n.label}",
                 ${parseLocationToWKT(n.getProps(name = LOCATION).firstOrNull(), isUpdate = true)}
-                ${relationshipToAsterixCitizen(n.relationships)}
-                ${propertiesToAsterixCitizen(n.getProps())}
-                "fromTimestamp": datetime("${timestampToISO8601(n.fromTimestamp)}"),
-                "toTimestamp": datetime("${timestampToISO8601(n.toTimestamp)}"),
-                "value": ${n.value}
-            }]);
-        """
+                ${edgesToAsterixCitizen(n.edges)}
+                ${propertiesToAsterixCitizen(n.properties)}
+                "$VALUE": ${n.value}
+            }]);""".trimIndent()
         asterixHTTPClient.updateTs(upsertStatement)
     }
 
     private fun selectNodeFromJsonObject(node: JSONObject): N {
+        val id = encodeBitwise(getTSId(), node.getLong(ID))
         val entity = N(
-            id = encodeBitwise(getTSId(), node.getLong("timestamp")),
-            label = labelFromString(node.getString("property")),
-            fromTimestamp = node.getLong("timestamp"),
-            toTimestamp = node.getLong("timestamp"),
-            value = node.getLong("value"),
+            id = id,
+            label = labelFromString(node.getString(LABEL)),
+            fromTimestamp = node.getLong(ID),
+            toTimestamp = node.getLong(ID),
+            value = node.getLong(VALUE),
             g = g
         )
-        node.takeIf { it.has("relationships") }
-            ?.getJSONArray("relationships")
+        node.takeIf { it.has(EDGES) }
+            ?.getJSONArray(EDGES)
             ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
             ?.map { jsonToRel(it, g) }
-            ?.let(entity.relationships::addAll)
-
-        node.takeIf { it.has("properties") }
-            ?.getJSONArray("properties")
+            ?.let(entity.edges::addAll)
+        node.takeIf { it.has(PROPERTIES) }
+            ?.getJSONArray(PROPERTIES)
             ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
-            ?.map { jsonToProp(it, g) }
+            ?.map { jsonToProp(it, id, NODE, g) }
             ?.let(entity.properties::addAll)
         return entity
     }

@@ -60,8 +60,8 @@ open class R(
         if (!fromDisk && id != DUMMY_ID) {
             val from = g.getNode(fromN)
             val to = g.getNode(toN)
-            if (from.nextRel == null) { // this is the first edge
-                from.nextRel = id
+            if (from.nextEdge == null) { // this is the first edge
+                from.nextEdge = id
             } else {
                 // No, when we add a new edge among the two same nodes, this is a not a new version of a previous edge
                 // for (it in from.getRels(direction = Direction.OUT, label = label)) {
@@ -70,14 +70,14 @@ open class R(
                 //         break
                 //     }
                 // }
-                fromNextRel = from.nextRel
-                from.nextRel = id
+                fromNextRel = from.nextEdge
+                from.nextEdge = id
             }
-            if (to.nextRel == null) { // this is the first edge
-                to.nextRel = id
+            if (to.nextEdge == null) { // this is the first edge
+                to.nextEdge = id
             } else {
-                toNextRel = to.nextRel
-                to.nextRel = id
+                toNextRel = to.nextEdge
+                to.nextEdge = id
             }
             g.addNode(from)
             g.addNode(to)

@@ -59,7 +59,7 @@ class TestQueryParallelism {
 //                    "statement" to queryStatement,
 //                    "pretty" to "true",
 //                    "mode" to "immediate",
-//                    "dataverse" to "Measurements_Dataverse"
+//                    "dataverse" to "Events_Dataverse"
 //                )
 //
 //                val postData = params.entries.joinToString("&") {
@@ -111,7 +111,7 @@ class TestQueryParallelism {
 //                val parallelTime = measureTimeMillis {
 //
 //                    val jobs = (1..iteration).map {
-//                            id -> async{query(id, endpoint, "USE Measurements_Dataverse; SELECT * FROM dataset_$id LIMIT 3000")}
+//                            id -> async{query(id, endpoint, "USE Events_Dataverse; SELECT * FROM dataset_$id LIMIT 3000")}
 //                    }
 //                    jobs.awaitAll()
 //                }
@@ -119,12 +119,12 @@ class TestQueryParallelism {
 //                // Evaluate sequential query time
 //                val sequentialTime = measureTimeMillis {
 //                    (1 .. iteration).map{
-//                        id -> query(id,endpoint,"USE Measurements_Dataverse; SELECT * FROM dataset_$id LIMIT 3000" )
+//                        id -> query(id,endpoint,"USE Events_Dataverse; SELECT * FROM dataset_$id LIMIT 3000" )
 //                    }
 //                }
 //
 //                // Evaluating one single query time
-//                val unionQuery = "USE Measurements_Dataverse;\n " + (1 until iteration).joinToString("UNION ALL ") { qId ->
+//                val unionQuery = "USE Events_Dataverse;\n " + (1 until iteration).joinToString("UNION ALL ") { qId ->
 //                    "SELECT * FROM (SELECT * FROM dataset_$qId LIMIT 3000) as q$qId\n "
 //                }
 //                val singleQueryTime = measureTimeMillis {

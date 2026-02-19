@@ -4,6 +4,7 @@ import it.unibo.graph.utils.DATAFEED_PREFIX
 import it.unibo.graph.utils.DATASET_PREFIX
 import it.unibo.graph.utils.FIRSTFEEDPORT
 import it.unibo.graph.utils.LASTFEEDPORT
+import it.unibo.graph.utils.LOCATION
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.*
@@ -22,8 +23,6 @@ class AsterixDBHTTPClient(
 ) {
     private val feedName: String = "$DATAFEED_PREFIX$tsId"
     private val dataset: String = "$DATASET_PREFIX$tsId"
-
-
     fun getDataset(): String = dataset
     fun getDataFeedPort(): Int = dataFeedPort
 
@@ -59,8 +58,8 @@ class AsterixDBHTTPClient(
 
         val datasetSetupQuery = """
             USE $dataverse;
-            CREATE DATASET $dataset($dataType)IF NOT EXISTS primary key timestamp;
-            CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
+            CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key id;
+            CREATE INDEX event_${LOCATION}_$tsId on $dataset($LOCATION) type rtree;
         """.trimIndent()
         val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
         val datasetExists = checkDatasetExists(dataverse, dataset)
@@ -79,14 +78,14 @@ class AsterixDBHTTPClient(
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
-                      "adapter-name": "socket_adapter",
-                      "sockets": "${hostIP}:$newDataFeedPort",
-                      "address-type": "IP",
-                      "type-name": "$dataType",
-                      "policy": "Spill",
-                      "format": "adm"
+                        "adapter-name": "socket_adapter",
+                        "sockets": "${hostIP}:$newDataFeedPort",
+                        "address-type": "IP",
+                        "type-name": "$dataType",
+                        "policy": "Spill",
+                        "format": "adm"
                     };
-                    CONNECT FEED MeasurementsFeed_$tsId TO DATASET $dataset;
+                    CONNECT FEED EventsFeed_$tsId TO DATASET $dataset;
                     START FEED $feedName;
                 """.trimIndent()
 
@@ -96,7 +95,7 @@ class AsterixDBHTTPClient(
                 socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
                 // Until I've successfully created a DataFeed and I can actually connect to it
                 while (!datafeedSetup || !socketConnect) {
-                    // TODO: cap the number of retries and fail if it doesn't work
+                    // TODO: Cap the number of retries and fail if it doesn't work
                     // TODO: Update this new port generation, should be more deterministic
                     newDataFeedPort = randomDataFeedPort()
                     datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
@@ -121,12 +120,12 @@ class AsterixDBHTTPClient(
                     USE $dataverse;
                     DROP FEED $feedName IF EXISTS;
                     CREATE FEED $feedName WITH {
-                      "adapter-name": "socket_adapter",
-                      "sockets": "$dataFeedIp:$dataFeedPort",
-                      "address-type": "IP",
-                      "type-name": "$dataType",
-                      "policy": "Spill",
-                      "format": "adm"
+                        "adapter-name": "socket_adapter",
+                        "sockets": "$dataFeedIp:$dataFeedPort",
+                        "address-type": "IP",
+                        "type-name": "$dataType",
+                        "policy": "Spill",
+                        "format": "adm"
                     };
                     CONNECT FEED $feedName TO DATASET $dataset;
                     START FEED $feedName;
@@ -216,18 +215,17 @@ class AsterixDBHTTPClient(
         val statusCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned ts in TS yet
-                throw Exception(e)
+                throw UnsupportedOperationException(errMsg)
             } else {
-                // println("errMsg: $errMsg")
                 errMsg
             }
         }
 
-        return when {
-            statusCode in 200..299 -> {
+        return when (statusCode) {
+            in 200..299 -> {
                 val cleanedQuery = queryStatement.substringAfter(";").trimStart()
                 if (cleanedQuery.startsWith("SELECT", ignoreCase = true)) {
                     return try {
@@ -245,28 +243,23 @@ class AsterixDBHTTPClient(
                     AsterixDBResult.InsertResult
                 }
             }
-            statusCode == 400 -> AsterixDBResult.SelectResult(JSONArray())
+            400 -> AsterixDBResult.SelectResult(JSONArray())
             else -> {
-                throw Exception("Query failed with status code $statusCode")
+                throw UnsupportedOperationException("Query failed with status code $statusCode: $responseText")
             }
         }
     }
 
     fun deleteTs(deleteDataset: Boolean = true) {
-        val sqlStatement: String = if (deleteDataset) {
-            """
-                USE $dataverse;
-                STOP FEED $feedName;
-                DROP FEED $feedName;
-                DROP dataset $dataset;
-            """.trimIndent()
-        } else {
-            """ 
-                USE $dataverse;
-                STOP FEED $feedName;
-                DROP FEED $feedName;
-            """.trimIndent()
+        var sql = """
+            USE $dataverse;
+            STOP FEED $feedName;
+            DROP FEED $feedName;
+        """.trimIndent()
+         if (deleteDataset) {
+            sql += "\nDROP dataset $dataset;"
         }
-        queryAsterixDB(sqlStatement)
+        queryAsterixDB(sql)
     }
+
 }

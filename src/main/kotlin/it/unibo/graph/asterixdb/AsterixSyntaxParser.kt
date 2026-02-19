@@ -128,24 +128,24 @@ fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
         null -> ""
         else -> {
             if (isUpdate)
-                """"location": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
+                """"$LOCATION": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
             else
-                """"location": "${WKTWriter().write((locationProp.value as Geometry))}","""
+                """"$LOCATION": "${WKTWriter().write((locationProp.value as Geometry))}","""
         }
     }
 }
 
-fun relationshipToAsterixCitizen(rels: List<R>): String {
+fun edgesToAsterixCitizen(rels: List<R>): String {
     return when (rels.size) {
         0 -> ""
-        else -> """"relationships": [${rels.joinToString(", ", transform = ::relToJson)}],"""
+        else -> """"$EDGES": [${rels.joinToString(", ", transform = ::relToJson)}],"""
     }
 }
 
 fun propertiesToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> """"properties":  [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
+        else -> """"$PROPERTIES":  [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
     }
 }
 
@@ -157,24 +157,22 @@ fun propertyToAsterixCitizen(props: List<P>): String {
 }
 
 fun relToJson(relationship: R): String {
-    val fromTimestampStr = checkAndParseTimestampToString("fromTimestamp", relationship.fromTimestamp)
-    val toTimestampStr = checkAndParseTimestampToString("toTimestamp", relationship.toTimestamp)
+    val fromTimestampStr = checkAndParseTimestampToString(FROM_TIMESTAMP, relationship.fromTimestamp)
+    val toTimestampStr = checkAndParseTimestampToString(TO_TIMESTAMP, relationship.toTimestamp)
     return """{
-            "type": "${relationship.label}",
+            "$LABEL": "${relationship.label}",
             "fromN": ${relationship.fromN},
             "toN": ${relationship.toN},
             $fromTimestampStr
             $toTimestampStr
-            "properties": ${relationship.getProps().map(::propToJson)}
+            "$PROPERTIES": ${relationship.getProps().map(::propToJson)}
         }""".trimIndent()
 }
 
 fun propToJson(property: P): String {
-    val fromTimestampStr = checkAndParseTimestampToString("fromTimestamp", property.fromTimestamp)
-    val toTimestampStr = checkAndParseTimestampToString("toTimestamp", property.toTimestamp)
+    val fromTimestampStr = checkAndParseTimestampToString(FROM_TIMESTAMP, property.fromTimestamp)
+    val toTimestampStr = checkAndParseTimestampToString(TO_TIMESTAMP, property.toTimestamp)
     return """{
-            "sourceId": ${property.sourceId},
-            "sourceType": ${property.sourceType},
             "key": "${property.key}",
             "value": ${getPropertyValue(property.value, property.type)},
             $fromTimestampStr
@@ -183,34 +181,35 @@ fun propToJson(property: P): String {
         }""".trimIndent()
 }
 
-fun jsonToProp(json: JSONObject, g: Graph): P {
+fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, g: Graph): P {
     return P(
         id = DUMMY_ID,
-        sourceId = json.getLong("sourceId"),
-        sourceType = json.getBoolean(("sourceType")),
+        sourceId = sourceId,
+        sourceType = sourceType,
         key = json.getString("key"),
         value = parsePropertyValue(json.getJSONObject("value"), PropType.entries[json.getInt("type")]),
         type = PropType.entries[json.getInt("type")],
-        fromTimestamp = if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
-        toTimestamp = if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+        fromTimestamp = if (json.has(FROM_TIMESTAMP)) dateToTimestamp(json.getString(FROM_TIMESTAMP)) else Long.MIN_VALUE,
+        toTimestamp = if (json.has(TO_TIMESTAMP)) dateToTimestamp(json.getString(TO_TIMESTAMP)) else Long.MAX_VALUE,
         g = g
     )
 }
 
 fun jsonToRel(json: JSONObject, g: Graph): R {
+    val id = DUMMY_ID
     val newRelationship = R(
-        id = DUMMY_ID,
-        label = labelFromString(json.getString("type")),
+        id = id,
+        label = labelFromString(json.getString(LABEL)),
         fromN = 0L, // Valore placeholder, se non è nel JSON
         toN = json.getLong("toN"),
-        fromTimestamp = if (json.has("fromTimestamp")) dateToTimestamp(json.getString("fromTimestamp")) else Long.MIN_VALUE,
-        toTimestamp = if (json.has("toTimestamp")) dateToTimestamp(json.getString("toTimestamp")) else Long.MAX_VALUE,
+        fromTimestamp = if (json.has(FROM_TIMESTAMP)) dateToTimestamp(json.getString(FROM_TIMESTAMP)) else Long.MIN_VALUE,
+        toTimestamp = if (json.has(TO_TIMESTAMP)) dateToTimestamp(json.getString(TO_TIMESTAMP)) else Long.MAX_VALUE,
         g = g
     )
     newRelationship.properties.addAll(
-        json.getJSONArray("properties")
+        json.getJSONArray(PROPERTIES)
             .let { array -> List(array.length()) { array.getJSONObject(it) } }
-            .map { jsonToProp(it, g) }
+            .map { jsonToProp(it, id, EDGE, g) }
     )
     return newRelationship
 }
@@ -271,7 +270,7 @@ private fun parseFilter(filter: Filter): String {
         Operators.ST_INTERSECTS -> "st_intersects"
     }
 
-    fun escapeIdentifier(name: String): String = if (name == "value") "`value`" else name
+    fun escapeIdentifier(name: String): String = if (name == VALUE) "`$VALUE`" else name
 
     fun normalizeWkt(wkt: String): String? {
         val clean = wkt.trim().removeSurrounding("\"").removeSurrounding("'")
@@ -286,9 +285,7 @@ private fun parseFilter(filter: Filter): String {
     val parsedValue = parseValue(filter.value)
     var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
     var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
-    left = if (left == "fromTimestamp" || left == "toTimestamp") "timestamp" else left
-    right = if (right == "fromTimestamp" || right == "toTimestamp") "timestamp" else right
-    right = if (left == "timestamp" && right.toLong() < 0) "0" else right
+    right = if (left == ID && right.toLong() < 0) "0" else right
 
     return when (filter.operator) {
         Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {

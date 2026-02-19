@@ -65,7 +65,7 @@ interface Graph {
     fun addEdgeTS(tsId: Long, key: Long, r: R): R {
         val ts = tsm!!.getTS(tsId)
         val n = ts.get(key)
-        n.relationships += r
+        n.edges += r
         ts.add(n, isUpdate = true)
         return r
     }

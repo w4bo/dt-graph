@@ -117,8 +117,6 @@ class AsterixDBTSM private constructor(
                 };
 
                 CREATE TYPE Property AS CLOSED {
-                    sourceId: bigint,
-                    sourceType: Boolean,
                     `key`: string,
                     `value`: PropertyValue,
                     `type`: int,
@@ -126,8 +124,8 @@ class AsterixDBTSM private constructor(
                     toTimestamp: DATETIME?
                 };
 
-                CREATE TYPE NodeRelationship AS CLOSED {
-                    `type`: string,
+                CREATE TYPE Edge AS CLOSED {
+                    label: string,
                     fromN: bigint,
                     toN: bigint,
                     fromTimestamp: DATETIME?,
@@ -135,11 +133,11 @@ class AsterixDBTSM private constructor(
                     properties: [Property]?
                 };
 
-                CREATE TYPE Measurement AS OPEN {
-                    timestamp: int,
-                    property: STRING,
+                CREATE TYPE Event AS OPEN {
+                    id: bigint,
+                    label: string,
                     location: geometry?,
-                    relationships: [NodeRelationship]?,
+                    edges: [Edge]?,
                     properties: [Property]?
                 };
             """.trimIndent()

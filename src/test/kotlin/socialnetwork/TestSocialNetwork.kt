@@ -40,13 +40,12 @@ class TestSocialNetwork {
             snb.stop()
         }
 
-        fun setup(
-            host: String,
-            limit: Int? = 1000
-        ): Graph {
+        fun setup(host: String, limit: Int? = 1000): Graph {
             val g = MemoryGraphACID()
             val tsm = AsterixDBTSM.createDefault(g)
             g.tsm = tsm
+            g.clear()
+            tsm.clear()
             DriverManager.getConnection(host, "test", "test").use { conn ->
                 // --------------------
                 // Load PERSON
@@ -92,10 +91,10 @@ class TestSocialNetwork {
                                 P(DUMMY_ID, messageId, NODE, "content", rs.getString("content"), PropType.STRING, timestamp, timestamp, g = g),
                                 P(DUMMY_ID, messageId, NODE, "length", rs.getInt("length"), PropType.INT, timestamp, timestamp, g = g)
                             ),
-                            relationships = mutableListOf()
+                            edges = mutableListOf()
                         )
                         ts!!.add(n, isUpdate = false)
-                        println("-- Adding $n to $personId")
+                        // println("-- Adding $n to $personId")
                     }
                 }
 
