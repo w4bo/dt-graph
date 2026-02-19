@@ -309,7 +309,7 @@ class TestKotlin {
     @Test
     fun testSearchTS() {
         matrix { g ->
-            var pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
+            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
             assertEquals(3, search(g, pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
         }
     }

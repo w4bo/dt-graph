@@ -4,37 +4,47 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels
+import it.unibo.graph.interfaces.Labels.AgriParcel
+import it.unibo.graph.interfaces.Labels.Device
+import it.unibo.graph.interfaces.Labels.HasTS
+import it.unibo.graph.interfaces.Labels.Measurement
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.P
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
+import it.unibo.graph.query.AggOperator
+import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.query
 import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.ID
 import it.unibo.graph.utils.NODE
+import it.unibo.graph.utils.VALUE
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import java.sql.DriverManager
+import kotlin.test.assertEquals
 
 class TestSocialNetwork {
-
     companion object {
         val snb = SnbCsvImportTest()
         var g: Graph? = null
+
         @BeforeAll
         @JvmStatic
         fun load() {
             snb.load()
-            g = setup("${snb.postgres.jdbcUrl}")
+            g = setup(snb.postgres.jdbcUrl)
         }
         @JvmStatic
         @AfterAll fun stop() {
             snb.stop()
         }
-
-        fun setup(host: String, limit: Int? = 1000): Graph {
+        const val cLimit = 1000
+        @JvmStatic
+        fun setup(host: String, limit: Int? = cLimit): Graph {
             val g = MemoryGraphACID()
             val tsm = AsterixDBTSM.createDefault(g)
             g.tsm = tsm
@@ -99,5 +109,25 @@ class TestSocialNetwork {
     fun testSelect() {
         val pattern = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c"))
         assertTrue(query(g!!, pattern, timeaware = true).isNotEmpty())
+    }
+
+//    @Test
+//    fun testGroupBy() {
+//        val result =
+//            query(g!!,
+//                match = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c")),
+//                by = listOf(Aggregate("p", ID), Aggregate("c", ID, AggOperator.COUNT))
+//            )
+//        assertEquals(listOf(), result, message = result.toString())
+//    }
+
+    @Test
+    fun testGroupBy2() {
+        val result =
+            query(g!!,
+                match = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c")),
+                by = listOf(Aggregate("c", ID, AggOperator.COUNT))
+            )
+        assertEquals(listOf(cLimit), result, message = result.toString())
     }
 }

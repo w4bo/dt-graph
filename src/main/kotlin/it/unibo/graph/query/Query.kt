@@ -342,12 +342,10 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 }
                 if (lastAggregation) v.first / v.second else v
             }
-            AggOperator.SUM -> {
-                cNumbers.sumOf { it.first }
-            }
-            AggOperator.MAX -> {
-                cNumbers.maxOf { it.first }
-            }
+
+            AggOperator.SUM -> cNumbers.sumOf { it.first }
+            AggOperator.MAX -> cNumbers.maxOf { it.first }
+            AggOperator.COUNT -> cNumbers.sumOf { it.second }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
