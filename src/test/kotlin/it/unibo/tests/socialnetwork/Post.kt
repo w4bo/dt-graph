@@ -1,4 +1,4 @@
-package socialnetwork
+package it.unibo.tests.socialnetwork
 
 data class Post(
     val id: Long,

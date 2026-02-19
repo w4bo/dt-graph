@@ -1,24 +1,18 @@
-package socialnetwork
+package it.unibo.tests.socialnetwork
 
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels
-import it.unibo.graph.interfaces.Labels.A
-import it.unibo.graph.interfaces.Labels.B
-import it.unibo.graph.interfaces.Labels.C
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.P
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
-import it.unibo.graph.query.EdgeStep
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.query
 import it.unibo.graph.utils.DUMMY_ID
 import it.unibo.graph.utils.NODE
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import kotlin.test.Test
 import kotlin.test.assertTrue

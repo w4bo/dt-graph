@@ -1,4 +1,4 @@
-package socialnetwork
+package it.unibo.tests.socialnetwork
 
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.MountableFile
