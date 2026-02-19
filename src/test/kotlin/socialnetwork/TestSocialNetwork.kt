@@ -94,7 +94,6 @@ class TestSocialNetwork {
                             edges = mutableListOf()
                         )
                         ts!!.add(n, isUpdate = false)
-                        // println("-- Adding $n to $personId")
                     }
                 }
 

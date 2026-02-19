@@ -23,11 +23,7 @@ jobs:
           chmod +x ./gradlew
           chmod +x ./wait-for-it.sh
           ./wait-for-it.sh localhost:19006 -t 30 
-          ./gradlew test --tests TestKotlin
-          ./gradlew test --tests TestTemporal
-          ./gradlew test --tests TestTemporalJoin
-          ./gradlew test --tests TestTemporalProperty
-          ./gradlew test --tests TestWorkload
+          ./gradlew
 
   release:
     needs:
