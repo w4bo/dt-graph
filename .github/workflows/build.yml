@@ -23,7 +23,7 @@ jobs:
           chmod +x ./gradlew
           chmod +x ./wait-for-it.sh
           ./wait-for-it.sh localhost:19006 -t 30 
-          ./gradlew test --tests it.unibo.tests.ci
+          ./gradlew test --tests "it.unibo.tests.ci*"
 
   release:
     needs:
