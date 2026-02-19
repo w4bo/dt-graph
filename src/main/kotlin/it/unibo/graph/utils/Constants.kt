@@ -6,10 +6,10 @@ val LIMIT : Int = System.getenv("THREAD")?.toInt() ?: 1
 
 const val HIGHPRIORITY = 0
 const val LOWPRIORITY = 1
-const val PROPERTY = "property"
 const val FROM_TIMESTAMP = "fromTimestamp"
 const val TO_TIMESTAMP = "toTimestamp"
-const val TIMESTAMP = "timestamp"
+const val KEY = "key"
+const val TYPE = "type"
 const val ID = "id"
 const val LABEL = "label"
 const val PROPERTIES = "properties"

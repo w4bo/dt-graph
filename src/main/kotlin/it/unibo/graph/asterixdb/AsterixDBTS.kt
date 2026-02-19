@@ -95,11 +95,11 @@ class AsterixDBTS(
                     for (line in lines) {
                         if (line.isNotBlank()) {
                             val json: JsonNode = mapper.readTree(line)
-                            val label = if (json.get("type").textValue() == "Temperature")
+                            val label = if (json.get(TYPE).textValue() == "Temperature")
                                 "temperature" else "presence"
 
                             add(
-                                label = labelFromString(json.get("type").textValue()),
+                                label = labelFromString(json.get(TYPE).textValue()),
                                 timestamp = dateToTimestamp(json.get("timestamp").textValue()),
                                 location = json.get("location").textValue(),
                                 // TODO: attualmente è fissato sulla sintassi SmartBench
@@ -285,24 +285,25 @@ class AsterixDBTS(
     }
 
     private fun selectNodeFromJsonObject(node: JSONObject): N {
-        val id = encodeBitwise(getTSId(), node.getLong(ID))
+        val timestamp = node.getLong(ID)
+        val id = encodeBitwise(getTSId(), timestamp)
         val entity = N(
             id = id,
             label = labelFromString(node.getString(LABEL)),
-            fromTimestamp = node.getLong(ID),
-            toTimestamp = node.getLong(ID),
+            fromTimestamp = timestamp,
+            toTimestamp = timestamp,
             value = node.getLong(VALUE),
             g = g
         )
         node.takeIf { it.has(EDGES) }
             ?.getJSONArray(EDGES)
             ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
-            ?.map { jsonToRel(it, g) }
+            ?.map { jsonToEdge(it, fromTimestamp = timestamp, toTimestamp = timestamp, g) }
             ?.let(entity.edges::addAll)
         node.takeIf { it.has(PROPERTIES) }
             ?.getJSONArray(PROPERTIES)
             ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
-            ?.map { jsonToProp(it, id, NODE, g) }
+            ?.map { jsonToProp(it, id, NODE, fromTimestamp = timestamp, toTimestamp = timestamp, g) }
             ?.let(entity.properties::addAll)
         return entity
     }

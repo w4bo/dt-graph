@@ -9,12 +9,12 @@ enum class Direction { IN, OUT }
 const val EDGE_SIZE: Int = 68
 
 open class R(
-    final override val id: Long, // id of the relationship
+    final override val id: Long, // id of the edge
     final override val label: Label, // label
     val fromN: Long, // from node
     val toN: Long, // to node
-    var fromNextRel: Long? = null, // pointer to the next relationship of the `from node`
-    var toNextRel: Long? = null, // pointer to the next relationship of the `to node`
+    var fromNextRel: Long? = null, // pointer to the next edge of the `from node`
+    var toNextRel: Long? = null, // pointer to the next edge of the `to node`
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     final override var nextProp: Long? = null,

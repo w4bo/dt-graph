@@ -25,9 +25,9 @@ class MemoryGraphACID(
     edgeFile: String = "edges.dat",
     propertyFile: String = "property.dat",
     nodes: MutableList<N> = ArrayList(),
-    rels: MutableList<R> = ArrayList(),
+    edges: MutableList<R> = ArrayList(),
     props: MutableList<P> = ArrayList()
-) : MemoryGraph(nodes, rels, props), Flushable {
+) : MemoryGraph(nodes, edges, props), Flushable {
     private val nodeChannel: FileChannel = FileChannel.open(File("$path/$nodeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val edgeChannel: FileChannel = FileChannel.open(File("$path/$edgeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val propertyChannel: FileChannel = FileChannel.open(File("$path/$propertyFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
@@ -84,11 +84,11 @@ class MemoryGraphACID(
 
         fun readFromDisk(path: String = PATH, nodeFile: String = "nodes.dat", edgeFile: String = "edges.dat", propertyFile: String = "property.dat"): MemoryGraphACID {
             val nodes = mutableListOf<N>()
-            val rels = mutableListOf<R>()
+            val edges = mutableListOf<R>()
             val props = mutableListOf<P>()
-            val g = MemoryGraphACID(nodes = nodes, rels = rels, props = props)
+            val g = MemoryGraphACID(nodes = nodes, edges = edges, props = props)
             readObjectsFromFile("$path/$nodeFile", objectSize = NODE_SIZE, deserializer = { array -> N.fromByteArray(array, g) }, result = nodes)
-            readObjectsFromFile("$path/$edgeFile", objectSize = EDGE_SIZE, deserializer = { array -> R.fromByteArray(array, g) }, result = rels)
+            readObjectsFromFile("$path/$edgeFile", objectSize = EDGE_SIZE, deserializer = { array -> R.fromByteArray(array, g) }, result = edges)
             readObjectsFromFile("$path/$propertyFile", objectSize = PROPERTY_SIZE, deserializer = { array -> P.fromByteArray(array, g) }, result = props)
             return g
         }

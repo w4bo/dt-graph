@@ -4,7 +4,7 @@ import it.unibo.graph.interfaces.*
 
 open class MemoryGraph(
     private val nodes: MutableList<N> = ArrayList(),
-    private val rels: MutableList<R> = ArrayList(),
+    private val edges: MutableList<R> = ArrayList(),
     private val props: MutableList<P> = ArrayList()
 ) : Graph {
 
@@ -12,12 +12,12 @@ open class MemoryGraph(
         if (this === other) return true
         if (other == null || this::class != other::class) return false
         other as MemoryGraph
-        return nodes == other.nodes && rels == other.rels && props == other.props
+        return nodes == other.nodes && edges == other.edges && props == other.props
     }
 
     override fun hashCode(): Int {
         var result = nodes.hashCode()
-        result = 31 * result + rels.hashCode()
+        result = 31 * result + edges.hashCode()
         result = 31 * result + props.hashCode()
         return result
     }
@@ -25,7 +25,7 @@ open class MemoryGraph(
     override var tsm: TSManager? = null
 
     override fun clear() {
-        listOf(nodes, rels, props).forEach { it.clear() }
+        listOf(nodes, edges, props).forEach { it.clear() }
     }
 
     override fun nextNodeId(): Long = nodes.size.toLong()
@@ -50,13 +50,13 @@ open class MemoryGraph(
         return p
     }
 
-    override fun nextEdgeId(): Long = rels.size.toLong()
+    override fun nextEdgeId(): Long = edges.size.toLong()
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        if (r.id >= rels.size) {
-            rels += r
+        if (r.id >= edges.size) {
+            edges += r
         } else {
-            rels[r.id.toInt()] = r
+            edges[r.id.toInt()] = r
         }
         return r
     }
@@ -70,7 +70,7 @@ open class MemoryGraph(
     }
 
     override fun getEdges(): MutableList<R> {
-        return rels
+        return edges
     }
 
     override fun getProp(id: Long): P {
@@ -82,6 +82,6 @@ open class MemoryGraph(
     }
 
     override fun getEdge(id: Long): R {
-        return rels[id.toInt()]
+        return edges[id.toInt()]
     }
 }

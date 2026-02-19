@@ -21,14 +21,6 @@ sealed class AsterixDBResult {
     object InsertResult : AsterixDBResult()
 }
 
-fun checkAndParseTimestampToString(label: String, timestamp: Long): String {
-    return if (timestamp != Long.MAX_VALUE && timestamp != Long.MIN_VALUE) {
-        """"$label": datetime("${timestampToISO8601(timestamp)}"),"""
-    } else {
-        ""
-    }
-}
-
 fun hashMapToGeometry(location: Map<String, Any>): Geometry? {
     val type = location["type"] as? String ?: return null
     val coordinates = location["coordinates"] as? List<*> ?: return null
@@ -135,17 +127,17 @@ fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
     }
 }
 
-fun edgesToAsterixCitizen(rels: List<R>): String {
-    return when (rels.size) {
+fun edgesToAsterixCitizen(edges: List<R>): String {
+    return when (edges.size) {
         0 -> ""
-        else -> """"$EDGES": [${rels.joinToString(", ", transform = ::relToJson)}],"""
+        else -> """"$EDGES": [${edges.joinToString(", ", transform = ::edgeToJson)}],"""
     }
 }
 
 fun propertiesToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> """"$PROPERTIES":  [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
+        else -> """"$PROPERTIES": [${props.joinToString(", ", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
     }
 }
 
@@ -156,62 +148,46 @@ fun propertyToAsterixCitizen(props: List<P>): String {
     }
 }
 
-fun relToJson(relationship: R): String {
-    val fromTimestampStr = checkAndParseTimestampToString(FROM_TIMESTAMP, relationship.fromTimestamp)
-    val toTimestampStr = checkAndParseTimestampToString(TO_TIMESTAMP, relationship.toTimestamp)
+fun edgeToJson(edge: R): String {
     return """{
-            "$LABEL": "${relationship.label}",
-            "fromN": ${relationship.fromN},
-            "toN": ${relationship.toN},
-            $fromTimestampStr
-            $toTimestampStr
-            "$PROPERTIES": ${relationship.getProps().map(::propToJson)}
+            "$LABEL": "${edge.label}",
+            "fromN": ${edge.fromN},
+            "toN": ${edge.toN},
+            "$PROPERTIES": ${edge.getProps().map(::propToJson)}
         }""".trimIndent()
 }
 
 fun propToJson(property: P): String {
-    val fromTimestampStr = checkAndParseTimestampToString(FROM_TIMESTAMP, property.fromTimestamp)
-    val toTimestampStr = checkAndParseTimestampToString(TO_TIMESTAMP, property.toTimestamp)
     return """{
-            "key": "${property.key}",
-            "value": ${getPropertyValue(property.value, property.type)},
-            $fromTimestampStr
-            $toTimestampStr
-            "type": ${property.type.ordinal}
+            "$KEY": "${property.key}",
+            "$VALUE": ${getPropertyValue(property.value, property.type)},
+            "$TYPE": ${property.type.ordinal}
         }""".trimIndent()
 }
 
-fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, g: Graph): P {
+fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, fromTimestamp: Long, toTimestamp: Long, g: Graph): P {
     return P(
         id = DUMMY_ID,
         sourceId = sourceId,
         sourceType = sourceType,
-        key = json.getString("key"),
-        value = parsePropertyValue(json.getJSONObject("value"), PropType.entries[json.getInt("type")]),
-        type = PropType.entries[json.getInt("type")],
-        fromTimestamp = if (json.has(FROM_TIMESTAMP)) dateToTimestamp(json.getString(FROM_TIMESTAMP)) else Long.MIN_VALUE,
-        toTimestamp = if (json.has(TO_TIMESTAMP)) dateToTimestamp(json.getString(TO_TIMESTAMP)) else Long.MAX_VALUE,
+        key = json.getString(KEY),
+        value = parsePropertyValue(json.getJSONObject(VALUE), PropType.entries[json.getInt(TYPE)]),
+        type = PropType.entries[json.getInt(TYPE)],
+        fromTimestamp = fromTimestamp,
+        toTimestamp = toTimestamp,
         g = g
     )
 }
 
-fun jsonToRel(json: JSONObject, g: Graph): R {
+fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Graph): R {
     val id = DUMMY_ID
-    val newRelationship = R(
-        id = id,
-        label = labelFromString(json.getString(LABEL)),
-        fromN = 0L, // Valore placeholder, se non è nel JSON
-        toN = json.getLong("toN"),
-        fromTimestamp = if (json.has(FROM_TIMESTAMP)) dateToTimestamp(json.getString(FROM_TIMESTAMP)) else Long.MIN_VALUE,
-        toTimestamp = if (json.has(TO_TIMESTAMP)) dateToTimestamp(json.getString(TO_TIMESTAMP)) else Long.MAX_VALUE,
-        g = g
-    )
-    newRelationship.properties.addAll(
+    val newEdge = R(id = id, label = labelFromString(json.getString(LABEL)), fromN = json.getLong("fromN"), toN = json.getLong("toN"), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+    newEdge.properties.addAll(
         json.getJSONArray(PROPERTIES)
             .let { array -> List(array.length()) { array.getJSONObject(it) } }
-            .map { jsonToProp(it, id, EDGE, g) }
+            .map { jsonToProp(it, id, EDGE, fromTimestamp, toTimestamp, g) }
     )
-    return newRelationship
+    return newEdge
 }
 
 fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
