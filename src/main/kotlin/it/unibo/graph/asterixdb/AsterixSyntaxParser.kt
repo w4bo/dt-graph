@@ -9,7 +9,6 @@ import org.json.JSONObject
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.WKTReader
 import org.locationtech.jts.io.WKTWriter
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -94,14 +93,10 @@ fun dateToTimestamp(date: String): Long {
     return instant.toEpochMilli()
 }
 
-private fun parsePropertyValue(value: JSONObject, type: PropType): Any {
+private fun jsonToValue(value: Any, type: PropType): Any {
     return when (type) {
-        PropType.INT -> value.getInt(VALUE)
-        PropType.DOUBLE -> value.getDouble(VALUE)
-        PropType.LONG -> value.getLong(VALUE)
-        PropType.STRING -> value.getString(VALUE)
-        PropType.GEOMETRY -> WKTReader().read(value.getString(VALUE))
-        else -> throw IllegalArgumentException("Unknown property type: $type")
+        PropType.GEOMETRY -> WKTReader().read(value as String)
+        else -> value
     }
 }
 
@@ -134,7 +129,7 @@ fun propertiesToAsterixCitizen(props: List<P>): String {
 fun propertyToAsterixCitizen(props: List<P>): String {
     return when (props.size) {
         0 -> ""
-        else -> props.joinToString(",") { """"${it.key}": ${parseValue(it.value)}""" }.let { if (it.isNotEmpty()) "$it," else "" }
+        else -> props.joinToString(",") { """"${it.key}": ${valueToJson(it.value)}""" }.let { if (it.isNotEmpty()) "$it," else "" }
     }
 }
 
@@ -150,7 +145,7 @@ fun edgeToJson(edge: R): String {
 fun propToJson(property: P): String {
     return """{
             "$KEY": "${property.key}",
-            "$VALUE": ${getPropertyValue(property.value, property.type)},
+            "$VALUE": ${valueToJson(property.value)},
             "$TYPE": ${property.type.ordinal}
         }""".trimIndent()
 }
@@ -161,7 +156,7 @@ fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, fromTimest
         sourceId = sourceId,
         sourceType = sourceType,
         key = json.getString(KEY),
-        value = parsePropertyValue(json.getJSONObject(VALUE), PropType.entries[json.getInt(TYPE)]),
+        value = jsonToValue(json.get(VALUE), PropType.entries[json.getInt(TYPE)]),
         type = PropType.entries[json.getInt(TYPE)],
         fromTimestamp = fromTimestamp,
         toTimestamp = toTimestamp,
@@ -180,24 +175,13 @@ fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Grap
     return newEdge
 }
 
-fun getPropertyValue(value: Any, valueType: PropType): JSONObject {
-    return when (valueType) {
-        PropType.GEOMETRY -> JSONObject().apply {
-            put(VALUE, WKTWriter().write(value as Geometry))
-        }
-
-        else -> JSONObject().apply {
-            put(VALUE, value)
-        }
-    }
-}
-
-fun parseValue(value: Any): String {
+fun valueToJson(value: Any): String {
     return when (value) {
         is Int -> "$value"
         is Long -> "$value"
         is Double -> "$value"
-        else -> """"$value""""
+        is Geometry -> "\"${WKTWriter().write(value)}\""
+        else -> "\"$value\""
         // else -> throw IllegalArgumentException("Unknown prop type ${value::class.qualifiedName}")
     }
 }
@@ -232,7 +216,7 @@ private fun parseFilter(filter: Filter): String {
     }
 
     val property = filter.property
-    val parsedValue = parseValue(filter.value)
+    val parsedValue = valueToJson(filter.value)
     var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
     var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
     right = if (left == ID && right.toLong() < 0) "0" else right

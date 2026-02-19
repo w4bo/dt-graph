@@ -113,11 +113,8 @@ class AsterixDBTSM private constructor(
                 CREATE DATAVERSE $dataverse;
                 USE $dataverse;
 
-                CREATE TYPE PropertyValue AS OPEN {};
-
-                CREATE TYPE Property AS CLOSED {
+                CREATE TYPE Property AS OPEN {
                     `$KEY`: string,
-                    `$VALUE`: PropertyValue,
                     `$TYPE`: int
                 };
 

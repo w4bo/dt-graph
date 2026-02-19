@@ -90,61 +90,13 @@ class TestSocialNetwork {
                         ts!!.add(n, isUpdate = false)
                     }
                 }
-
-//            // --------------------
-//            // Load COMMENT
-//            // --------------------
-//            conn.createStatement().use { stmt ->
-//                val sql = if (limit != null)
-//                    "SELECT * FROM comment LIMIT $limit"
-//                else
-//                    "SELECT * FROM comment"
-//
-//                val rs = stmt.executeQuery(sql)
-//
-//                while (rs.next()) {
-//                    val n = g.addNode(Labels.Comment)
-//
-//                    g.addProperty(n.id, "id", rs.getLong("id"), PropType.LONG)
-//                    g.addProperty(n.id, "creationDate", rs.getLong("creationDate"), PropType.LONG)
-//                    g.addProperty(n.id, "locationIP", rs.getString("locationIP"), PropType.STRING)
-//                    g.addProperty(n.id, "browserUsed", rs.getString("browserUsed"), PropType.STRING)
-//                    g.addProperty(n.id, "content", rs.getString("content"), PropType.STRING)
-//                    g.addProperty(n.id, "length", rs.getInt("length"), PropType.INT)
-//                }
-//            }
-//
-//            // --------------------
-//            // Load POST
-//            // --------------------
-//            conn.createStatement().use { stmt ->
-//                val sql = if (limit != null)
-//                    "SELECT * FROM post LIMIT $limit"
-//                else
-//                    "SELECT * FROM post"
-//
-//                val rs = stmt.executeQuery(sql)
-//                while (rs.next()) {
-//                    val n = g.addNode(Labels.Post)
-//                    g.addProperty(n.id, "id", rs.getLong("id"), PropType.LONG)
-//                    g.addProperty(n.id, "creationDate", rs.getLong("creationDate"), PropType.LONG)
-//                    listOf("language", "content", "imageFile", "locationIP", "browserUsed").forEach {
-//                        val field = rs.getString(it)
-//                        if (!field.isNullOrBlank()) {
-//                            g.addProperty(n.id, it, field, PropType.STRING)
-//                        }
-//                    }
-//                    g.addProperty(n.id, "length", rs.getInt("length"), PropType.INT)
-//                }
-//            }
-//        }
             }
             return g
         }
     }
 
     @Test
-    fun testLoad() {
+    fun testSelect() {
         val pattern = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c"))
         assertTrue(query(g!!, pattern, timeaware = true).isNotEmpty())
     }
