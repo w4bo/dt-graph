@@ -171,19 +171,37 @@ fun nodeToJson(n: N, isUpdate: Boolean): String {
 }
 
 fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
-    val timestamp = node.getLong(ID)
-    val id = encodeBitwise(tsId, timestamp)
-    val entity = N(id = id, label = labelFromString(node.getString(LABEL)), fromTimestamp = timestamp, toTimestamp = timestamp, value = node.getLong(VALUE), g = g)
+    val timestamp: Long
+    val id: Long
+    if (node.has(ID)) {
+        timestamp = node.getLong(ID)
+        id = encodeBitwise(tsId, timestamp)
+    } else {
+        id = DUMMY_ID
+        timestamp = DUMMY_ID
+    }
+
+    val fromTimestamp = if (node.has(FROM_TIMESTAMP)) node.getLong(FROM_TIMESTAMP) else timestamp
+    val toTimestamp = if (node.has(TO_TIMESTAMP)) node.getLong(TO_TIMESTAMP) else timestamp
+
+    val entity = N(
+        id = id,
+        label = labelFromString(node.getString(LABEL)),
+        fromTimestamp = fromTimestamp,
+        toTimestamp = toTimestamp,
+        value = if (id != DUMMY_ID) node.getLong(VALUE) else null,
+        g = g
+    )
     node.keys()
         .forEach { key ->
-            if (!listOf(ID, LABEL, VALUE).contains(key)) {
+            if ((id == DUMMY_ID && key == VALUE) || !listOf(ID, LABEL, VALUE, FROM_TIMESTAMP, TO_TIMESTAMP).contains(key)) {
                 when (key) {
                     EDGES -> node.getJSONArray(EDGES)
                         ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
-                        ?.map { jsonToEdge(it, fromTimestamp = timestamp, toTimestamp = timestamp, g) }
+                        ?.map { jsonToEdge(it, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g) }
                         ?.let(entity.edges::addAll)
                     else -> {
-                        jsonToProp(node.getJSONObject(key), sourceId = id, sourceType = NODE, key = key, fromTimestamp = timestamp, toTimestamp = timestamp, g)
+                        jsonToProp(node.getJSONObject(key), sourceId = id, sourceType = NODE, key = key, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g)
                             .let { entity.properties.add(it) }
                     }
                 }

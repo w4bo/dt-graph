@@ -170,9 +170,8 @@ class AsterixDBTS(
         val groupby: MutableSet<String> =
             by
                 .filter { it.operator == null }
-                .map { f -> replacePropertyName(f.property!!) }
+                .map { f -> f.property!! }
                 .toMutableSet()
-        groupby += filters.filter { it.first != ID }.map { (orig, f) -> "${f.property} as $orig" }
         groupby += listOf(LABEL)
 
         val aggregators: MutableSet<String> =
@@ -187,7 +186,7 @@ class AsterixDBTS(
                     SELECT ${(groupby + aggregators).joinToString(",")}
                     FROM $dataset
                     ${applyFilters(filters.map { it.second })}
-                    GROUP BY ${groupby.joinToString(","){ removeAlias(it) }}
+                    GROUP BY ${groupby.joinToString(","){ removeAlias(it).replace(".$VALUE", "") }}
                 """.trimIndent()
         } else {
             selectQuery = """
@@ -209,21 +208,29 @@ class AsterixDBTS(
             }
             is AsterixDBResult.GroupByResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                val aggOperator = by.first { it.operator != null }.property!!
-                outNodes =  result.entities.toList()
-                    .map { it as HashMap<*, *> }
-                    .map {
-                        val fromTimestamp = (it[FROM_TIMESTAMP] as Number).toLong()
-                        val toTimestamp = (it[TO_TIMESTAMP] as Number).toLong()
-                        val aggValue = Pair((it[aggOperator] as? Number)?.toDouble(), (it[COUNT] as? Number)?.toDouble())
-                        val properties = it.keys
-                            .map { key -> key.toString() }
-                            .filter { key -> key == LOCATION || (key != aggOperator && key != COUNT && !firstCitizens.contains(key)) }
-                            .map { key -> parseProp(it, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, key = key, g = g) }
-                            .toMutableList()
-                        properties += if (aggOperator != VALUE) { listOf(P(DUMMY_ID, sourceId = DUMMY_ID, sourceType = NODE, key = aggOperator, value = aggValue, type = PropType.DOUBLE, g = g, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp)) } else { emptyList() }
-                        N.createVirtualN(labelFromString(it[LABEL]!!.toString()), aggregatedValue = aggValue, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g, properties = properties)
-                }
+                outNodes =  result.entities
+                    .map { it as JSONObject }
+                    .map { json ->
+                        val aggOperator = by.first { it.operator != null }.property!!
+                        // json.keys().forEach { key ->
+                        //     val currentValue = json.get(key)
+                        //     if (currentValue !is JSONObject) {
+                        //         json.put(
+                        //             key,
+                        //             JSONObject().apply {
+                        //                 put(VALUE, if(key != VALUE) currentValue else Pair((json[aggOperator] as? Number)?.toDouble(), (json[COUNT] as? Number)?.toDouble()))
+                        //                 put(TYPE, PropType.NULL.ordinal)
+                        //             }
+                        //         )
+                        //     }
+                        // }
+                        json.put(aggOperator, JSONObject().let { it ->
+                            it.put(VALUE, Pair((json[aggOperator] as? Number)?.toDouble(), (json[COUNT] as? Number)?.toDouble()))
+                            it.put(TYPE, PropType.NULL.ordinal)
+                        })
+                        json.remove(COUNT)
+                        jsonToNode(tsId = id, g = g, node = json)
+                    }
                 return outNodes
             }
             else -> throw UnsupportedOperationException(selectQuery)

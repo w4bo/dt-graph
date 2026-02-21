@@ -7,6 +7,7 @@ import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.query.*
+import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
@@ -25,10 +26,10 @@ class TestKotlin {
      */
     private fun matrix(f: (Graph) -> Unit) {
         // Loop over different Graph implementations
-        listOf(MemoryGraphACID()/*, MemoryGraph(), RocksDBGraph()*/)
+        listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
             .forEach { g1 ->
                 // For each Graph, test it with different TSM (Time-Series Management) implementations
-                listOf(/*MemoryTSM(g1),*/ AsterixDBTSM.createDefault(g1))
+                listOf(MemoryTSM(g1), AsterixDBTSM.createDefault(g1))
                     .forEach { tsm ->
                         // Set up the graph with the current TSM
                         var g: Graph = setup(g1, tsm)
