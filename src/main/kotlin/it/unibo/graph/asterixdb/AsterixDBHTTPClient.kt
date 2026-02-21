@@ -1,10 +1,6 @@
 package it.unibo.graph.asterixdb
 
-import it.unibo.graph.utils.DATAFEED_PREFIX
-import it.unibo.graph.utils.DATASET_PREFIX
-import it.unibo.graph.utils.FIRSTFEEDPORT
-import it.unibo.graph.utils.LASTFEEDPORT
-import it.unibo.graph.utils.LOCATION
+import it.unibo.graph.utils.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.*
@@ -243,10 +239,15 @@ class AsterixDBHTTPClient(
                     AsterixDBResult.InsertResult
                 }
             }
-            400 -> AsterixDBResult.SelectResult(JSONArray())
-            else -> {
-                throw UnsupportedOperationException("Query failed with status code $statusCode: $responseText")
-            }
+
+            400 ->
+                if (!isGroupBy) {
+                    AsterixDBResult.SelectResult(JSONArray())
+                } else {
+                    AsterixDBResult.GroupByResult(JSONArray())
+                }
+
+            else -> throw UnsupportedOperationException("Query failed with status code $statusCode: $responseText")
         }
     }
 

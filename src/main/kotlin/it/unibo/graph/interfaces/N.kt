@@ -70,7 +70,7 @@ open class N(
         return g.getTSM().getTS(id + 1).getValues(emptyList(), emptyList())
     }
 
-    fun getRels(
+    fun getEdges(
         next: Long? = nextEdge,
         direction: Direction? = null,
         label: Label? = null,

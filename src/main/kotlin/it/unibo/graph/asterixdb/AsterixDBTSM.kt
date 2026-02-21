@@ -3,15 +3,7 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.utils.EDGES
-import it.unibo.graph.utils.ID
-import it.unibo.graph.utils.KEY
-import it.unibo.graph.utils.LABEL
-import it.unibo.graph.utils.LOCATION
-import it.unibo.graph.utils.PROPERTIES
-import it.unibo.graph.utils.TYPE
-import it.unibo.graph.utils.VALUE
-import it.unibo.graph.utils.loadProps
+import it.unibo.graph.utils.*
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -120,17 +112,15 @@ class AsterixDBTSM private constructor(
 
                 CREATE TYPE Edge AS CLOSED {
                     $LABEL: string,
-                    fromN: bigint,
-                    toN: bigint,
-                    $PROPERTIES: [Property]?
+                    $FROM_N: bigint,
+                    $TO_N: bigint
                 };
 
                 CREATE TYPE Event AS OPEN {
                     $ID: bigint,
                     $LABEL: string,
                     $LOCATION: geometry?,
-                    $EDGES: [Edge]?,
-                    $PROPERTIES: [Property]?
+                    $EDGES: [Edge]?
                 };
             """.trimIndent()
     }

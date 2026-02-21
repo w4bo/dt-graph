@@ -3,7 +3,6 @@ package it.unibo.tests.socialnetwork
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.MountableFile
 import java.sql.DriverManager
-import kotlin.use
 
 class SnbCsvImportTest {
     val postgres = PostgreSQLContainer<Nothing>("postgres:18")

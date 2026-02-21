@@ -9,6 +9,7 @@ import org.json.JSONObject
 import org.locationtech.jts.geom.Geometry
 import org.locationtech.jts.io.WKTReader
 import org.locationtech.jts.io.WKTWriter
+import org.locationtech.jts.io.geojson.GeoJsonReader
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -95,92 +96,108 @@ fun dateToTimestamp(date: String): Long {
 
 private fun jsonToValue(value: Any, type: PropType): Any {
     return when (type) {
-        PropType.GEOMETRY -> WKTReader().read(value as String)
+        PropType.GEOMETRY -> GeoJsonReader().read(value as String)
         else -> value
     }
 }
 
-fun parseLocationToWKT(locationProp: P?, isUpdate: Boolean = false): String {
-    return when (locationProp) {
-        null -> ""
-        else -> {
-            if (isUpdate)
-                """"$LOCATION": st_geom_from_text('${WKTWriter().write((locationProp.value as Geometry))}'),"""
-            else
-                """"$LOCATION": "${WKTWriter().write((locationProp.value as Geometry))}","""
-        }
-    }
-}
-
-fun edgesToAsterixCitizen(edges: List<R>): String {
+fun edgesToAsterixCitizen(edges: List<R>, isUpdate: Boolean): String {
     return when (edges.size) {
         0 -> ""
-        else -> """"$EDGES": [${edges.joinToString(",", transform = ::edgeToJson)}],"""
+        else -> """"$EDGES": [${edges.joinToString(",", transform = { e-> edgeToJson(e, isUpdate)})}],"""
     }
 }
 
-fun propertiesToAsterixCitizen(props: List<P>): String {
-    return when (props.size) {
-        0 -> ""
-        else -> """"$PROPERTIES": [${props.joinToString(",", transform = ::propToJson)}], """ + propertyToAsterixCitizen(props)
-    }
-}
+fun propertiesToAsterixCitizen(props: List<P>, isUpdate: Boolean): String =
+    props.joinToString(",", transform = { p -> propToJson(p, isUpdate) }).let { if (it.isNotEmpty()) "$it," else "" }
 
-fun propertyToAsterixCitizen(props: List<P>): String {
-    return when (props.size) {
-        0 -> ""
-        else -> props.joinToString(",") { """"${it.key}": ${valueToJson(it.value)}""" }.let { if (it.isNotEmpty()) "$it," else "" }
-    }
-}
-
-fun edgeToJson(edge: R): String {
+fun edgeToJson(edge: R, isUpdate: Boolean): String {
     return """{
             "$LABEL": "${edge.label}",
-            "fromN": ${edge.fromN},
-            "toN": ${edge.toN},
-            "$PROPERTIES": ${edge.properties.map(::propToJson)}
+            ${propertiesToAsterixCitizen(edge.properties, isUpdate)}
+            "$FROM_N": ${edge.fromN},
+            "$TO_N": ${edge.toN}
         }""".trimIndent()
 }
 
-fun propToJson(property: P): String {
-    return """{
-            "$KEY": "${property.key}",
-            "$VALUE": ${valueToJson(property.value)},
-            "$TYPE": ${property.type.ordinal}
-        }""".trimIndent()
+fun propToJson(property: P, isUpdate: Boolean): String {
+    return if (property.key == LOCATION) {
+        // "\"${property.key}\": st_geom_from_text(${valueToJson(property.value)})"
+        "\"${property.key}\": ${valueToJson(property.value, isUpdate)}"
+    } else {
+        """
+            "${property.key}": {
+                "$VALUE": ${valueToJson(property.value, isUpdate)},
+                "$TYPE": ${property.type.ordinal}
+            }
+        """.trimIndent()
+    }
 }
 
-fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, fromTimestamp: Long, toTimestamp: Long, g: Graph): P {
-    return P(
-        id = DUMMY_ID,
-        sourceId = sourceId,
-        sourceType = sourceType,
-        key = json.getString(KEY),
-        value = jsonToValue(json.get(VALUE), PropType.entries[json.getInt(TYPE)]),
-        type = PropType.entries[json.getInt(TYPE)],
-        fromTimestamp = fromTimestamp,
-        toTimestamp = toTimestamp,
-        g = g
-    )
+fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, key: String, fromTimestamp: Long, toTimestamp: Long, g: Graph): P {
+    val value: Any
+    val type: PropType
+    if (key == LOCATION) {
+        type = PropType.GEOMETRY
+        value = jsonToValue(json.toString(), type)
+    } else {
+        type = PropType.entries[json.getInt(TYPE)]
+        value = jsonToValue(json.get(VALUE), type)
+    }
+
+    return P(id = DUMMY_ID, sourceId = sourceId, sourceType = sourceType, key = key, value = value, type = type, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
 }
 
 fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Graph): R {
     val id = DUMMY_ID
-    val newEdge = R(id = id, label = labelFromString(json.getString(LABEL)), fromN = json.getLong("fromN"), toN = json.getLong("toN"), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
-    newEdge.properties.addAll(
-        json.getJSONArray(PROPERTIES)
-            .let { array -> List(array.length()) { array.getJSONObject(it) } }
-            .map { jsonToProp(it, id, EDGE, fromTimestamp, toTimestamp, g) }
-    )
-    return newEdge
+    val edge = R(id = id, label = labelFromString(json.getString(LABEL)), fromN = json.getLong(FROM_N), toN = json.getLong(TO_N), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+    json.keys()
+        .forEach { key ->
+            if (!listOf(ID, LABEL, FROM_N, TO_N).contains(key)) {
+                jsonToProp(json.getJSONObject(key), sourceId = id, sourceType = EDGE, key = key, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g)
+            }
+        }
+    return edge
 }
 
-fun valueToJson(value: Any): String {
+fun nodeToJson(n: N, isUpdate: Boolean): String {
+    return """{
+                "$ID": ${n.fromTimestamp},
+                "$LABEL": "${n.label}",
+                ${edgesToAsterixCitizen(n.edges, isUpdate)}
+                ${propertiesToAsterixCitizen(n.properties, isUpdate)}
+                "$VALUE": ${n.value ?: 0}
+            }""".trimIndent().replace("\\s+".toRegex(), " ")
+}
+
+fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
+    val timestamp = node.getLong(ID)
+    val id = encodeBitwise(tsId, timestamp)
+    val entity = N(id = id, label = labelFromString(node.getString(LABEL)), fromTimestamp = timestamp, toTimestamp = timestamp, value = node.getLong(VALUE), g = g)
+    node.keys()
+        .forEach { key ->
+            if (!listOf(ID, LABEL, VALUE).contains(key)) {
+                when (key) {
+                    EDGES -> node.getJSONArray(EDGES)
+                        ?.let { array -> List(array.length()) { array.getJSONObject(it) } }
+                        ?.map { jsonToEdge(it, fromTimestamp = timestamp, toTimestamp = timestamp, g) }
+                        ?.let(entity.edges::addAll)
+                    else -> {
+                        jsonToProp(node.getJSONObject(key), sourceId = id, sourceType = NODE, key = key, fromTimestamp = timestamp, toTimestamp = timestamp, g)
+                            .let { entity.properties.add(it) }
+                    }
+                }
+            }
+        }
+    return entity
+}
+
+fun valueToJson(value: Any, isUpdate: Boolean): String {
     return when (value) {
         is Int -> "$value"
         is Long -> "$value"
         is Double -> "$value"
-        is Geometry -> "\"${WKTWriter().write(value)}\""
+        is Geometry -> if (isUpdate) "st_geom_from_text(\"${WKTWriter().write(value)}\")" else "\"${WKTWriter().write(value)}\""
         else -> "\"$value\""
         // else -> throw IllegalArgumentException("Unknown prop type ${value::class.qualifiedName}")
     }
@@ -189,7 +206,7 @@ fun valueToJson(value: Any): String {
 fun applyFilters(filters: List<Filter>): String {
     return when {
         filters.isEmpty() -> ""
-        else -> "WHERE ${filters.joinToString(separator = "\n AND ", transform = ::parseFilter)}"
+        else -> "WHERE ${filters.joinToString(separator = " AND ", transform = ::parseFilter)}"
     }
 }
 
@@ -204,8 +221,6 @@ private fun parseFilter(filter: Filter): String {
         Operators.ST_INTERSECTS -> "st_intersects"
     }
 
-    fun escapeIdentifier(name: String): String = if (name == VALUE) "`$VALUE`" else name
-
     fun normalizeWkt(wkt: String): String? {
         val clean = wkt.trim().removeSurrounding("\"").removeSurrounding("'")
         val wktPattern = Regex(
@@ -216,9 +231,9 @@ private fun parseFilter(filter: Filter): String {
     }
 
     val property = filter.property
-    val parsedValue = valueToJson(filter.value)
-    var left = if (filter.attrFirst) escapeIdentifier(property) else escapeIdentifier(parsedValue)
-    var right = if (filter.attrFirst) escapeIdentifier(parsedValue) else escapeIdentifier(property)
+    val parsedValue = valueToJson(filter.value, isUpdate = false)
+    var left = if (filter.attrFirst) property else parsedValue
+    var right = if (filter.attrFirst) parsedValue else property
     right = if (left == ID && right.toLong() < 0) "0" else right
 
     return when (filter.operator) {

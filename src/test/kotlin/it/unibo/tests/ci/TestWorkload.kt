@@ -8,7 +8,6 @@ import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import kotlin.collections.get
 import kotlin.test.Test
 
 
@@ -28,7 +27,7 @@ import kotlin.test.Test
  *            listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
  *            listOf(Step(AgriParcel, alias = "parcel")),
  *        )
- *    query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+ *    query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
  *    6. Possiamo specificare due validità diverse temporali nella stessa query? Don't think so, e.g., di tutti i device attivi 10 ore fa, dammi a cosa sono collegati ora.
  */
 class TestWorkload{
@@ -64,15 +63,15 @@ class TestWorkload{
         // Errano farm
         val errano = g.addNode(AgriFarm)
         g.addProperty(errano.id, "name", "Errano Kiwi Farm", PropType.STRING)
-        g.addProperty(errano.id, "location", ERRANO_LOCATION, PropType.GEOMETRY)
+        g.addProperty(errano.id, LOCATION, ERRANO_LOCATION, PropType.GEOMETRY)
 
         // Errano parcels
         val erranoT1 = g.addNode(AgriParcel)
         g.addProperty(erranoT1.id, "name", "Errano T1", PropType.STRING)
-        g.addProperty(erranoT1.id, "location", T1_LOCATION, PropType.GEOMETRY)
+        g.addProperty(erranoT1.id, LOCATION, T1_LOCATION, PropType.GEOMETRY)
         val erranoT2 = g.addNode(AgriParcel)
 
-        g.addProperty(erranoT2.id, "location", T2_LOCATION, PropType.GEOMETRY)
+        g.addProperty(erranoT2.id, LOCATION, T2_LOCATION, PropType.GEOMETRY)
         g.addProperty(erranoT2.id, "name", "Errano T2", PropType.STRING)
 
 
@@ -81,10 +80,10 @@ class TestWorkload{
 
         // Static devices
         val t1Moisture = g.addNode(Device)
-        g.addProperty(t1Moisture.id, "location", POINT_IN_T1, PropType.GEOMETRY)
+        g.addProperty(t1Moisture.id, LOCATION, POINT_IN_T1, PropType.GEOMETRY)
         g.addProperty(t1Moisture.id, "name", "Errano T1 MoistureDevice", PropType.STRING)
         val t2Moisture = g.addNode(Device)
-        g.addProperty(t2Moisture.id, "location", POINT_IN_T2, PropType.GEOMETRY)
+        g.addProperty(t2Moisture.id, LOCATION, POINT_IN_T2, PropType.GEOMETRY)
         g.addProperty(t2Moisture.id, "name", "Errano T2 MoistureDevice", PropType.STRING)
 
         if (dynamicDevices) {
@@ -93,7 +92,7 @@ class TestWorkload{
             // Moving device
             val erranoDrone = g.addNode(Device)
             g.addProperty(erranoDrone.id, "name", "Errano Drone" ,PropType.STRING)
-            g.addProperty(erranoDrone.id, "location", POINT_IN_T1, PropType.GEOMETRY, from = 0, to = 2)
+            g.addProperty(erranoDrone.id, LOCATION, POINT_IN_T1, PropType.GEOMETRY, from = 0, to = 2)
 
             val droneNDVI = g.addNode(NDVI, isTs = true)
             val droneTs = g.getTSM().addTS(droneNDVI.id)
@@ -106,7 +105,7 @@ class TestWorkload{
 
             //Moving device from T1 to T2
             g.addEdge(HasDevice, erranoT2.id, erranoDrone.id, from = 2, to = 5)
-            g.addProperty(erranoDrone.id, "location", POINT_IN_T2, PropType.GEOMETRY, from = 2, to = 5)
+            g.addProperty(erranoDrone.id, LOCATION, POINT_IN_T2, PropType.GEOMETRY, from = 2, to = 5)
 
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = POINT_IN_T2)
             droneTs.add(Measurement, timestamp = measurementTimestamp++, value = measurementTimestamp, location = POINT_IN_T2)
@@ -115,7 +114,7 @@ class TestWorkload{
         // Weather station, not linked to anything
         val weatherStation = g.addNode(Device)
         g.addProperty(weatherStation.id, "name", """Errano Weather Station""" ,PropType.STRING)
-        g.addProperty(weatherStation.id, "location", METEO_POINT ,PropType.GEOMETRY)
+        g.addProperty(weatherStation.id, LOCATION, METEO_POINT ,PropType.GEOMETRY)
 
         // g.addEdge(hasDevice, errano.id, weatherStation.id)
         g.addEdge(HasDevice, erranoT1.id, t1Moisture.id)
@@ -148,9 +147,9 @@ class TestWorkload{
     fun testParcelInFarm() {
         val g = setup()
         // Parcels in farm
-        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("farm", "parcel", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("farm", "parcel", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
         // Devices in Farm
-        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("parcel", "device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("parcel", "device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
     }
 
     @Test
@@ -162,7 +161,7 @@ class TestWorkload{
             )
 
         // Devices in farm throuh spatial join
-        kotlin.test.assertEquals(3, query(g, pattern, listOf(Compare("farm","device", "location", Operators.ST_CONTAINS)), timeaware = false).size)
+        kotlin.test.assertEquals(3, query(g, pattern, listOf(Compare("farm","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
     }
 
     // E* -> A*
@@ -196,7 +195,7 @@ class TestWorkload{
         )
 
         val targetLocation = g.addNode(TargetLocation)
-        g.addProperty(targetLocation.id, "location", searchLocation, PropType.GEOMETRY)
+        g.addProperty(targetLocation.id, LOCATION, searchLocation, PropType.GEOMETRY)
 
         val spatialPattern = listOf(
             listOf(Step(TargetLocation, alias="targetLocation")),
@@ -210,7 +209,7 @@ class TestWorkload{
         // v.1
         //kotlin.test.assertEquals(2, search(g, pattern, timeaware = false).size)
 
-        val query = query(g, spatialPattern, listOf(Compare("targetLocation","device", "location", Operators.ST_CONTAINS)), timeaware = false)
+        val query = query(g, spatialPattern, listOf(Compare("targetLocation","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false)
 
         // v.2
         kotlin.test.assertEquals(3, query.size)
@@ -284,11 +283,11 @@ class TestWorkload{
         )
 
 //        val query =  query(g, pattern,
-//            by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", "value", AggOperator.AVG)), from = 0, to = 5)//.chunked(3).map{Triple(it[0],it[1],it[2])}
+//            by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", VALUE, AggOperator.AVG)), from = 0, to = 5)//.chunked(3).map{Triple(it[0],it[1],it[2])}
 
         val spatialQuery = query(g, spatialPattern,
-            where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS)),
-            by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", "value", AggOperator.AVG)),
+            where = listOf(Compare("Environment", "Measurement", LOCATION, Operators.ST_CONTAINS)),
+            by = listOf(Aggregate("Device","name"), Aggregate("Environment","name"), Aggregate("Measurement", VALUE, AggOperator.AVG)),
             from = 0, to = 5)
 
         agents.forEach{ elem ->
@@ -351,7 +350,7 @@ class TestWorkload{
                 )
             )
 
-            val spatialResult = query(g, pattern, where = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")))
+            val spatialResult = query(g, pattern, where = listOf(Compare("Environment", "Measurement", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")))
             val traversalResult = query(g, traversalPattern, by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")), timeaware = true)
 
             kotlin.test.assertEquals(it.first, spatialResult.size)
@@ -434,7 +433,7 @@ class TestWorkload{
             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
 
-            val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", "location", Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+            val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
     }
@@ -481,7 +480,7 @@ class TestWorkload{
 
         // Adding a new parcel that should not be considered
         val erranoT0 = g.addNode(AgriParcel)
-        g.addProperty(erranoT0.id, "location", T0_LOCATION, PropType.GEOMETRY)
+        g.addProperty(erranoT0.id, LOCATION, T0_LOCATION, PropType.GEOMETRY)
         val t0Device = g.addNode(Device)
         g.addEdge(HasDevice,erranoT0.id,t0Device.id)
 
@@ -500,7 +499,7 @@ class TestWorkload{
                 Step(Measurement, alias = "Measurement")
             ),
         )
-        val oldMeasurementsLocations = query(g, oldMeasurementsLocationPattern, where = listOf(Compare("Environment","Measurement","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name")), from = tA, to = tB, timeaware = true)
+        val oldMeasurementsLocations = query(g, oldMeasurementsLocationPattern, where = listOf(Compare("Environment","Measurement",LOCATION,Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name")), from = tA, to = tB, timeaware = true)
 
         if (oldMeasurementsLocations.isEmpty()){
             throw Exception()
@@ -518,7 +517,7 @@ class TestWorkload{
             )
 
             val activeAgents = query(g, activeAgentsPattern, by = listOf(Aggregate("Environment", "name"), Aggregate("Device","name")), from = 4)
-            val activeSpatialAgents = query(g, activeAgentsSpatialPattern, where = listOf(Compare("Environment","Device","location",Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name"), Aggregate("Device","name")), from = 4)
+            val activeSpatialAgents = query(g, activeAgentsSpatialPattern, where = listOf(Compare("Environment","Device",LOCATION,Operators.ST_CONTAINS)), by = listOf(Aggregate("Environment", "name"), Aggregate("Device","name")), from = 4)
 
             var result = (activeAgents as List<List<Any>>)
                 .filter { it.isNotEmpty() }

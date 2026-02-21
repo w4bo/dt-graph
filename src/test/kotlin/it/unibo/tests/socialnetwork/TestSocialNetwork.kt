@@ -2,30 +2,19 @@ package it.unibo.tests.socialnetwork
 
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels
-import it.unibo.graph.interfaces.Labels.AgriParcel
-import it.unibo.graph.interfaces.Labels.Device
-import it.unibo.graph.interfaces.Labels.HasTS
-import it.unibo.graph.interfaces.Labels.Measurement
-import it.unibo.graph.interfaces.N
-import it.unibo.graph.interfaces.P
-import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.interfaces.TS
+import it.unibo.graph.interfaces.*
 import it.unibo.graph.query.AggOperator
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.query
 import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.ID
 import it.unibo.graph.utils.NODE
-import it.unibo.graph.utils.VALUE
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
-import kotlin.test.Test
-import kotlin.test.assertTrue
 import java.sql.DriverManager
+import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class TestSocialNetwork {
     companion object {
@@ -59,7 +48,7 @@ class TestSocialNetwork {
 
                     while (rs.next()) {
                         val n = g.addNode(Labels.Person, isTs = true)
-                        g.addProperty(n.id, "id", rs.getLong("id"), PropType.LONG)
+                        g.addProperty(n.id, "pId", rs.getLong("id"), PropType.LONG)
                         g.addProperty(n.id, "firstName", rs.getString("firstName"), PropType.STRING)
                         g.addProperty(n.id, "lastName", rs.getString("lastName"), PropType.STRING)
                         g.addProperty(n.id, "gender", rs.getString("gender"), PropType.STRING)
@@ -88,7 +77,7 @@ class TestSocialNetwork {
                         val timestamp = rs.getLong("creationDate")
                         val n = N(messageId, Labels.Comment, timestamp, timestamp, timestamp, g = g,
                             properties = mutableListOf(
-                                P(DUMMY_ID, messageId, NODE, "id", messageId, PropType.LONG, timestamp, timestamp, g = g),
+                                P(DUMMY_ID, messageId, NODE, "cId", messageId, PropType.LONG, timestamp, timestamp, g = g),
                                 P(DUMMY_ID, messageId, NODE, "creationDate", rs.getLong("creationDate"), PropType.LONG, timestamp, timestamp, g = g),
                                 P(DUMMY_ID, messageId, NODE, "locationIP", rs.getString("locationIP"), PropType.STRING, timestamp, timestamp, g = g),
                                 P(DUMMY_ID, messageId, NODE, "browserUsed", rs.getString("browserUsed"), PropType.STRING, timestamp, timestamp, g = g),
@@ -126,7 +115,7 @@ class TestSocialNetwork {
         val result =
             query(g!!,
                 match = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c")),
-                by = listOf(Aggregate("c", ID, AggOperator.COUNT))
+                by = listOf(Aggregate("c", "cId", AggOperator.COUNT))
             )
         assertEquals(listOf(cLimit), result, message = result.toString())
     }
