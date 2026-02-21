@@ -172,6 +172,7 @@ class AsterixDBTS(
                 .filter { it.operator == null }
                 .map { f -> f.property!! }
                 .toMutableSet()
+        groupby += filters.filter { it.first != ID }.map { (orig, _) -> orig }
         groupby += listOf(LABEL)
 
         val aggregators: MutableSet<String> =
@@ -212,18 +213,6 @@ class AsterixDBTS(
                     .map { it as JSONObject }
                     .map { json ->
                         val aggOperator = by.first { it.operator != null }.property!!
-                        // json.keys().forEach { key ->
-                        //     val currentValue = json.get(key)
-                        //     if (currentValue !is JSONObject) {
-                        //         json.put(
-                        //             key,
-                        //             JSONObject().apply {
-                        //                 put(VALUE, if(key != VALUE) currentValue else Pair((json[aggOperator] as? Number)?.toDouble(), (json[COUNT] as? Number)?.toDouble()))
-                        //                 put(TYPE, PropType.NULL.ordinal)
-                        //             }
-                        //         )
-                        //     }
-                        // }
                         json.put(aggOperator, JSONObject().let { it ->
                             it.put(VALUE, Pair((json[aggOperator] as? Number)?.toDouble(), (json[COUNT] as? Number)?.toDouble()))
                             it.put(TYPE, PropType.NULL.ordinal)
