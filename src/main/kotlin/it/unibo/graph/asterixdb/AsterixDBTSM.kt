@@ -3,7 +3,7 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.utils.loadProps
+import it.unibo.graph.utils.*
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -73,17 +73,13 @@ class AsterixDBTSM private constructor(
                 )
             }"
         }
-
         connection.outputStream.use { it.write(postData.toByteArray()) }
-
-
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(e)
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            throw UnsupportedOperationException(errMsg)
         }
-
         if (connection.responseCode in 200..299) {
             // If I just want the request to return successfully
             if (!checkResults) {
@@ -109,38 +105,22 @@ class AsterixDBTSM private constructor(
                 CREATE DATAVERSE $dataverse;
                 USE $dataverse;
 
-                CREATE TYPE PropertyValue AS OPEN {
-                    stringValue: string?,
-                    doubleValue: double?,
-                    intValue: int?,
-                    geometryValue: string?
+                CREATE TYPE Property AS OPEN {
+                    `$KEY`: string,
+                    `$TYPE`: int
                 };
 
-                CREATE TYPE Property AS CLOSED {
-                    sourceId: bigint,
-                    sourceType: Boolean,
-                    `key`: string,
-                    `value`: PropertyValue,
-                    `type`: int,
-                    fromTimestamp: DATETIME?,
-                    toTimestamp: DATETIME?
+                CREATE TYPE Edge AS CLOSED {
+                    $LABEL: string,
+                    $FROM_N: bigint,
+                    $TO_N: bigint
                 };
 
-                CREATE TYPE NodeRelationship AS CLOSED {
-                    `type`: string,
-                    fromN: bigint,
-                    toN: bigint,
-                    fromTimestamp: DATETIME?,
-                    toTimestamp: DATETIME?,
-                    properties: [Property]?
-                };
-
-                CREATE TYPE Measurement AS OPEN {
-                    timestamp: int,
-                    property: STRING,
-                    location: geometry?,
-                    relationships: [NodeRelationship]?,
-                    properties: [Property]?
+                CREATE TYPE Event AS OPEN {
+                    $ID: bigint,
+                    $LABEL: string,
+                    $LOCATION: geometry?,
+                    $EDGES: [Edge]?
                 };
             """.trimIndent()
     }

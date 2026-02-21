@@ -7,7 +7,9 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.utils.ID
 import it.unibo.graph.utils.LIMIT
+import it.unibo.graph.utils.TYPE
 import it.unibo.graph.utils.propTypeFromValue
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
@@ -50,21 +52,15 @@ class SmartBenchDataLoader(
         val graphLoadingTime = measureTimeMillis {
             for (file in dataPath) {
                 println("Loading data from $file")
-
                 val path = Paths.get(file).toAbsolutePath().normalize()
-
                 require(Files.exists(path)) { "File not found: $file" }
-
                 var count = 0
-
                 val fileTime = measureTimeMillis {
                     for (obj in loadJsonObjects(path.toUri(), mapper)) {
                         count++
 
-                        val typeVal = (obj["type"] as? String)
-                            ?: error("Missing 'type' in JSON object")
-                        val entityId = obj["id"] as? String
-                            ?: error("Missing 'id' in JSON object")
+                        val typeVal = (obj[TYPE] as? String)?: error("Missing \"$TYPE\" in JSON object")
+                        val entityId = obj[ID] as? String?: error("Missing \"$ID\" in JSON object")
                         val nodeLabel = labelFromString(
                             typeVal.replaceFirstChar {
                                 if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
@@ -81,7 +77,7 @@ class SmartBenchDataLoader(
                             for ((key, value) in obj) {
                                 when (value) {
                                     is Map<*, *> -> {
-                                        val destId = value["id"] as? String
+                                        val destId = value[ID] as? String
                                         if (destId != null) {
                                             val edgeLabel = hasLabel(key)
                                             val targetId = graphIdList[destId]

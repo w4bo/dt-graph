@@ -102,7 +102,7 @@ services:
         BARRIER_READY_NAME: INGESTION_BARRIER
         BARRIER_COMPLETED_NAME: RUN_COMPLETED
         BARRIER_FAILED_NAME: RUN_FAILED
-        DATAVERSE: Measurements_Dataverse
+        DATAVERSE: Events_Dataverse
 
 volumes:
   asterix_cc_conf:

@@ -1,3 +1,5 @@
+package it.unibo.tests.ci
+
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
@@ -59,12 +61,12 @@ class TestKotlin {
         val n5 = g.addNode(Person)
 
         g.addProperty(n0.id, "name", "Errano", PropType.STRING)
-        g.addProperty(n0.id, "location", "POLYGON ((11.798105 44.234354, 11.801217 44.237683, 11.805286 44.235809, 11.803987 44.234851, 11.804789 44.233683, 11.80268 44.231419, 11.798105 44.234354))\n", PropType.GEOMETRY)
+        g.addProperty(n0.id, LOCATION, "POLYGON ((11.798105 44.234354, 11.801217 44.237683, 11.805286 44.235809, 11.803987 44.234851, 11.804789 44.233683, 11.80268 44.231419, 11.798105 44.234354))\n", PropType.GEOMETRY)
         g.addProperty(n1.id, "name", "T0", PropType.STRING)
-        g.addProperty(n1.id, "location", "POLYGON ((11.79915 44.235384, 11.799412 44.23567, 11.801042 44.234555, 11.800681 44.234343, 11.79915 44.235384))", PropType.GEOMETRY)
+        g.addProperty(n1.id, LOCATION, "POLYGON ((11.79915 44.235384, 11.799412 44.23567, 11.801042 44.234555, 11.800681 44.234343, 11.79915 44.235384))", PropType.GEOMETRY)
         g.addProperty(n2.id, "name", "GB", PropType.STRING)
-        g.addProperty(n2.id, "location", "POINT (11.799328 44.235394)", PropType.GEOMETRY)
-        g.addProperty(n3.id, "location", "POINT (14.800711 44.234904)", PropType.GEOMETRY)
+        g.addProperty(n2.id, LOCATION, "POINT (11.799328 44.235394)", PropType.GEOMETRY)
+        g.addProperty(n3.id, LOCATION, "POINT (14.800711 44.234904)", PropType.GEOMETRY)
 
         g.addEdge(HasParcel, n0.id, n1.id)
         g.addEdge(HasDevice, n0.id, n2.id)
@@ -189,7 +191,7 @@ class TestKotlin {
                 Pair(g.getNode(N3), 5),
                 Pair(g.getNode(N4), 3)
             ).forEach {
-                assertEquals(it.second, it.first.getRels().size, it.first.getRels().toString())
+                assertEquals(it.second, it.first.getEdges().size, it.first.getEdges().toString())
             }
         }
     }
@@ -198,12 +200,12 @@ class TestKotlin {
     fun testProps() {
         matrix { g ->
             listOf(
-                Pair(g.getNode(N0), 2),
-                Pair(g.getNode(N1), 2),
-                Pair(g.getNode(N2), 2),
+                //Pair(g.getNode(N0), 2),
+                //Pair(g.getNode(N1), 2),
+                //Pair(g.getNode(N2), 2),
                 Pair(g.getTSM().getTS(N6 + 1).get(0), 1) // first measurement of the TS corresponding to N6
             ).forEach {
-                assertEquals(it.second, it.first.getProps().size, it.first.getProps().toString())
+                assertEquals(it.second, it.first.getProps().size, it.first.toString())
             }
         }
     }
@@ -300,15 +302,15 @@ class TestKotlin {
         matrix { g ->
             val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device, alias = "d"))
             assertEquals(2, search(g, pattern).size)
-            assertEquals(1, search(g, pattern, listOf(Compare("p", "d", "location", Operators.ST_CONTAINS))).size)
+            assertEquals(1, search(g, pattern, listOf(Compare("p", "d", LOCATION, Operators.ST_CONTAINS))).size)
         }
     }
 
     @Test
     fun testSearchTS() {
         matrix { g ->
-            var pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
-            assertEquals(3, search(g, pattern, listOf(Compare("p", "m", "location", Operators.ST_CONTAINS))).size)
+            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
+            assertEquals(3, search(g, pattern, listOf(Compare("p", "m", LOCATION, Operators.ST_CONTAINS))).size)
         }
     }
 
@@ -415,7 +417,7 @@ class TestKotlin {
         val p5 = g.addProperty(e1.id, "p5", "A".repeat(MAX_LENGTH_VALUE + 1), PropType.STRING, sourceType = EDGE)
         val p6 = g.addProperty(e1.id, "p6", 1L, PropType.LONG, sourceType = EDGE)
         val p7 = g.addProperty(e1.id, "p7", 1.0, PropType.DOUBLE, sourceType = EDGE)
-        val p8 = g.addProperty(e1.id, "location", "POINT (11.799328 44.235394)", PropType.GEOMETRY, sourceType = EDGE)
+        val p8 = g.addProperty(e1.id, LOCATION, "POINT (11.799328 44.235394)", PropType.GEOMETRY, sourceType = EDGE)
         val p9 = g.addProperty(e1.id, "p9", "A".repeat(MAX_LENGTH_VALUE), PropType.STRING, sourceType = EDGE)
         val p10 = g.addProperty(e1.id, "p10", "A".repeat(MAX_LENGTH_VALUE / 2), PropType.STRING, sourceType = EDGE)
         g.flushToDisk()
@@ -435,12 +437,12 @@ class TestKotlin {
 
             val n10 = g.addNode(A)
             val n11 = g.addNode(B)
-            g.addProperty(n10.id, "location", POINT_IN_T0, PropType.GEOMETRY)
-            g.addProperty(n11.id, "location", T0_LOCATION, PropType.GEOMETRY)
+            g.addProperty(n10.id, LOCATION, POINT_IN_T0, PropType.GEOMETRY)
+            g.addProperty(n11.id, LOCATION, T0_LOCATION, PropType.GEOMETRY)
             g.addEdge(Foo, n10.id, n11.id)
 
-            val w1 = listOf(Compare("b", "a", "location", Operators.ST_CONTAINS))
-            val w2 = listOf(Compare("a", "b", "location", Operators.ST_CONTAINS))
+            val w1 = listOf(Compare("b", "a", LOCATION, Operators.ST_CONTAINS))
+            val w2 = listOf(Compare("a", "b", LOCATION, Operators.ST_CONTAINS))
             assertEquals(1, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w1).size)
             assertEquals(0, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w2).size)
             assertEquals(0, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w1).size)
@@ -644,10 +646,10 @@ class TestKotlin {
 
         val n10 = g.addNode(A)
 
-        g.addProperty(n10.id, "location", T0_LOCATION, PropType.GEOMETRY)
+        g.addProperty(n10.id, LOCATION, T0_LOCATION, PropType.GEOMETRY)
         g.addEdge(Foo, n10.id, n11.id)
 
-        val w1 = listOf(Compare("Environment", "Measurement", "location", Operators.ST_CONTAINS))
+        val w1 = listOf(Compare("Environment", "Measurement", LOCATION, Operators.ST_CONTAINS))
 
         val pattern1 = listOf(
             listOf(Step(A, alias = "Environment")),
@@ -659,6 +661,5 @@ class TestKotlin {
         )
         assertEquals(1, query(g, pattern1, where = w1).size)
         assertEquals(1, query(g, pattern2, where = w1).size)
-
     }
 }

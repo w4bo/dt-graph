@@ -1,3 +1,5 @@
+package it.unibo.tests.ci
+
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Direction
@@ -5,9 +7,7 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.Labels.*
 import it.unibo.graph.interfaces.labelFromString
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.LIMIT
-import it.unibo.graph.utils.TimeRange
-import it.unibo.graph.utils.loadTemporalRanges
+import it.unibo.graph.utils.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
@@ -113,16 +113,16 @@ class TestQuerySmartBench {
                 Step(Sensor, alias = "Sensor"),
                 Step(hasOwner),
                 Step(User, alias = "Owner"),
-                EdgeStep(hasOwner, direction = Direction.IN ),
+                EdgeStep(hasOwner, direction = Direction.IN),
                 Step(Platform, alias = "Platform"),
                 Step(hasType_),
                 Step(PlatformType, alias = "PlatformType"),
             ),
             listOf(
                 Step(InfrastructureType),
-                EdgeStep(hasType_, direction = Direction.IN ),
+                EdgeStep(hasType_, direction = Direction.IN),
                 Step(Infrastructure, alias = "Environment"),
-                EdgeStep(hasCoverage, direction = Direction.IN ),
+                EdgeStep(hasCoverage, direction = Direction.IN),
                 Step(Sensor, alias = "Device"),
                 null,
                 null,
@@ -132,23 +132,19 @@ class TestQuerySmartBench {
         )
 
         val edgesDirectionResult: List<Any>
-
-
         val edgesQueryTime = measureTimeMillis {
             edgesDirectionResult = query(
                 graph, edgesDirectionPattern,
-                where = listOf(Compare("Device","Sensor","id",Operators.EQ)),
+                where = listOf(Compare("Device", "Sensor", "id", Operators.EQ)),
                 by = listOf(
                     Aggregate("PlatformType", "id"),
                     Aggregate("Owner", "id"),
-                    Aggregate("Environment","id"),
-                    Aggregate("Measurement","value", AggOperator.AVG)
+                    Aggregate("Environment", "id"),
+                    Aggregate("Measurement", VALUE, AggOperator.AVG)
                 ),
                 from = tA, to = tB, timeaware = true
             )
         }
-
-
         logger.info("--- EnvironmentAggregate execution times ---")
         logQueryResult("EnvironmentAggregate", "edgesDirection", edgesQueryTime, edgesDirectionResult.size,temporalRangeIndex, iteration)
     }
@@ -171,7 +167,7 @@ class TestQuerySmartBench {
                 null,
                 null,
                 Step(HasTS),
-                Step(Temperature, properties = listOf(Filter("value",Operators.GTE, minTemp)))
+                Step(Temperature, properties = listOf(Filter(VALUE,Operators.GTE, minTemp)))
             ),
             listOf(
                 Step(Sensor, alias = "Device2"),
@@ -227,8 +223,8 @@ class TestQuerySmartBench {
 
         val edgesDirectionQueryTime = measureTimeMillis {
             edgesDirectionResult = query(graph, edgesDirectionPattern,
-                where=listOf(Compare("Environment","Measurement","location",Operators.ST_INTERSECTS)),
-                by=listOf(Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.AVG)),
+                where=listOf(Compare("Environment", "Measurement", LOCATION, Operators.ST_INTERSECTS)),
+                by=listOf(Aggregate("Environment","id"), Aggregate("Measurement",VALUE,AggOperator.AVG)),
                 from = tA,
                 to = tB,
                 timeaware = true
@@ -261,7 +257,7 @@ class TestQuerySmartBench {
 
         val edgesDirectionTime = measureTimeMillis {
             edgesDirectionResult = query(graph, edgesDirectionPattern,
-                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement","value",AggOperator.MAX)),
+                by = listOf(Aggregate("Device","id"), Aggregate("Environment","id"), Aggregate("Measurement",VALUE,AggOperator.MAX)),
                 from = tA,
                 to = tB,
                 timeaware = true)

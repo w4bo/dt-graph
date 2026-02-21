@@ -1,3 +1,5 @@
+package it.unibo.tests.ci
+
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph

@@ -15,13 +15,13 @@ open class N(
     final override var toTimestamp: Long = Long.MAX_VALUE, // maximum validity
 
     // if graph node...
-    var nextRel: Long? = null, // link to the next edge, else null
+    var nextEdge: Long? = null, // link to the next edge, else null
     final override var nextProp: Long? = null, // link to the next property, else null
     val isTs : Boolean = false, // whether the node refers to an external TS
 
     // if TS event...
-    @Transient val value: Long? = null, // value of the measurement, else null
-    @Transient val relationships: MutableList<R> = mutableListOf(), // lists of edges towards the graph
+    @Transient val value: Long? = null, // value of the event, else null
+    @Transient val edges: MutableList<R> = mutableListOf(), // lists of edges towards the graph
     @Transient final override val properties: MutableList<P> = mutableListOf(), // lists of node properties
     @Transient final override var g: Graph
 ) : ElemP {
@@ -35,14 +35,16 @@ open class N(
             val labelOrdinal = buffer.int
             val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
-            val nextRel = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
+            val nextEdge = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val isTs = buffer.get() != 0.toByte()
-            return N(id = id, label = label, nextRel = nextRel, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, isTs = isTs, g = g)
+            return N(id = id, label = label, nextEdge = nextEdge, nextProp = nextProp, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, isTs = isTs, g = g)
         }
 
+        @Deprecated("Should be treated as a custom node builder")
         fun createVirtualN(label: Label, aggregatedValue: Any, fromTimestamp: Long, toTimestamp: Long, g: Graph, properties: List<P> = emptyList()) = createVirtualN(label, mutableListOf(P(DUMMY_ID, DUMMY_ID, NODE, key = VALUE, value = aggregatedValue, type = PropType.DOUBLE, fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)) + properties, fromTimestamp, toTimestamp, g)
 
-        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(id = DUMMY_ID, label = label, nextRel = null, nextProp = null, relationships = mutableListOf(), properties = properties.toMutableList(), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+        @Deprecated("Should be treated as a custom node builder")
+        fun createVirtualN(label: Label, properties: List<P>, fromTimestamp: Long, toTimestamp: Long, g: Graph) = N(id = DUMMY_ID, label = label, nextEdge = null, nextProp = null, edges = mutableListOf(), properties = properties.toMutableList(), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
     }
 
     fun serialize(): ByteArray {
@@ -52,7 +54,7 @@ open class N(
         buffer.putLong(toTimestamp)                       // 8 bytes
         buffer.putInt((label as Labels).ordinal)          // 4 bytes
         buffer.putLong(nextProp?: Long.MIN_VALUE)         // 8 bytes
-        buffer.putLong(nextRel?: Long.MIN_VALUE)          // 8 bytes
+        buffer.putLong(nextEdge?: Long.MIN_VALUE)         // 8 bytes
         buffer.put(if (isTs) 1 else 0)                       // 5 byte
         return buffer.array()                                    // Total: 45 bytes
     }
@@ -70,18 +72,18 @@ open class N(
         return g.getTSM().getTS(id + 1).getValues(emptyList(), emptyList())
     }
 
-    fun getRels(
-        next: Long? = nextRel,
+    fun getEdges(
+        next: Long? = nextEdge,
         direction: Direction? = null,
         label: Label? = null,
         includeHasTs: Boolean = false
     ): List<R> {
         val result = mutableListOf<R>()
         // Caso evento TS (relazioni già presenti)
-        if (relationships != null && relationships.isNotEmpty()) {
+        if (edges != null && edges.isNotEmpty()) {
             when (direction) {
                 Direction.IN -> throw NotImplementedException()
-                else -> return relationships.filter { label == null || it.label == label }
+                else -> return edges.filter { label == null || it.label == label }
             }
         }
         // Caso nodo grafo: itera sulle relazioni collegate
@@ -110,10 +112,10 @@ open class N(
 
     override fun equals(other: Any?): Boolean {
         if (other !is N) return false
-        return id == other.id && label == other.label && nextRel == other.nextRel && nextProp == other.nextProp && value == other.value && isTs == other.isTs
+        return id == other.id && label == other.label && nextEdge == other.nextEdge && nextProp == other.nextProp && value == other.value && isTs == other.isTs
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(id, label, nextRel, nextProp, value, isTs)
+        return Objects.hash(id, label, nextEdge, nextProp, value, isTs)
     }
 }

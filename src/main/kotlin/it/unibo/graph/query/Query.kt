@@ -342,12 +342,10 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 }
                 if (lastAggregation) v.first / v.second else v
             }
-            AggOperator.SUM -> {
-                cNumbers.sumOf { it.first }
-            }
-            AggOperator.MAX -> {
-                cNumbers.maxOf { it.first }
-            }
+
+            AggOperator.SUM -> cNumbers.sumOf { it.first }
+            AggOperator.MAX -> cNumbers.maxOf { it.first }
+            AggOperator.COUNT -> cNumbers.sumOf { it.second }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
@@ -491,7 +489,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                         if (curElem.index % 2 == 0) { // is node
                             val nextStep: IStep? = if (curElem.index + 1 < match.size) match[curElem.index + 1] else null // get the next step
                             (curElem.e as N)
-                                .getRels(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
+                                .getEdges(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
                                 .forEach {
                                     mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                 }

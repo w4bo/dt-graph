@@ -1,3 +1,5 @@
+package it.unibo.tests.ci
+
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
@@ -14,6 +16,7 @@ import it.unibo.graph.utils.EDGE
 import it.unibo.graph.utils.EPSILON
 import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TestTemporal {
@@ -68,7 +71,7 @@ class TestTemporal {
     @Test
     fun testSearch0() {
         val g = setup()
-        kotlin.test.assertEquals(
+        assertEquals(
             6,
             search(g, 
                 listOf(
@@ -85,7 +88,7 @@ class TestTemporal {
     @Test
     fun testSearch1() {
         val g = setup()
-        kotlin.test.assertEquals(
+        assertEquals(
             2,
             search(g, 
                 listOf(
@@ -102,7 +105,7 @@ class TestTemporal {
     @Test
     fun testSearch2() {
         val g = setup()
-        kotlin.test.assertEquals(
+        assertEquals(
             1,
             search(g, 
                 listOf(
@@ -117,7 +120,7 @@ class TestTemporal {
     @Test
     fun testSearch3() {
         val g = setup()
-        kotlin.test.assertEquals(
+        assertEquals(
             1,
             search(g, listOf(Step(Person)), timeaware = true, from = 0, to = 1).size
         )
@@ -135,11 +138,11 @@ class TestTemporal {
             Step(HasOwner),
             Step(Person)
         )
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true).size)
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 4 + EPSILON).size)
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0 + EPSILON).size)
-        kotlin.test.assertEquals(0, search(g, steps, timeaware = true, from = 1, to = 1 + EPSILON).size)
-        kotlin.test.assertEquals(2, search(g, steps, timeaware = false).size)
+        assertEquals(1, search(g, steps, timeaware = true).size)
+        assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 4 + EPSILON).size)
+        assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0 + EPSILON).size)
+        assertEquals(0, search(g, steps, timeaware = true, from = 1, to = 1 + EPSILON).size)
+        assertEquals(2, search(g, steps, timeaware = false).size)
     }
 
     @Test
@@ -154,8 +157,8 @@ class TestTemporal {
             Step(HasOwner),
             Step(Person, listOf(Filter("name", Operators.EQ, "Alice")))
         )
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true).size)
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
+        assertEquals(1, search(g, steps, timeaware = true).size)
+        assertEquals(1, search(g, steps, timeaware = false).size)
     }
 
     @Test
@@ -164,22 +167,22 @@ class TestTemporal {
         val steps = listOf(
             Step(Person, listOf(Filter("name", Operators.EQ, "Alice"), Filter("address", Operators.EQ, "Foo")))
         )
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
-        kotlin.test.assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
-        kotlin.test.assertEquals(0, search(g, steps, timeaware = true, to = -1).size)
+        assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
+        assertEquals(1, search(g, steps, timeaware = false).size)
+        assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
+        assertEquals(0, search(g, steps, timeaware = true, to = -1).size)
     }
 
     @Test
     fun testSearch7() {
         val g = setup()
         var steps = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel))
-        kotlin.test.assertEquals(2, search(g, steps, timeaware = false).size)
+        assertEquals(2, search(g, steps, timeaware = false).size)
 
         steps = listOf(Step(AgriFarm), Step(HasParcel, listOf(Filter("dateChanged", Operators.EQ, "today"))), Step(AgriParcel))
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = false).size)
-        kotlin.test.assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
-        kotlin.test.assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
+        assertEquals(1, search(g, steps, timeaware = false).size)
+        assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
+        assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
     }
 
     @Test

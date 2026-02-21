@@ -1,3 +1,5 @@
+package it.unibo.tests.ci
+
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
@@ -6,6 +8,7 @@ import it.unibo.graph.interfaces.Labels.B
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class TestTemporalJoin {
 
@@ -26,7 +29,7 @@ class TestTemporalJoin {
     fun test1() {
         val g = setup()
         // MATCH (a:A)-->(b:B) WHERE a.name = b.name RETURN a.name, b.name
-        kotlin.test.assertEquals(
+        assertEquals(
             setOf(listOf("Bar", "Bar")),
             query(g,
                 listOf(
@@ -43,7 +46,7 @@ class TestTemporalJoin {
     fun test2() {
         val g = setup()
         // MATCH (a:A)-->(b:B) WHERE a.name = b.name and timestamp in [0, 1) RETURN a.name, b.name
-        kotlin.test.assertEquals(
+        assertEquals(
             setOf(),
             query(
                 g,
