@@ -59,7 +59,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:dataframe:0.15.0'
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0"
     implementation "org.openjdk.jol:jol-core:0.17"
-    implementation "io.lettuce:lettuce-core:6.8.2.RELEASE"
+    implementation "io.lettuce:lettuce-core:7.4.0.RELEASE"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.21.1"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.21.1"
     implementation "com.fasterxml.jackson.core:jackson-core:2.21.1"
