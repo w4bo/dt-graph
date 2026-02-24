@@ -8,6 +8,7 @@ import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.query
 import it.unibo.graph.utils.DUMMY_ID
+import it.unibo.graph.utils.ID
 import it.unibo.graph.utils.NODE
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -105,9 +106,9 @@ class TestSocialNetwork {
 //        val result =
 //            query(g!!,
 //                match = listOf(Step(Labels.Person, alias = "p"), null, Step(Labels.Comment, alias = "c")),
-//                by = listOf(Aggregate("p", ID), Aggregate("c", ID, AggOperator.COUNT))
+//                by = listOf(Aggregate("p", "pId"), Aggregate("c", "cId", AggOperator.COUNT))
 //            )
-//        assertEquals(listOf(), result, message = result.toString())
+//        assertEquals(setOf(listOf(8796093022367L, 340), listOf(8796093022764L, 128), listOf(17592186046185L, 532)), result.toSet())
 //    }
 
     @Test
