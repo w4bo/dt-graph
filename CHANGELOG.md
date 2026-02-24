@@ -1,3 +1,13 @@
+## [1.2.27](https://github.com/w4bo/dt-graph/compare/1.2.26...1.2.27) (2026-02-24)
+
+### Dependency updates
+
+* **deps:** update node.js to 24.14 ([#164](https://github.com/w4bo/dt-graph/issues/164)) ([68c9e81](https://github.com/w4bo/dt-graph/commit/68c9e818b099f9e64d8e050dd55c56be95ddc978))
+
+### Bug Fixes
+
+* **deps:** update dependency io.lettuce:lettuce-core to v7 ([#157](https://github.com/w4bo/dt-graph/issues/157)) ([bee1e00](https://github.com/w4bo/dt-graph/commit/bee1e0025605c961a5abae841ec4bc55e353e973))
+
 ## [1.2.26](https://github.com/w4bo/dt-graph/compare/1.2.25...1.2.26) (2026-02-23)
 
 ### Bug Fixes
