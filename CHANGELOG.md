@@ -1,3 +1,9 @@
+## [1.2.28](https://github.com/w4bo/dt-graph/compare/1.2.27...1.2.28) (2026-02-27)
+
+### Bug Fixes
+
+* **deps:** update dependency org.yaml:snakeyaml to v2.6 ([#165](https://github.com/w4bo/dt-graph/issues/165)) ([a7f2a46](https://github.com/w4bo/dt-graph/commit/a7f2a463437556c6efc1a7dab08a1cb65a488b80))
+
 ## [1.2.27](https://github.com/w4bo/dt-graph/compare/1.2.26...1.2.27) (2026-02-24)
 
 ### Dependency updates
