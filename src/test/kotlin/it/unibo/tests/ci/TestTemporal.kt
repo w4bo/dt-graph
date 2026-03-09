@@ -3,7 +3,7 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.timeOverlap
@@ -83,6 +83,7 @@ class TestTemporal {
                 ), timeaware = true
             ).size
         )
+        g.close()
     }
 
     @Test
@@ -100,6 +101,7 @@ class TestTemporal {
                 ), timeaware = true, from = 0, to = 1
             ).size
         )
+        g.close()
     }
 
     @Test
@@ -115,6 +117,7 @@ class TestTemporal {
                 ), timeaware = true, from = 0, to = 1
             ).size
         )
+        g.close()
     }
 
     @Test
@@ -124,6 +127,7 @@ class TestTemporal {
             1,
             search(g, listOf(Step(Person)), timeaware = true, from = 0, to = 1).size
         )
+        g.close()
     }
 
     @Test
@@ -143,6 +147,7 @@ class TestTemporal {
         assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0 + EPSILON).size)
         assertEquals(0, search(g, steps, timeaware = true, from = 1, to = 1 + EPSILON).size)
         assertEquals(2, search(g, steps, timeaware = false).size)
+        g.close()
     }
 
     @Test
@@ -159,6 +164,7 @@ class TestTemporal {
         )
         assertEquals(1, search(g, steps, timeaware = true).size)
         assertEquals(1, search(g, steps, timeaware = false).size)
+        g.close()
     }
 
     @Test
@@ -171,6 +177,7 @@ class TestTemporal {
         assertEquals(1, search(g, steps, timeaware = false).size)
         assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
         assertEquals(0, search(g, steps, timeaware = true, to = -1).size)
+        g.close()
     }
 
     @Test
@@ -183,6 +190,7 @@ class TestTemporal {
         assertEquals(1, search(g, steps, timeaware = false).size)
         assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
+        g.close()
     }
 
     @Test

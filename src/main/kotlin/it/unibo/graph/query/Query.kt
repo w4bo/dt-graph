@@ -1,7 +1,7 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.interfaces.Labels.HasTS
+import it.unibo.graph.interfaces.Label.HasTS
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll

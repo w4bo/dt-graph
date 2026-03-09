@@ -5,7 +5,7 @@ import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.utils.*
@@ -25,27 +25,28 @@ class TestKotlin {
      * - Closes the Graph afterward to release resources.
      */
     private fun matrix(f: (Graph) -> Unit) {
-        // Loop over different Graph implementations
-        listOf(MemoryGraphACID(), MemoryGraph(), RocksDBGraph())
-            .forEach { g1 ->
-                // For each Graph, test it with different TSM (Time-Series Management) implementations
-                listOf(MemoryTSM(g1), AsterixDBTSM.createDefault(g1))
-                    .forEach { tsm ->
-                        // Set up the graph with the current TSM
-                        var g: Graph = setup(g1, tsm)
-                        // If the graph supports ACID and persistence, flush to the disk and reload
-                        if (g1 is MemoryGraphACID) {
-                            g1.flushToDisk() // Persist graph state to disk
-                            g = MemoryGraphACID.readFromDisk() // Reload from disk
-                            g.tsm = tsm // Reassign the TSM (not persisted)
-                        }
-                        // Apply the test function to the prepared graph
-                        println("Graph: ${g1.javaClass}, TSM: ${tsm.javaClass}")
-                        f(g)
-                        // Clean up and release resources
-                        g.close()
+
+        listOf(MemoryGraphACID::class, MemoryGraph::class, RocksDBGraph::class)
+            .forEach { graphClass ->
+                listOf(
+                    { graph: Graph -> AsterixDBTSM.createDefault(graph) },
+                    { graph: Graph -> MemoryTSM(graph) }
+                ).forEach { tsmFactory ->
+                    val g1: Graph = graphClass.java.getDeclaredConstructor().newInstance()
+                    val tsm = tsmFactory(g1)
+                    print("Graph: ${g1.javaClass}, TSM: ${tsm.javaClass}...")
+                    var g: Graph = setup(g1, tsm)
+                    if (g1 is MemoryGraphACID) {
+                        g1.flushToDisk()
+                        g1.close()
+                        g = MemoryGraphACID.readFromDisk(g1.path)
+                        g.tsm = tsm
                     }
-            }
+                    f(g)
+                    g.close()
+                    println(" Done.")
+                }
+        }
     }
 
     private fun setup(g: Graph, tsm: TSManager): Graph {
@@ -157,10 +158,12 @@ class TestKotlin {
         val g = MemoryGraphACID()
         setup(g, MemoryTSM(g))
         g.flushToDisk()
+        g.close()
 
-        val g1 = MemoryGraphACID.readFromDisk()
+        val g1 = MemoryGraphACID.readFromDisk(PATH + "graph_acid/")
         assertEquals(g, g1)
         assertEquals(g.hashCode(), g1.hashCode())
+        g1.close()
     }
 
     @Test
@@ -179,6 +182,7 @@ class TestKotlin {
         assertEquals(NODE_SIZE, g.getNode(N0).serialize().size)
         assertEquals(EDGE_SIZE, g.getEdge(N0).serialize().size)
         assertEquals(PROPERTY_SIZE, g.getProp(N0).serialize().size)
+        g.close()
     }
 
     @Test
@@ -200,9 +204,9 @@ class TestKotlin {
     fun testProps() {
         matrix { g ->
             listOf(
-                //Pair(g.getNode(N0), 2),
-                //Pair(g.getNode(N1), 2),
-                //Pair(g.getNode(N2), 2),
+                Pair(g.getNode(N0), 2),
+                Pair(g.getNode(N1), 2),
+                Pair(g.getNode(N2), 2),
                 Pair(g.getTSM().getTS(N6 + 1).get(0), 1) // first measurement of the TS corresponding to N6
             ).forEach {
                 assertEquals(it.second, it.first.getProps().size, it.first.toString())
@@ -264,6 +268,7 @@ class TestKotlin {
                 by = listOf(Aggregate("a", property = "name"), Aggregate("d", property = "name"), Aggregate("e", property = "lastname"))
             )
         )
+        g.close()
     }
 
     @Test
@@ -281,6 +286,7 @@ class TestKotlin {
             res.size,
             res.toString()
         )
+        g.close()
     }
 
     @Test
@@ -355,6 +361,7 @@ class TestKotlin {
             listOf("Errano" as Any, "null" as Any),
             query(g, listOf(Step(A, alias = "n")), by = listOf(Aggregate("n", "name")))
         )
+        g.close()
     }
 
     @Test
@@ -427,6 +434,7 @@ class TestKotlin {
         listOf(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10).forEachIndexed {
             i, p -> assertEquals(p, g.getPropertyFromDisk(p.id), "p${i + 1}")
         }
+        g.close()
     }
 
     @Test
@@ -631,10 +639,11 @@ class TestKotlin {
         val gb2 = listOf(Aggregate("n3", property = "name"), Aggregate("n1", property = "name"), Aggregate("n2", property = "name"))
         val pattern3 = listOf(Step(C, alias = "n3"), EdgeStep(direction = Direction.IN), Step(A, alias = "n1"), EdgeStep(direction = Direction.OUT), Step(B, alias = "n2"))
         assertEquals(setOf(listOf("c", "a", "b")), query(g, pattern3, by=gb2, timeaware = true).toSet())
+        g.close()
     }
 
     @Test
-    fun `join commutativity` (){
+    fun `join commutativity`() {
         val g = MemoryGraph()
         g.clear()
         g.tsm = AsterixDBTSM.createDefault(g)
@@ -661,5 +670,6 @@ class TestKotlin {
         )
         assertEquals(1, query(g, pattern1, where = w1).size)
         assertEquals(1, query(g, pattern2, where = w1).size)
+        g.close()
     }
 }

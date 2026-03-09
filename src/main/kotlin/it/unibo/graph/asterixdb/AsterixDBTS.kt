@@ -1,8 +1,9 @@
 package it.unibo.graph.asterixdb
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import it.unibo.graph.interfaces.*
+import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.N
+import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.interfaces.TS
 import it.unibo.graph.query.AggOperator
 import it.unibo.graph.query.Aggregate
 import it.unibo.graph.query.Filter
@@ -12,8 +13,6 @@ import org.json.JSONObject
 import java.io.OutputStream
 import java.io.PrintWriter
 import java.net.Socket
-import java.nio.file.Files
-import java.nio.file.Paths
 
 @OptIn(DelicateCoroutinesApi::class)
 class AsterixDBTS(
@@ -23,7 +22,6 @@ class AsterixDBTS(
     nodeControllersIPs: List<String>,
     private val dataverse: String,
     datatype: String,
-    seed: Long = id,
     get : Boolean = false
 ) : TS {
 
@@ -31,44 +29,35 @@ class AsterixDBTS(
 
     private val asterixHTTPClient: AsterixDBHTTPClient
     val dataFeedIp : String = getDataFeedIP(id, nodeControllersIPs)
-    var dataFeedPort : Int = getDataFeedPort(id, FIRSTFEEDPORT, LASTFEEDPORT)
+    var dataFeedPort : Int = incPort()
 
     private lateinit var socket: Socket
     private lateinit var outputStream: OutputStream
     private lateinit var writer: PrintWriter
     private var isFeedConnectionOpen: Boolean = false
-    private val mapper = ObjectMapper()
 
     init {
-        asterixHTTPClient = AsterixDBHTTPClient(
-            clusterControllerHost,
-            dataFeedIp,
-            dataFeedPort,
-            dataverse,
-            datatype,
-            id,
-            seed,
-            get = get
-        )
-
+        asterixHTTPClient = AsterixDBHTTPClient(clusterControllerHost, dataFeedIp, dataFeedPort, dataverse, datatype, id, get = get)
         dataset = asterixHTTPClient.getDataset()
-        // DataFeedPort might be changed if connection failed
-        dataFeedPort = asterixHTTPClient.getDataFeedPort()
-
+        dataFeedPort = asterixHTTPClient.getDataFeedPort() // DataFeedPort might be changed if connection failed
     }
 
-    private fun openDataFeedConnection() {
+    fun openDataFeedConnection() {
         socket = Socket(dataFeedIp, dataFeedPort)
         outputStream = socket.getOutputStream()
         writer = PrintWriter(outputStream, true)
         isFeedConnectionOpen = true
     }
 
-    private fun closeDataFeedConnection(){
+    fun closeDataFeedConnection(closeRemote: Boolean = false) {
         writer.close()
         outputStream.close()
         socket.close()
         isFeedConnectionOpen = false
+        if (closeRemote) {
+            asterixHTTPClient.stopFeed()
+            asterixHTTPClient.dropFeed()
+        }
     }
 
     private fun getDataFeedIP(id: Long, ipList: List<String>): String {
@@ -77,44 +66,6 @@ class AsterixDBTS(
         return ipList[index]
     }
 
-    private fun getDataFeedPort(id: Long, min: Int, max: Int): Int {
-        require(min <= max) { "min must be <= max" }
-        val rangeSize = max - min + 1
-        val normalized = (id % rangeSize).toInt()
-        return min + normalized
-    }
-
-    fun loadInitialData(path: String) {
-        if (asterixHTTPClient.isDatasetEmpty(dataverse, dataset)) {
-            val projectRoot = Paths.get("").toAbsolutePath().normalize()
-            val filePath = projectRoot.resolve(path).normalize()
-
-            if (Files.exists(filePath)) {
-                openDataFeedConnection()
-                Files.newBufferedReader(filePath).useLines { lines ->
-                    for (line in lines) {
-                        if (line.isNotBlank()) {
-                            val json: JsonNode = mapper.readTree(line)
-                            val label = if (json.get(TYPE).textValue() == "Temperature")
-                                "temperature" else "presence"
-
-                            add(
-                                label = labelFromString(json.get(TYPE).textValue()),
-                                timestamp = dateToTimestamp(json.get("timestamp").textValue()),
-                                location = json.get(LOCATION).textValue(),
-                                // TODO: attualmente è fissato sulla sintassi SmartBench
-                                value = json.get("payload").get(label).longValue(),
-                                isUpdate = false
-                            )
-                        }
-                    }
-                }
-                closeDataFeedConnection()
-            } else {
-                println("File not found: $filePath")
-            }
-        }
-    }
     override fun getTSId(): Long = id
 
     override fun add(n: N, isUpdate: Boolean): N {
@@ -135,8 +86,8 @@ class AsterixDBTS(
                 closeDataFeedConnection()
             }
         }
-        //TODO: Nei test, cambia apertura chiusura dei socket
-        //TODO: Handle negative results
+        // TODO: Nei test, cambia apertura chiusura dei socket
+        // TODO: Handle negative results
         return n
     }
 
@@ -227,10 +178,7 @@ class AsterixDBTS(
     }
 
     override fun get(eventId: Long): N {
-        val selectQuery = """
-            USE $dataverse;
-            SELECT * FROM $dataset WHERE $ID = $eventId
-        """.trimIndent()
+        val selectQuery = "USE $dataverse; SELECT * FROM $dataset WHERE $ID = $eventId"
         when (val result = asterixHTTPClient.selectFromAsterixDB(selectQuery)) {
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.length() > 0) {
@@ -244,8 +192,5 @@ class AsterixDBTS(
         }
     }
 
-    private fun updateTs(n: N) = asterixHTTPClient.updateTs("""
-            USE $dataverse;
-            UPSERT INTO $dataset ([${nodeToJson(n, isUpdate = true)}])
-        """.trimIndent())
+    private fun updateTs(n: N) = asterixHTTPClient.updateTs("USE $dataverse; UPSERT INTO $dataset ([${nodeToJson(n, isUpdate = true)}])")
 }

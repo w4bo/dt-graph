@@ -5,7 +5,6 @@ import it.unibo.graph.utils.GRAPH_SOURCE
 import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwiseSource
 import org.locationtech.jts.io.WKTReader
-import org.rocksdb.*
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -31,17 +30,6 @@ open class P(
 ) : Elem {
 
     companion object {
-        private val db: RocksDB
-        private const val DB_NAME = "db_properties"
-        init {
-            val options = DBOptions()
-            options.setCreateIfMissing(true)
-            options.setCreateMissingColumnFamilies(true)
-            val cfDescriptors = listOf(ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()))
-            val cfHandles: List<ColumnFamilyHandle> = ArrayList()
-            db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
-        }
-
         fun fromByteArray(bytes: ByteArray, g: Graph): P {
             val buffer = ByteBuffer.wrap(bytes)
             val id = buffer.long
@@ -68,11 +56,11 @@ open class P(
                 PropType.STRING -> {             // Serialize String (using your serializeString method)
                     val v = readString(buffer, MAX_LENGTH_VALUE)
                     v.ifEmpty {
-                        String(db.get("$id".toByteArray()), Charsets.UTF_8)
+                        String(g.dynamicDb!!.get("$id".toByteArray()), Charsets.UTF_8)
                     }
                 }
                 PropType.GEOMETRY -> {
-                    WKTReader().read(String(db.get("$id".toByteArray()), Charsets.UTF_8))
+                    WKTReader().read(String(g.dynamicDb!!.get("$id".toByteArray()), Charsets.UTF_8))
                 }
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
@@ -107,7 +95,7 @@ open class P(
             PropType.STRING -> {                                        // Serialize String
                 val value = value as String
                 if (value.length > MAX_LENGTH_VALUE) { // in place if the string is longer than 8 bytes
-                    db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+                    g.dynamicDb!!.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
                     repeat(8) { buffer.put(0.toByte()) } // Add 8 empty bytes (0x00)
                 } else { // in place if the string is shorter than or equal to 8 bytes
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
@@ -115,7 +103,7 @@ open class P(
             }
             PropType.GEOMETRY -> {
                 val value = value.toString()
-                db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+                g.dynamicDb!!.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
             }
             else -> throw IllegalArgumentException("Unsupported type: $type")
         }
@@ -138,54 +126,6 @@ open class P(
                  }
                  next = elem.nextProp  // update the next pointer of the node
                  elem.nextProp = id
-
-                // var prev: P? = null
-                // var cur: P = g.getProp(elem.nextProp!!)
-                // var pointerUpdated = false
-                // var lastP: P? = null
-                // if (cur.key == key && cur.toTimestamp != Long.MAX_VALUE && cur.toTimestamp >= fromTimestamp && cur.fromTimestamp <= toTimestamp)
-                //     throw IllegalArgumentException("You are trying to add overlapping properties!")
-                // while (true) {
-                //     if (cur.key == key) {
-                //         lastP = cur
-                //     }
-                //     if (cur.toTimestamp <= toTimestamp) {
-                //         // if (cur.toTimestamp == toTimestamp && cur.fromTimestamp > fromTimestamp)
-                //         //     throw IllegalArgumentException("The new property must be more recent")
-                //         if (prev == null) { // this is the first property to add
-                //             if (!pointerUpdated) {
-                //                 next = elem.nextProp  // update the next pointer of the node
-                //                 elem.nextProp = id
-                //                 pointerUpdated = true
-                //
-                //             }
-                //         } else { // there is a previous property to modify
-                //             if (!pointerUpdated) {
-                //                 next = prev.next
-                //                 prev.next = id
-                //                 g.addProperty(prev) // update the property
-                //                 pointerUpdated = true
-                //             }
-                //             if (cur.key == key) {
-                //                 cur.toTimestamp = fromTimestamp
-                //                 g.addProperty(cur) // update the property
-                //                 break
-                //             }
-                //         }
-                //     }
-                //     if (cur.next == null) break
-                //     prev = cur
-                //     cur = g.getProp(cur.next!!)
-                // }
-                // if (!pointerUpdated) {
-                //     cur.next = id
-                //     g.addProperty(cur)
-                //     if (lastP != null) {
-                //         lastP.fromTimestamp = toTimestamp
-                //         if (cur != lastP)
-                //             g.addProperty(lastP)
-                //     }
-                // }
             }
 
             if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again

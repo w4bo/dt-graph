@@ -4,10 +4,10 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels.*
-import it.unibo.graph.interfaces.labelFromString
+import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
@@ -57,14 +57,18 @@ class TestQuerySmartBench {
 
     @BeforeAll
     fun setup() {
-        graph = MemoryGraphACID()
-        graph = MemoryGraphACID.readFromDisk() // Reload from disk
+        graph = MemoryGraphACID.readFromDisk("datasets/dump/smartbench/small/") // Reload from disk
         val tsm = AsterixDBTSM.createDefault(graph)
         graph.tsm = tsm
 
         logger.info("Loaded ${graph.getNodes().size} vertexes")
         logger.info("Loaded ${graph.getEdges().size} edges")
         logger.info("Loaded ${graph.getProps().size} props")
+    }
+
+    @AfterAll
+    fun teardown() {
+        graph.close()
     }
 
     /*
@@ -79,9 +83,9 @@ class TestQuerySmartBench {
 
         val edgesDirectionPattern = listOf(
             Step(Infrastructure, listOf(Filter("id", Operators.EQ, infrastructureId)), alias = "Environment"),
-            EdgeStep(hasCoverage, direction = Direction.IN ),
+            EdgeStep(hasCoverage, direction = Direction.IN),
             Step(Sensor, alias="device"),
-            Step(labelFromString("has$tau")),
+            Step(hasTemperature),
             Step(tau)
         )
 
@@ -95,8 +99,6 @@ class TestQuerySmartBench {
 
         logger.info("--- EnvironmentCoverage execution times ---")
         logQueryResult("EnvironmentCoverage","edgesDirection", edgesDirectionTime, edgesDirectionResult.size,temporalConstraintIndex, iteration)
-
-
     }
 
     /*

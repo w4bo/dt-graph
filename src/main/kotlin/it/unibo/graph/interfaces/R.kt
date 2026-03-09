@@ -30,7 +30,7 @@ open class R(
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
-            val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
+            val label = Label.entries[labelOrdinal] // Convert ordinal to enum
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val fromN = buffer.long
             val toN = buffer.long
@@ -44,10 +44,10 @@ open class R(
 
     fun serialize(): ByteArray {
         val buffer = ByteBuffer.allocate(EDGE_SIZE)
-        buffer.putLong(id)                  // 8 bytes
+        buffer.putLong(id)                           // 8 bytes
         buffer.putLong(fromTimestamp)                // 8 bytes
         buffer.putLong(toTimestamp)                  // 8 bytes
-        buffer.putInt((label as Labels).ordinal)     // 4 bytes
+        buffer.putInt(label.ordinal)                 // 4 bytes
         buffer.putLong(nextProp?: Long.MIN_VALUE)    // 8 bytes
         buffer.putLong(fromN)                        // 8 bytes
         buffer.putLong(toN)                          // 8 bytes

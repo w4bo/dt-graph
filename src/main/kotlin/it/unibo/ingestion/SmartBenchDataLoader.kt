@@ -1,16 +1,18 @@
 package it.unibo.ingestion
 
 import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
+import it.unibo.graph.asterixdb.dateToTimestamp
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.*
-import it.unibo.graph.utils.ID
-import it.unibo.graph.utils.LIMIT
-import it.unibo.graph.utils.TYPE
-import it.unibo.graph.utils.propTypeFromValue
+import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.Label
+import it.unibo.graph.interfaces.TS
+import it.unibo.graph.interfaces.labelFromString
+import it.unibo.graph.utils.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -23,9 +25,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
-class SmartBenchDataLoader(
-    private val graph: Graph = MemoryGraphACID(),
-) {
+class SmartBenchDataLoader(private val graph: Graph = MemoryGraphACID()) {
     private val mapper: ObjectMapper = jacksonObjectMapper()
     private val tsm = graph.getTSM() as AsterixDBTSM
 
@@ -40,9 +40,7 @@ class SmartBenchDataLoader(
 
     private fun hasLabel(key: String): Label =
         edgeLabelCache.getOrPut(key) { labelFromString("has${key.replaceFirstChar {
-            if (it.isLowerCase()) it.titlecase(
-                Locale.getDefault()
-            ) else it.toString()
+            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
         }}") }
 
     fun loadData(dataPath: List<String>, threads: Int = LIMIT): Pair<Long, Long> {
@@ -51,7 +49,6 @@ class SmartBenchDataLoader(
 
         val graphLoadingTime = measureTimeMillis {
             for (file in dataPath) {
-                println("Loading data from $file")
                 val path = Paths.get(file).toAbsolutePath().normalize()
                 require(Files.exists(path)) { "File not found: $file" }
                 var count = 0
@@ -102,10 +99,9 @@ class SmartBenchDataLoader(
                             }
 
                             // If it's a sensor, check if it has a TS attached
-                            if (typeVal == Labels.Sensor.toString() || typeVal == Labels.VirtualSensor.toString()) {
+                            if (typeVal == Label.Sensor.toString() || typeVal == Label.VirtualSensor.toString()) {
                                 val sensorId = obj["id"] as String
-                                val labelString =
-                                    if (labelFromString(typeVal) === Labels.Sensor) "Temperature" else "Presence"
+                                val labelString = if (labelFromString(typeVal) === Label.Sensor) "Temperature" else "Presence"
 
                                 val sensorTsFilePath = path.parent
                                     ?.resolve("timeseries")
@@ -140,21 +136,17 @@ class SmartBenchDataLoader(
             if (threads > 1) {
                 runBlocking {
                     val jobs = tsList.map { row ->
-                        launch(executor) {
-                            (row.key as AsterixDBTS).loadInitialData(row.value)
-                        }
+                        launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
                     }
                     jobs.joinAll()
                 }
             } else {
-                tsList.forEach { ts ->
-                    (ts.key as AsterixDBTS).loadInitialData(ts.value)
-                }
+                tsList.forEach { ts -> loadTS(ts.key as AsterixDBTS, ts.value) }
             }
         }
         println("IT TOOK $tsLoadingTime ms to load TS data")
         println("TOTAL ingestion time: ${graphLoadingTime + tsLoadingTime} ms")
-        print("Graph contains ${graph.getNodes().size} nodes and  ${graph.getEdges().size} edge")
+        print("Graph contains ${graph.getNodes().size} nodes and  ${graph.getEdges().size} edges")
         return Pair(graphLoadingTime, tsLoadingTime)
     }
 
@@ -170,6 +162,32 @@ class SmartBenchDataLoader(
             }
         } else {
             graph.addProperty(nodeId, key, property, propTypeFromValue(property))
+        }
+    }
+
+    fun loadTS(ts: AsterixDBTS, path: String) {
+        val projectRoot = Paths.get("").toAbsolutePath().normalize()
+        val filePath = projectRoot.resolve(path).normalize()
+        if (Files.exists(filePath)) {
+            ts.openDataFeedConnection()
+            Files.newBufferedReader(filePath).useLines { lines ->
+                for (line in lines) {
+                    if (line.isNotBlank()) {
+                        val json: JsonNode = mapper.readTree(line)
+                        val label = if (json.get(TYPE).textValue() == "Temperature") "temperature" else "presence"
+                        ts.add(
+                            label = labelFromString(json.get(TYPE).textValue()),
+                            timestamp = dateToTimestamp(json.get("timestamp").textValue()),
+                            location = json.get(LOCATION).textValue(),
+                            value = json.get("payload").get(label).longValue(), // TODO: attualmente è fissato sulla sintassi SmartBench
+                            isUpdate = false
+                        )
+                    }
+                }
+            }
+            ts.closeDataFeedConnection(closeRemote = true)
+        } else {
+            throw UnsupportedOperationException("File not found: $filePath")
         }
     }
 

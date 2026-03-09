@@ -1,6 +1,6 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.interfaces.Labels.HasTS
+import it.unibo.graph.interfaces.Label.HasTS
 import it.unibo.graph.utils.*
 import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
@@ -33,7 +33,7 @@ open class N(
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
-            val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
+            val label = Label.entries[labelOrdinal] // Convert ordinal to enum
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val nextEdge = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val isTs = buffer.get() != 0.toByte()
@@ -52,7 +52,7 @@ open class N(
         buffer.putLong(id)                                // 8 bytes
         buffer.putLong(fromTimestamp)                     // 8 bytes
         buffer.putLong(toTimestamp)                       // 8 bytes
-        buffer.putInt((label as Labels).ordinal)          // 4 bytes
+        buffer.putInt(label.ordinal)                      // 4 bytes
         buffer.putLong(nextProp?: Long.MIN_VALUE)         // 8 bytes
         buffer.putLong(nextEdge?: Long.MIN_VALUE)         // 8 bytes
         buffer.put(if (isTs) 1 else 0)                       // 5 byte

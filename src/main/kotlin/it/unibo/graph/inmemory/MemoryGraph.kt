@@ -1,12 +1,26 @@
 package it.unibo.graph.inmemory
 
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.utils.PATH
+import org.rocksdb.*
+import java.io.File
 
 open class MemoryGraph(
     private val nodes: MutableList<N> = ArrayList(),
     private val edges: MutableList<R> = ArrayList(),
-    private val props: MutableList<P> = ArrayList()
+    private val props: MutableList<P> = ArrayList(),
+    override val path: String = PATH + "graph_mem",
+    override var dynamicDb: RocksDB? = null
 ) : Graph {
+    val cfHandles: List<ColumnFamilyHandle> = ArrayList()
+    val options = DBOptions()
+    val cfNames = RocksDB.listColumnFamilies(Options(), path)
+    init {
+        options.setCreateIfMissing(true)
+        options.setCreateMissingColumnFamilies(true)
+        val cfDescriptors = listOf(ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()))
+        dynamicDb = RocksDB.open(options, "$path/properties", cfDescriptors, cfHandles)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -83,5 +97,12 @@ open class MemoryGraph(
 
     override fun getEdge(id: Long): R {
         return edges[id.toInt()]
+    }
+
+    override fun close() {
+        cfHandles.forEach { it.close() }
+        dynamicDb?.closeE()
+        options.close()
+        File("$path/properties/LOCK").delete()
     }
 }

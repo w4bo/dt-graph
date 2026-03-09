@@ -2,7 +2,7 @@ package it.unibo.tests.ci
 
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.utils.resetPort
 import it.unibo.ingestion.SmartBenchDataLoader
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
@@ -11,104 +11,110 @@ import java.nio.file.Paths
 import java.util.*
 import kotlin.math.round
 
+// Output folders setup
+const val resultPath = "results/dt_graph/ingestion_time"
+val resultFolder = File(resultPath)
+val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
 
 class TestIngestion {
     private val logger = LoggerFactory.getLogger(TestIngestion::class.java)
 
-    data class IngestionResult(
-        val startTimestamp: Long,
-        val endTimestamp: Long,
-        val graphLoadingTime: Long,
-        val tsLoadingTime: Long
-    )
-
-    // Test params set through env variables
-    private val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
-    private val threads = System.getenv("THREAD")?.toInt() ?: 1
-    private val dataset_size = System.getenv("DATASET_SIZE") ?: "small"
-
-    // Folder path for storage consuption
-    private val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "asterix_data"
-    private val graphDataFolder = System.getenv("GRAPH_DATA_FOLDER") ?: "db_graphm"
-
-    // Output folders setup
-    private val resultPath = "results/dt_graph/ingestion_time"
-    private val resultFolder = File(resultPath)
-    private val testUUID: UUID = UUID.randomUUID()
-    private val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
+    private fun checkFolder(folderPath: String) {
+        val folder = File(folderPath)
+        if (!folder.exists()) throw IllegalStateException("Folder $folderPath does not exist")
+    }
 
     private fun getFolderSize(folderPath: String): Long {
         val folder = File(folderPath)
-        if (!folder.exists()) return 0L
-        val sizeBytes = folder.walkTopDown()
-            .filter { it.isFile }
-            .map { it.length() }
-            .sum()
-        return round(sizeBytes.toDouble() / (1024 * 1024)).toLong()  // Converti in MB
+        val sizeBytes = folder.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+        return round(sizeBytes.toDouble() / (1024 * 1024)).toLong() // Converti in MB
     }
 
-    private fun loadSmartBench(graph: Graph, dataPath: List<String>): IngestionResult {
-        val loader = SmartBenchDataLoader(graph)
-        val startTimestamp = System.currentTimeMillis() / 1000
-        val ingestionTime = loader.loadData(dataPath, threads)
-        val endTimestamp = System.currentTimeMillis() / 1000
-        return IngestionResult(startTimestamp, endTimestamp, ingestionTime.first, ingestionTime.second)
-    }
-
-    private fun loadDataset(dataPath: List<String>, threads: Int, dataset: String = "smartbench") {
+    private fun loadDataset(uuid: String, dataPath: List<String>, threads: Int, numMachines: Int, dataset: String, size: String, graphDataFolder: String, asterixDataFolder: String) {
         if (!resultFolder.exists()) resultFolder.mkdirs()
+        checkFolder(graphDataFolder)
+        checkFolder(asterixDataFolder)
 
-        val dtGraph: Graph
-        dtGraph = MemoryGraphACID()
-        val tsm = AsterixDBTSM.createDefault(dtGraph)
-        dtGraph.tsm = tsm
+        val graph = MemoryGraphACID(path ="datasets/dump/$dataset/$size")
+        val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size")
+        graph.tsm = tsm
+        graph.clear()
+        tsm.clear()
 
-        // Clear graph and TS data
-        dtGraph.clear()
-        dtGraph.getTSM().clear()
-
-        val ingestionStats = when (dataset) {
-            "smartbench" -> loadSmartBench(dtGraph, dataPath)
-            else -> IngestionResult(-1, -1, -1, -1)
+        val startTimestamp = System.currentTimeMillis() / 1000
+        val graphLoadingTime: Long
+        val tsLoadingTime: Long
+        when (dataset) {
+            "smartbench" -> {
+                val ingestionTime = SmartBenchDataLoader(graph).loadData(dataPath, threads)
+                graphLoadingTime = ingestionTime.first
+                tsLoadingTime = ingestionTime.second
+            }
+            else -> throw IllegalArgumentException("$dataset not supported yet")
         }
+        graph.flushToDisk() // Persist graph state to disk
+        val endTimestamp = System.currentTimeMillis() / 1000
 
-        // Flush graph to disk to be queried
-        dtGraph.flushToDisk() // Persist graph state to disk
+        val gsStorage = getFolderSize(graphDataFolder)
+        val tsStorage = getFolderSize(asterixDataFolder)
+        val row = linkedMapOf(
+            "test_id" to uuid,
+            "model" to "stgraph",
+            "startTimestamp" to startTimestamp,
+            "endTimestamp" to endTimestamp,
+            "dataset" to dataset,
+            "datasetSize" to size,
+            "threads" to threads,
+            "graphElapsedTime" to graphLoadingTime,
+            "tsElapsedTime" to tsLoadingTime,
+            "elapsedTime" to tsLoadingTime + graphLoadingTime,
+            "numMachines" to numMachines,
+            "storage" to gsStorage + tsStorage,
+            "tsStorage" to tsStorage,
+            "gsStorage" to gsStorage
+        )
 
-        //Log statistics to file
         val writeHeader = !statisticsFile.exists()
         statisticsFile.appendText(buildString {
-            if (writeHeader) append("test_id,model,startTimestamp,endTimestamp,dataset,datasetSize,threads,graphElapsedTime,tsElapsedTime,elapsedTime,numMachines,storage\n")
-            append(
-                "$testUUID,stgraph,${ingestionStats.startTimestamp},${ingestionStats.endTimestamp},$dataset,$dataset_size,$threads,${ingestionStats.graphLoadingTime},${ingestionStats.tsLoadingTime},${ingestionStats.graphLoadingTime + ingestionStats.tsLoadingTime},${
-                    System.getenv(
-                        "DEFAULT_NC_POOL"
-                    )?.split(',')?.size ?: 1
-                },${getFolderSize(asterixDataFolder) + getFolderSize(graphDataFolder)}\n"
-            )
+            if (writeHeader) append(row.keys.joinToString(",") + "\n")
+            append(row.values.joinToString(",") + "\n")
         })
+
+        graph.close()
     }
 
     @Test
     fun testSmartBenchIngestion() {
+        val sizes = listOf("small") // listOf("small", "medium", "large") // System.getenv("DATASET_SIZE")
+
+        val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "datasets/dump/asterixdb"
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
-        val starting_path="$projectRoot/datasets"
-        val data: List<String> = listOf(
-            "$starting_path/dataset/smartbench/$dataset_size/group.json",
-            "$starting_path/dataset/smartbench/$dataset_size/user.json",
-            "$starting_path/dataset/smartbench/$dataset_size/platformType.json",
-            "$starting_path/dataset/smartbench/$dataset_size/sensorType.json",
-            "$starting_path/dataset/smartbench/$dataset_size/platform.json",
-            "$starting_path/dataset/smartbench/$dataset_size/infrastructureType.json",
-            "$starting_path/dataset/smartbench/$dataset_size/infrastructure.json",
-            "$starting_path/dataset/smartbench/$dataset_size/sensor.json",
-            "$starting_path/dataset/smartbench/$dataset_size/virtualSensorType.json",
-            "$starting_path/dataset/smartbench/$dataset_size/virtualSensor.json",
-            "$starting_path/dataset/smartbench/$dataset_size/semanticObservationType.json",
-        )
-        repeat(iterations) { i ->
-            logger.info("\n=== RUN INGESTION ITERATION #${i + 1} ===")
-            loadDataset(data, threads, "smartbench")
+        val path = "$projectRoot/datasets"
+        val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
+        val threads = System.getenv("THREAD")?.toInt() ?: 1
+        val numMachines = System.getenv("DEFAULT_NC_POOL")?.split(',')?.size ?: 1
+        val dataset = "smartbench"
+
+        sizes.forEach { size ->
+            val data: List<String> = listOf(
+                "$path/original/$dataset/$size/group.json",
+                "$path/original/$dataset/$size/user.json",
+                "$path/original/$dataset/$size/platformType.json",
+                "$path/original/$dataset/$size/sensorType.json",
+                "$path/original/$dataset/$size/platform.json",
+                "$path/original/$dataset/$size/infrastructureType.json",
+                "$path/original/$dataset/$size/infrastructure.json",
+                "$path/original/$dataset/$size/sensor.json",
+                "$path/original/$dataset/$size/virtualSensorType.json",
+                "$path/original/$dataset/$size/virtualSensor.json",
+                "$path/original/$dataset/$size/semanticObservationType.json",
+            )
+            val graphDataFolder = System.getenv("GRAPH_DATA_FOLDER") ?: "datasets/dump/$dataset/$size/"
+            repeat(iterations) { i ->
+                logger.info("\n--- Ingesting $dataset/$size. Iteration: #${i + 1}")
+                resetPort()
+                loadDataset(UUID.randomUUID().toString(), data, threads, numMachines, dataset, size, graphDataFolder, asterixDataFolder)
+            }
         }
     }
 }

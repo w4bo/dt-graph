@@ -3,41 +3,21 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
 
-
-/**
- * Problemi:
- *  1. Non abbiamo possibilità di fare dei BIN temporali, e.g., SELECT timestamp, AVG(value) GROUP BY HOUR(timestamp)
- *  2. Nella search sulle TS, il toTimestamp è incluso.
- *  3. Senza Gremlin, non ho accesso alla TS come lista di elementi
- *  4. Non abbiamo percorsi di dimensione variabile e.g., [*2...5]
- *  5. Questo funziona
- *     val nowSpatialPattern = listOf(
- *            listOf(Step(AgriParcel, alias = "parcel")),
- *            listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
- *        )
- *     Questo no, perchè?
- *     val nowSpatialPattern = listOf(
- *            listOf(Step(Device, listOf(Triple("name",Operators.EQ, it)), alias = "nowDevice")),
- *            listOf(Step(AgriParcel, alias = "parcel")),
- *        )
- *    query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
- *    6. Possiamo specificare due validità diverse temporali nella stessa query? Don't think so, e.g., di tutti i device attivi 10 ore fa, dammi a cosa sono collegati ora.
- */
-class TestWorkload{
+class TestWorkload {
 
     val staticDevicePattern = listOf(
-        Step(AgriFarm, alias="farm"),
+        Step(AgriFarm, alias = "farm"),
         Step(HasParcel),
-        Step(AgriParcel, alias="parcel"),
+        Step(AgriParcel, alias = "parcel"),
         Step(HasDevice),
-        Step(Device, alias="device"),
+        Step(Device, alias = "device"),
     )
 
     val dynamicDevicePattern = listOf(
@@ -47,16 +27,13 @@ class TestWorkload{
         Step(HasDevice),
         Step(Device, alias="device"),
     )
+
     fun setup(dynamicDevices: Boolean = false): Graph {
         return setup(MemoryGraphACID(), dynamicDevices)
     }
 
     fun setup(g: Graph, dynamicDevices: Boolean): Graph {
-
-        // Define a relative timestamp for debug purposes
-        val maxTimestamp = 5L
-
-        g.tsm = AsterixDBTSM.createDefault(g)//AsterixDBTSM.createDefault(g)
+        g.tsm = AsterixDBTSM.createDefault(g)
         g.clear()
         g.getTSM().clear()
 
@@ -139,17 +116,13 @@ class TestWorkload{
     }
 
     @Test
-    fun testSum() {
-        assertEquals(42, 40 + 2)
-    }
-
-    @Test
     fun testParcelInFarm() {
         val g = setup()
         // Parcels in farm
         kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("farm", "parcel", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
         // Devices in Farm
         kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("parcel", "device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
+        g.close()
     }
 
     @Test
@@ -162,6 +135,7 @@ class TestWorkload{
 
         // Devices in farm throuh spatial join
         kotlin.test.assertEquals(3, query(g, pattern, listOf(Compare("farm","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
+        g.close()
     }
 
     // E* -> A*
@@ -213,6 +187,7 @@ class TestWorkload{
 
         // v.2
         kotlin.test.assertEquals(3, query.size)
+        g.close()
     }
 
     // E* ->  A* -> M
@@ -238,6 +213,7 @@ class TestWorkload{
 
         val result = search(g, pattern, timeaware = true)
         kotlin.test.assertEquals(2, result.size)
+        g.close()
     }
 
     // A -> E -> M
@@ -297,6 +273,7 @@ class TestWorkload{
             //kotlin.test.assertEquals(queryResult?.get(2)!!, elem.first)
             kotlin.test.assertEquals(spatialQueryResult?.get(2)!!, elem.first)
         }
+        g.close()
     }
 
 
@@ -356,6 +333,7 @@ class TestWorkload{
             kotlin.test.assertEquals(it.first, spatialResult.size)
             kotlin.test.assertEquals(it.first, traversalResult.size)
         }
+        g.close()
     }
 
     // M -> A -> E
@@ -389,53 +367,54 @@ class TestWorkload{
       *  AND ST_CONTAINS(nowEnv, device)
       *  RETURN nowDevice, nowEnv
      */
-    @Test
-    fun currentAgentLocation(){
-        val g = setup(dynamicDevices = true)
-        val resultMap = mapOf(
-            "Errano T1 MoistureDevice" to "Errano T1",
-            "Errano T2 MoistureDevice" to "Errano T2",
-            "Errano Drone" to "Errano T2",
-            "Errano Weather Station" to ""
-        )
-        val historicalPattern = listOf(
-            Step(Device, alias="oldDevice"),
-            null,
-            null,
-            Step(HasTS),
-            null
-        )
+     @Test
+     fun currentAgentLocation() {
+         val g = setup(dynamicDevices = true)
+         val resultMap = mapOf(
+             "Errano T1 MoistureDevice" to "Errano T1",
+             "Errano T2 MoistureDevice" to "Errano T2",
+             "Errano Drone" to "Errano T2",
+             "Errano Weather Station" to ""
+         )
+         val historicalPattern = listOf(
+             Step(Device, alias = "oldDevice"),
+             null,
+             null,
+             Step(HasTS),
+             null
+         )
 
-        val nowPattern = listOf(
-                Step(AgriParcel, alias = "env"),
-                Step(HasDevice),
-                Step(Device, alias = "nowDevice")
-            )
+         val nowPattern = listOf(
+             Step(AgriParcel, alias = "env"),
+             Step(HasDevice),
+             Step(Device, alias = "nowDevice")
+         )
 
         val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
 
-        kotlin.test.assertEquals(resultMap.size, devicesInTime.size)
+         kotlin.test.assertEquals(resultMap.size, devicesInTime.size)
 
-         if(devicesInTime.isEmpty()){
+         if (devicesInTime.isEmpty()) {
              throw Exception()
          }
 
-        devicesInTime.forEach{
-            val pattern = listOf(
-                listOf(Step(Device, listOf(Filter("name", Operators.EQ, it)), alias = "device")),
-                nowPattern
-            )
-            val nowSpatialPattern = listOf(
-                    listOf(Step(AgriParcel, alias = "parcel")),
-                    listOf(Step(Device, listOf(Filter("name",Operators.EQ, it)), alias = "nowDevice")),
-                )
+         devicesInTime.forEach {
+             val pattern = listOf(
+                 listOf(Step(Device, listOf(Filter("name", Operators.EQ, it)), alias = "device")),
+                 nowPattern
+             )
+             val nowSpatialPattern = listOf(
+                 listOf(Step(AgriParcel, alias = "parcel")),
+                 listOf(Step(Device, listOf(Filter("name", Operators.EQ, it)), alias = "nowDevice")),
+             )
 
-            val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
-            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+             val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
+             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
 
-            val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
-            kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+             val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
+             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
+         g.close()
     }
 
     // M -> E -> A
@@ -532,8 +511,7 @@ class TestWorkload{
                 .mapValues { it.value.flatten() }
 
             assertEquals(resultMap[it]!!.toSet(), result[it]!!.toSet())
-
         }
-
+        g.close()
     }
 }

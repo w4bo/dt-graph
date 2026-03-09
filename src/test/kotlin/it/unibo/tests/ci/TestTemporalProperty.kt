@@ -3,7 +3,7 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels.*
+import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.EDGE
@@ -57,6 +57,7 @@ class TestTemporalProperty {
             setOf(listOf("Foo", "b1"), listOf("Bar", "b1"), listOf("Bar", "b2"), listOf("null", "b3")),
             query(g, listOf(Step(A, alias = "a"), null, Step(B, alias = "b")), by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -73,6 +74,7 @@ class TestTemporalProperty {
             setOf(listOf("Foo", "b1", "null"), listOf("Bar", "b1", "c2.lastname")),
             query(g, listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c")), by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"), Aggregate("c", property = "lastname"))).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -111,6 +113,7 @@ class TestTemporalProperty {
         assertEquals(setOf("Foo"), query(g, pattern, by = listOf(Aggregate("e", property = "name")), from = 0, to = 1).toSet())
         // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [1, 2) RETURN e.name
         assertEquals(setOf("Bar"), query(g, pattern, by = listOf(Aggregate("e", property = "name")), from = 1, to = 2).toSet())
+        g.close()
     }
 
     @Test
@@ -146,6 +149,7 @@ class TestTemporalProperty {
                 )
             ).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -174,6 +178,7 @@ class TestTemporalProperty {
         assertEquals(1, query(g, pattern, from = 2, to = 4).size) // it still exists the first edge! the one spanning -inf, +inf
         // MATCH (a:A)-(e)->(b:B)-->(c:C) WHERE timestamp in [4, inf) RETURN a, e, b
         assertEquals(2, query(g, pattern, from = 5).size)
+        g.close()
     }
 
     @Test
@@ -197,11 +202,7 @@ class TestTemporalProperty {
         assertEquals(4, g.getNode(a1.id).getProps(name = "name", fromTimestamp = 0).size)
         assertEquals(3, g.getNode(a1.id).getProps(name = "name", fromTimestamp = 1).size)
         assertEquals(4, g.getNode(a1.id).getProps(fromTimestamp = 1).size)
-    }
-
-    @Test
-    fun test6() {
-        // TODO test historical properties on TS Measurements
+        g.close()
     }
 
     @Test
@@ -245,6 +246,7 @@ class TestTemporalProperty {
             ),
             query(g, listOf(pattern1, pattern2), by = by, where = where, timeaware = true).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -280,6 +282,7 @@ class TestTemporalProperty {
             ),
             query(g, listOf(pattern1, pattern2), by = by, where = where, timeaware = true).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -300,6 +303,7 @@ class TestTemporalProperty {
         val pattern = listOf(Step(A), null, Step(B), null, Step(C), null, Step(D))
         assertEquals(2, query(g, pattern, timeaware = true).size)
         assertEquals(2, query(g, pattern, timeaware = false).size)
+        g.close()
     }
 
     @Test
@@ -323,5 +327,6 @@ class TestTemporalProperty {
         assertEquals(1, query(g, pattern, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
         assertEquals(0, query(g, pattern, where = listOf(Compare("a", "c", "name", Operators.EQ))).size)
         assertEquals(0, query(g, pattern, where = listOf(Compare("c", "a", "name", Operators.EQ))).size)
+        g.close()
     }
 }

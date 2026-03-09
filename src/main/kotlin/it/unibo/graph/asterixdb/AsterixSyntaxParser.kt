@@ -113,7 +113,7 @@ fun propertiesToAsterixCitizen(props: List<P>, isUpdate: Boolean): String =
 
 fun edgeToJson(edge: R, isUpdate: Boolean): String {
     return """{
-            "$LABEL": "${edge.label}",
+            "$LABEL": ${edge.label.ordinal},
             ${propertiesToAsterixCitizen(edge.properties, isUpdate)}
             "$FROM_N": ${edge.fromN},
             "$TO_N": ${edge.toN}
@@ -122,7 +122,6 @@ fun edgeToJson(edge: R, isUpdate: Boolean): String {
 
 fun propToJson(property: P, isUpdate: Boolean): String {
     return if (property.key == LOCATION) {
-        // "\"${property.key}\": st_geom_from_text(${valueToJson(property.value)})"
         "\"${property.key}\": ${valueToJson(property.value, isUpdate)}"
     } else {
         """
@@ -150,7 +149,7 @@ fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, key: Strin
 
 fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Graph): R {
     val id = DUMMY_ID
-    val edge = R(id = id, label = labelFromString(json.getString(LABEL)), fromN = json.getLong(FROM_N), toN = json.getLong(TO_N), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+    val edge = R(id = id, label = Label.entries[json.getInt(LABEL)], fromN = json.getLong(FROM_N), toN = json.getLong(TO_N), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
     json.keys()
         .forEach { key ->
             if (!listOf(ID, LABEL, FROM_N, TO_N).contains(key)) {
@@ -163,7 +162,7 @@ fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Grap
 fun nodeToJson(n: N, isUpdate: Boolean): String {
     return """{
                 "$ID": ${n.fromTimestamp},
-                "$LABEL": "${n.label}",
+                "$LABEL": ${n.label.ordinal},
                 ${edgesToAsterixCitizen(n.edges, isUpdate)}
                 ${propertiesToAsterixCitizen(n.properties, isUpdate)}
                 "$VALUE": ${n.value ?: 0}
@@ -186,7 +185,7 @@ fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
 
     val entity = N(
         id = id,
-        label = labelFromString(node.getString(LABEL)),
+        label = Label.entries[node.getInt(LABEL)],
         fromTimestamp = fromTimestamp,
         toTimestamp = toTimestamp,
         value = if (id != DUMMY_ID) node.getLong(VALUE) else null,
@@ -250,7 +249,7 @@ private fun parseFilter(filter: Filter): String {
 
     val property = filter.property
     val parsedValue = valueToJson(filter.value, isUpdate = false)
-    var left = if (filter.attrFirst) property else parsedValue
+    val left = if (filter.attrFirst) property else parsedValue
     var right = if (filter.attrFirst) parsedValue else property
     right = if (left == ID && right.toLong() < 0) "0" else right
 

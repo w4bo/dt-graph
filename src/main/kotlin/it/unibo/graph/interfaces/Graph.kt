@@ -5,9 +5,13 @@ import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwise
 import it.unibo.graph.utils.encodeBitwise
 import org.locationtech.jts.io.WKTReader
+import org.rocksdb.RocksDB
 
 interface Graph {
+    val path: String
+    var dynamicDb: RocksDB?
     var tsm: TSManager?
+
     fun getTSM(): TSManager = tsm!!
     fun close() {}
     fun clear()

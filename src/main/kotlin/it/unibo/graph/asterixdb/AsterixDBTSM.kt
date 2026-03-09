@@ -23,10 +23,8 @@ class AsterixDBTSM private constructor(
 
     init {
         if (!checkRestore(dataverse)) {
-            val result = createTSMEnvironment()
-            if (!result) {
-                println("Something went wrong while creating $dataverse environment")
-                throw Exception()
+            if (!createTSMEnvironment()) {
+                throw Exception("Something went wrong while creating $dataverse")
             }
         }
     }
@@ -67,16 +65,13 @@ class AsterixDBTSM private constructor(
         )
 
         val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${
-                URLEncoder.encode(
-                    it.value, StandardCharsets.UTF_8.name()
-                )
-            }"
+            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
         }
         connection.outputStream.use { it.write(postData.toByteArray()) }
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
+            e.printStackTrace()
             val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             throw UnsupportedOperationException(errMsg)
         }
@@ -111,14 +106,14 @@ class AsterixDBTSM private constructor(
                 };
 
                 CREATE TYPE Edge AS CLOSED {
-                    $LABEL: string,
+                    $LABEL: int,
                     $FROM_N: bigint,
                     $TO_N: bigint
                 };
 
                 CREATE TYPE Event AS OPEN {
                     $ID: bigint,
-                    $LABEL: string,
+                    $LABEL: int,
                     $LOCATION: geometry?,
                     $EDGES: [Edge]?
                 };
@@ -126,12 +121,12 @@ class AsterixDBTSM private constructor(
     }
 
     companion object {
-        fun createDefault(g: Graph): AsterixDBTSM {
+        fun createDefault(g: Graph, dataverse: String = props["default_dataverse"].toString()): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
                 System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
                 props["default_cc_port"].toString(),
-                props["default_dataverse"].toString(),
+                dataverse,
                 System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
                 props["default_datatype"].toString(),
             )

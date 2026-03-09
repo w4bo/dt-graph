@@ -5,6 +5,8 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import java.io.*
 import java.util.*
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -113,4 +115,19 @@ fun loadTemporalRanges(
             to = raw[1].toString().toLong()
         )
     }
+}
+
+@OptIn(ExperimentalAtomicApi::class)
+val atomicPort = AtomicInt(FIRSTFEEDPORT)
+
+@OptIn(ExperimentalAtomicApi::class)
+fun incPort(): Int {
+    val port = atomicPort.fetchAndAdd(1)
+    if (port > LASTFEEDPORT) throw UnsupportedOperationException("Ports are exhausted")
+    return port
+}
+
+@OptIn(ExperimentalAtomicApi::class)
+fun resetPort() {
+    atomicPort.store(FIRSTFEEDPORT)
 }

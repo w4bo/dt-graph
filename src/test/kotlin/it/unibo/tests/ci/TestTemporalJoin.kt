@@ -3,8 +3,8 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Labels.A
-import it.unibo.graph.interfaces.Labels.B
+import it.unibo.graph.interfaces.Label.A
+import it.unibo.graph.interfaces.Label.B
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
 import kotlin.test.Test
@@ -40,6 +40,7 @@ class TestTemporalJoin {
                 by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))
             ).toSet()
         )
+        g.close()
     }
 
     @Test
@@ -60,5 +61,6 @@ class TestTemporalJoin {
                 by = listOf(Aggregate("a", property = "name"), Aggregate("b", property = "name"))
             ).toSet()
         )
+        g.close()
     }
 }
