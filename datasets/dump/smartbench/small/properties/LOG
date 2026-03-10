@@ -1,0 +1,265 @@
+2026/03/09-16:45:09.450555 b51c RocksDB version: 9.10.0
+2026/03/09-16:45:09.450615 b51c Git sha ae8fb3e5000e46d8d4c9dbf3a36019c0aaceebff
+2026/03/09-16:45:09.450629 b51c Compile date 2025-01-22 17:43:14
+2026/03/09-16:45:09.450638 b51c DB SUMMARY
+2026/03/09-16:45:09.450647 b51c Host name (Env):  ISI-BIG-LAB-03
+2026/03/09-16:45:09.450655 b51c DB Session ID:  8QZFSDXMBTHCJAM98UCN
+2026/03/09-16:45:09.451251 b51c CURRENT file:  CURRENT
+2026/03/09-16:45:09.451262 b51c IDENTITY file:  IDENTITY
+2026/03/09-16:45:09.451321 b51c MANIFEST file:  MANIFEST-000033 size: 623 Bytes
+2026/03/09-16:45:09.451330 b51c SST files in datasets/dump/smartbench/small//properties dir, Total Num: 1, files: 000036.sst 
+2026/03/09-16:45:09.451340 b51c Write Ahead Log file in datasets/dump/smartbench/small//properties: 000032.log size: 577021 ; 
+2026/03/09-16:45:09.451763 b51c                         Options.error_if_exists: 0
+2026/03/09-16:45:09.451783 b51c                       Options.create_if_missing: 1
+2026/03/09-16:45:09.451787 b51c                         Options.paranoid_checks: 1
+2026/03/09-16:45:09.451790 b51c             Options.flush_verify_memtable_count: 1
+2026/03/09-16:45:09.451793 b51c          Options.compaction_verify_record_count: 1
+2026/03/09-16:45:09.451795 b51c                               Options.track_and_verify_wals_in_manifest: 0
+2026/03/09-16:45:09.451799 b51c        Options.verify_sst_unique_id_in_manifest: 1
+2026/03/09-16:45:09.451802 b51c                                     Options.env: 0000014558C49550
+2026/03/09-16:45:09.451806 b51c                                      Options.fs: WinFS
+2026/03/09-16:45:09.451809 b51c                                Options.info_log: 0000014527910C20
+2026/03/09-16:45:09.451812 b51c                Options.max_file_opening_threads: 16
+2026/03/09-16:45:09.451815 b51c                              Options.statistics: 0000000000000000
+2026/03/09-16:45:09.451818 b51c                               Options.use_fsync: 0
+2026/03/09-16:45:09.451821 b51c                       Options.max_log_file_size: 0
+2026/03/09-16:45:09.451824 b51c                  Options.max_manifest_file_size: 1073741824
+2026/03/09-16:45:09.451828 b51c                   Options.log_file_time_to_roll: 0
+2026/03/09-16:45:09.451830 b51c                       Options.keep_log_file_num: 1000
+2026/03/09-16:45:09.451833 b51c                    Options.recycle_log_file_num: 0
+2026/03/09-16:45:09.451836 b51c                         Options.allow_fallocate: 1
+2026/03/09-16:45:09.451839 b51c                        Options.allow_mmap_reads: 0
+2026/03/09-16:45:09.451842 b51c                       Options.allow_mmap_writes: 0
+2026/03/09-16:45:09.451845 b51c                        Options.use_direct_reads: 0
+2026/03/09-16:45:09.451848 b51c                        Options.use_direct_io_for_flush_and_compaction: 0
+2026/03/09-16:45:09.451851 b51c          Options.create_missing_column_families: 1
+2026/03/09-16:45:09.451854 b51c                              Options.db_log_dir: 
+2026/03/09-16:45:09.451857 b51c                                 Options.wal_dir: 
+2026/03/09-16:45:09.451860 b51c                Options.table_cache_numshardbits: 6
+2026/03/09-16:45:09.451863 b51c                         Options.WAL_ttl_seconds: 0
+2026/03/09-16:45:09.451866 b51c                       Options.WAL_size_limit_MB: 0
+2026/03/09-16:45:09.451869 b51c                        Options.max_write_batch_group_size_bytes: 1048576
+2026/03/09-16:45:09.451872 b51c             Options.manifest_preallocation_size: 4194304
+2026/03/09-16:45:09.451875 b51c                     Options.is_fd_close_on_exec: 1
+2026/03/09-16:45:09.451878 b51c                   Options.advise_random_on_open: 1
+2026/03/09-16:45:09.451881 b51c                    Options.db_write_buffer_size: 0
+2026/03/09-16:45:09.451884 b51c                    Options.write_buffer_manager: 00000145584298D0
+2026/03/09-16:45:09.451887 b51c           Options.random_access_max_buffer_size: 1048576
+2026/03/09-16:45:09.451890 b51c                      Options.use_adaptive_mutex: 0
+2026/03/09-16:45:09.451893 b51c                            Options.rate_limiter: 0000000000000000
+2026/03/09-16:45:09.451937 b51c     Options.sst_file_manager.rate_bytes_per_sec: 0
+2026/03/09-16:45:09.451943 b51c                       Options.wal_recovery_mode: 2
+2026/03/09-16:45:09.451946 b51c                  Options.enable_thread_tracking: 0
+2026/03/09-16:45:09.451949 b51c                  Options.enable_pipelined_write: 0
+2026/03/09-16:45:09.451952 b51c                  Options.unordered_write: 0
+2026/03/09-16:45:09.451955 b51c         Options.allow_concurrent_memtable_write: 1
+2026/03/09-16:45:09.451958 b51c      Options.enable_write_thread_adaptive_yield: 1
+2026/03/09-16:45:09.451961 b51c             Options.write_thread_max_yield_usec: 100
+2026/03/09-16:45:09.451964 b51c            Options.write_thread_slow_yield_usec: 3
+2026/03/09-16:45:09.451967 b51c                               Options.row_cache: None
+2026/03/09-16:45:09.451970 b51c                              Options.wal_filter: None
+2026/03/09-16:45:09.451973 b51c             Options.avoid_flush_during_recovery: 0
+2026/03/09-16:45:09.451976 b51c             Options.allow_ingest_behind: 0
+2026/03/09-16:45:09.451979 b51c             Options.two_write_queues: 0
+2026/03/09-16:45:09.451982 b51c             Options.manual_wal_flush: 0
+2026/03/09-16:45:09.451985 b51c             Options.wal_compression: 0
+2026/03/09-16:45:09.451988 b51c             Options.background_close_inactive_wals: 0
+2026/03/09-16:45:09.451991 b51c             Options.atomic_flush: 0
+2026/03/09-16:45:09.451994 b51c             Options.avoid_unnecessary_blocking_io: 0
+2026/03/09-16:45:09.451997 b51c             Options.prefix_seek_opt_in_only: 0
+2026/03/09-16:45:09.452000 b51c                 Options.persist_stats_to_disk: 0
+2026/03/09-16:45:09.452003 b51c                 Options.write_dbid_to_manifest: 1
+2026/03/09-16:45:09.452006 b51c                 Options.write_identity_file: 1
+2026/03/09-16:45:09.452009 b51c                 Options.log_readahead_size: 0
+2026/03/09-16:45:09.452012 b51c                 Options.file_checksum_gen_factory: Unknown
+2026/03/09-16:45:09.452015 b51c                 Options.best_efforts_recovery: 0
+2026/03/09-16:45:09.452018 b51c                Options.max_bgerror_resume_count: 2147483647
+2026/03/09-16:45:09.452021 b51c            Options.bgerror_resume_retry_interval: 1000000
+2026/03/09-16:45:09.452024 b51c             Options.allow_data_in_errors: 0
+2026/03/09-16:45:09.452027 b51c             Options.db_host_id: __hostname__
+2026/03/09-16:45:09.452030 b51c             Options.enforce_single_del_contracts: true
+2026/03/09-16:45:09.452034 b51c             Options.metadata_write_temperature: kUnknown
+2026/03/09-16:45:09.452037 b51c             Options.wal_write_temperature: kUnknown
+2026/03/09-16:45:09.452040 b51c             Options.max_background_jobs: 2
+2026/03/09-16:45:09.452043 b51c             Options.max_background_compactions: -1
+2026/03/09-16:45:09.452046 b51c             Options.max_subcompactions: 1
+2026/03/09-16:45:09.452049 b51c             Options.avoid_flush_during_shutdown: 0
+2026/03/09-16:45:09.452052 b51c           Options.writable_file_max_buffer_size: 1048576
+2026/03/09-16:45:09.452055 b51c             Options.delayed_write_rate : 16777216
+2026/03/09-16:45:09.452058 b51c             Options.max_total_wal_size: 0
+2026/03/09-16:45:09.452061 b51c             Options.delete_obsolete_files_period_micros: 21600000000
+2026/03/09-16:45:09.452064 b51c                   Options.stats_dump_period_sec: 600
+2026/03/09-16:45:09.452067 b51c                 Options.stats_persist_period_sec: 600
+2026/03/09-16:45:09.452070 b51c                 Options.stats_history_buffer_size: 1048576
+2026/03/09-16:45:09.452073 b51c                          Options.max_open_files: -1
+2026/03/09-16:45:09.452076 b51c                          Options.bytes_per_sync: 0
+2026/03/09-16:45:09.452079 b51c                      Options.wal_bytes_per_sync: 0
+2026/03/09-16:45:09.452082 b51c                   Options.strict_bytes_per_sync: 0
+2026/03/09-16:45:09.452085 b51c       Options.compaction_readahead_size: 2097152
+2026/03/09-16:45:09.452088 b51c                  Options.max_background_flushes: -1
+2026/03/09-16:45:09.452101 b51c Options.daily_offpeak_time_utc: 
+2026/03/09-16:45:09.452105 b51c Compression algorithms supported:
+2026/03/09-16:45:09.452109 b51c 	kZSTD supported: 1
+2026/03/09-16:45:09.452112 b51c 	kSnappyCompression supported: 1
+2026/03/09-16:45:09.452115 b51c 	kBZip2Compression supported: 0
+2026/03/09-16:45:09.452118 b51c 	kZlibCompression supported: 1
+2026/03/09-16:45:09.452121 b51c 	kLZ4Compression supported: 1
+2026/03/09-16:45:09.452124 b51c 	kXpressCompression supported: 0
+2026/03/09-16:45:09.452127 b51c 	kLZ4HCCompression supported: 1
+2026/03/09-16:45:09.452130 b51c 	kZSTDNotFinalCompression supported: 1
+2026/03/09-16:45:09.452135 b51c Fast CRC32 supported: Not supported on x86
+2026/03/09-16:45:09.452138 b51c DMutex implementation: std::mutex
+2026/03/09-16:45:09.452141 b51c Jemalloc supported: 0
+2026/03/09-16:45:09.453039 b51c [db\version_set.cc:6030] Recovering from manifest file: datasets/dump/smartbench/small//properties/MANIFEST-000033
+2026/03/09-16:45:09.453191 b51c [db\column_family.cc:629] --------------- Options for column family [default]:
+2026/03/09-16:45:09.453196 b51c               Options.comparator: leveldb.BytewiseComparator
+2026/03/09-16:45:09.453200 b51c           Options.merge_operator: None
+2026/03/09-16:45:09.453203 b51c        Options.compaction_filter: None
+2026/03/09-16:45:09.453205 b51c        Options.compaction_filter_factory: None
+2026/03/09-16:45:09.453208 b51c  Options.sst_partitioner_factory: None
+2026/03/09-16:45:09.453211 b51c         Options.memtable_factory: SkipListFactory
+2026/03/09-16:45:09.453214 b51c            Options.table_factory: BlockBasedTable
+2026/03/09-16:45:09.453241 b51c            table_factory options:   flush_block_policy_factory: FlushBlockBySizePolicyFactory (000001455C0DC5D0)
+  cache_index_and_filter_blocks: 0
+  cache_index_and_filter_blocks_with_high_priority: 1
+  pin_l0_filter_and_index_blocks_in_cache: 0
+  pin_top_level_index_and_filter: 1
+  index_type: 0
+  data_block_index_type: 0
+  index_shortening: 1
+  data_block_hash_table_util_ratio: 0.750000
+  checksum: 4
+  no_block_cache: 0
+  block_cache: 000001455AF59DD0
+  block_cache_name: LRUCache
+  block_cache_options:
+    capacity : 33554432
+    num_shard_bits : 6
+    strict_capacity_limit : 0
+    memory_allocator : None
+    high_pri_pool_ratio: 0.500
+    low_pri_pool_ratio: 0.000
+  persistent_cache: 0000000000000000
+  block_size: 4096
+  block_size_deviation: 10
+  block_restart_interval: 16
+  index_block_restart_interval: 1
+  metadata_block_size: 4096
+  partition_filters: 0
+  use_delta_encoding: 1
+  filter_policy: nullptr
+  whole_key_filtering: 1
+  verify_compression: 0
+  read_amp_bytes_per_bit: 0
+  format_version: 6
+  enable_index_compression: 1
+  block_align: 0
+  max_auto_readahead_size: 262144
+  prepopulate_block_cache: 0
+  initial_auto_readahead_size: 8192
+  num_file_reads_for_auto_readahead: 2
+2026/03/09-16:45:09.453245 b51c        Options.write_buffer_size: 67108864
+2026/03/09-16:45:09.453248 b51c  Options.max_write_buffer_number: 2
+2026/03/09-16:45:09.453252 b51c          Options.compression: Snappy
+2026/03/09-16:45:09.453255 b51c                  Options.bottommost_compression: Disabled
+2026/03/09-16:45:09.453258 b51c       Options.prefix_extractor: nullptr
+2026/03/09-16:45:09.453261 b51c   Options.memtable_insert_with_hint_prefix_extractor: nullptr
+2026/03/09-16:45:09.453264 b51c             Options.num_levels: 7
+2026/03/09-16:45:09.453267 b51c        Options.min_write_buffer_number_to_merge: 1
+2026/03/09-16:45:09.453269 b51c     Options.max_write_buffer_number_to_maintain: 0
+2026/03/09-16:45:09.453272 b51c     Options.max_write_buffer_size_to_maintain: 0
+2026/03/09-16:45:09.453275 b51c            Options.bottommost_compression_opts.window_bits: -14
+2026/03/09-16:45:09.453279 b51c                  Options.bottommost_compression_opts.level: 32767
+2026/03/09-16:45:09.453282 b51c               Options.bottommost_compression_opts.strategy: 0
+2026/03/09-16:45:09.453285 b51c         Options.bottommost_compression_opts.max_dict_bytes: 0
+2026/03/09-16:45:09.453290 b51c         Options.bottommost_compression_opts.zstd_max_train_bytes: 0
+2026/03/09-16:45:09.453294 b51c         Options.bottommost_compression_opts.parallel_threads: 1
+2026/03/09-16:45:09.453297 b51c                  Options.bottommost_compression_opts.enabled: false
+2026/03/09-16:45:09.453300 b51c         Options.bottommost_compression_opts.max_dict_buffer_bytes: 0
+2026/03/09-16:45:09.453303 b51c         Options.bottommost_compression_opts.use_zstd_dict_trainer: true
+2026/03/09-16:45:09.453307 b51c            Options.compression_opts.window_bits: -14
+2026/03/09-16:45:09.453310 b51c                  Options.compression_opts.level: 32767
+2026/03/09-16:45:09.453312 b51c               Options.compression_opts.strategy: 0
+2026/03/09-16:45:09.453315 b51c         Options.compression_opts.max_dict_bytes: 0
+2026/03/09-16:45:09.453318 b51c         Options.compression_opts.zstd_max_train_bytes: 0
+2026/03/09-16:45:09.453321 b51c         Options.compression_opts.use_zstd_dict_trainer: true
+2026/03/09-16:45:09.453324 b51c         Options.compression_opts.parallel_threads: 1
+2026/03/09-16:45:09.453327 b51c                  Options.compression_opts.enabled: false
+2026/03/09-16:45:09.453330 b51c         Options.compression_opts.max_dict_buffer_bytes: 0
+2026/03/09-16:45:09.453333 b51c      Options.level0_file_num_compaction_trigger: 4
+2026/03/09-16:45:09.453336 b51c          Options.level0_slowdown_writes_trigger: 20
+2026/03/09-16:45:09.453339 b51c              Options.level0_stop_writes_trigger: 36
+2026/03/09-16:45:09.453342 b51c                   Options.target_file_size_base: 67108864
+2026/03/09-16:45:09.453345 b51c             Options.target_file_size_multiplier: 1
+2026/03/09-16:45:09.453348 b51c                Options.max_bytes_for_level_base: 268435456
+2026/03/09-16:45:09.453351 b51c Options.level_compaction_dynamic_level_bytes: 1
+2026/03/09-16:45:09.453354 b51c          Options.max_bytes_for_level_multiplier: 10.000000
+2026/03/09-16:45:09.453357 b51c Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2026/03/09-16:45:09.453361 b51c Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2026/03/09-16:45:09.453364 b51c Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2026/03/09-16:45:09.453367 b51c Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2026/03/09-16:45:09.453369 b51c Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2026/03/09-16:45:09.453372 b51c Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2026/03/09-16:45:09.453375 b51c Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2026/03/09-16:45:09.453378 b51c       Options.max_sequential_skip_in_iterations: 8
+2026/03/09-16:45:09.453381 b51c                    Options.max_compaction_bytes: 1677721600
+2026/03/09-16:45:09.453384 b51c                        Options.arena_block_size: 1048576
+2026/03/09-16:45:09.453387 b51c   Options.soft_pending_compaction_bytes_limit: 68719476736
+2026/03/09-16:45:09.453390 b51c   Options.hard_pending_compaction_bytes_limit: 274877906944
+2026/03/09-16:45:09.453393 b51c                Options.disable_auto_compactions: 0
+2026/03/09-16:45:09.453397 b51c                        Options.compaction_style: kCompactionStyleLevel
+2026/03/09-16:45:09.453401 b51c                          Options.compaction_pri: kMinOverlappingRatio
+2026/03/09-16:45:09.453404 b51c Options.compaction_options_universal.size_ratio: 1
+2026/03/09-16:45:09.453407 b51c Options.compaction_options_universal.min_merge_width: 2
+2026/03/09-16:45:09.453410 b51c Options.compaction_options_universal.max_merge_width: 4294967295
+2026/03/09-16:45:09.453413 b51c Options.compaction_options_universal.max_size_amplification_percent: 200
+2026/03/09-16:45:09.453416 b51c Options.compaction_options_universal.compression_size_percent: -1
+2026/03/09-16:45:09.453420 b51c Options.compaction_options_universal.stop_style: kCompactionStopStyleTotalSize
+2026/03/09-16:45:09.453423 b51c Options.compaction_options_universal.max_read_amp: -1
+2026/03/09-16:45:09.453426 b51c Options.compaction_options_fifo.max_table_files_size: 1073741824
+2026/03/09-16:45:09.453429 b51c Options.compaction_options_fifo.allow_compaction: 0
+2026/03/09-16:45:09.453454 b51c                   Options.table_properties_collectors: 
+2026/03/09-16:45:09.453458 b51c                   Options.inplace_update_support: 0
+2026/03/09-16:45:09.453461 b51c                 Options.inplace_update_num_locks: 10000
+2026/03/09-16:45:09.453464 b51c               Options.memtable_prefix_bloom_size_ratio: 0.000000
+2026/03/09-16:45:09.453467 b51c               Options.memtable_whole_key_filtering: 0
+2026/03/09-16:45:09.453470 b51c   Options.memtable_huge_page_size: 0
+2026/03/09-16:45:09.453473 b51c                           Options.bloom_locality: 0
+2026/03/09-16:45:09.453476 b51c                    Options.max_successive_merges: 0
+2026/03/09-16:45:09.453479 b51c             Options.strict_max_successive_merges: 0
+2026/03/09-16:45:09.453482 b51c                Options.optimize_filters_for_hits: 0
+2026/03/09-16:45:09.453484 b51c                Options.paranoid_file_checks: 0
+2026/03/09-16:45:09.453487 b51c                Options.force_consistency_checks: 1
+2026/03/09-16:45:09.453490 b51c                Options.report_bg_io_stats: 0
+2026/03/09-16:45:09.453493 b51c                               Options.ttl: 2592000
+2026/03/09-16:45:09.453496 b51c          Options.periodic_compaction_seconds: 0
+2026/03/09-16:45:09.453499 b51c                        Options.default_temperature: kUnknown
+2026/03/09-16:45:09.453502 b51c  Options.preclude_last_level_data_seconds: 0
+2026/03/09-16:45:09.453505 b51c    Options.preserve_internal_time_seconds: 0
+2026/03/09-16:45:09.453508 b51c                       Options.enable_blob_files: false
+2026/03/09-16:45:09.453511 b51c                           Options.min_blob_size: 0
+2026/03/09-16:45:09.453514 b51c                          Options.blob_file_size: 268435456
+2026/03/09-16:45:09.453517 b51c                   Options.blob_compression_type: NoCompression
+2026/03/09-16:45:09.453521 b51c          Options.enable_blob_garbage_collection: false
+2026/03/09-16:45:09.453524 b51c      Options.blob_garbage_collection_age_cutoff: 0.250000
+2026/03/09-16:45:09.453527 b51c Options.blob_garbage_collection_force_threshold: 1.000000
+2026/03/09-16:45:09.453530 b51c          Options.blob_compaction_readahead_size: 0
+2026/03/09-16:45:09.453533 b51c                Options.blob_file_starting_level: 0
+2026/03/09-16:45:09.453536 b51c         Options.experimental_mempurge_threshold: 0.000000
+2026/03/09-16:45:09.453539 b51c            Options.memtable_max_range_deletions: 0
+2026/03/09-16:45:09.455282 b51c [db\version_set.cc:6088] Recovered from manifest file:datasets/dump/smartbench/small//properties/MANIFEST-000033 succeeded,manifest_file_number is 33, next_file_number is 38, last_sequence is 44260, log_number is 28,prev_log_number is 0,max_column_family is 0,min_log_number_to_keep is 28
+2026/03/09-16:45:09.455299 b51c [db\version_set.cc:6097] Column family [default] (ID 0), log number is 28
+2026/03/09-16:45:09.455600 b51c [db\db_impl\db_impl_open.cc:686] DB ID: 91fac5e2-1bc6-11f1-8ec9-001a7dda7114
+2026/03/09-16:45:09.456854 b51c EVENT_LOG_v1 {"time_micros": 1773071109456846, "job": 1, "event": "recovery_started", "wal_files": [32]}
+2026/03/09-16:45:09.456862 b51c [db\db_impl\db_impl_open.cc:1189] Recovering log #32 mode 2
+2026/03/09-16:45:09.464342 b51c [db\db_impl\db_impl_open.cc:1378] Recovered to log #32 seq #55326
+2026/03/09-16:45:09.490295 b51c EVENT_LOG_v1 {"time_micros": 1773071109490253, "cf_name": "default", "job": 1, "event": "table_file_creation", "file_number": 39, "file_size": 271401, "file_checksum": "", "file_checksum_func_name": "Unknown", "smallest_seqno": 44261, "largest_seqno": 55325, "table_properties": {"data_size": 268774, "index_size": 1589, "index_partitions": 0, "top_level_index_size": 0, "index_key_is_user_key": 1, "index_value_is_delta_encoded": 1, "filter_size": 0, "raw_key_size": 135260, "raw_average_key_size": 12, "raw_value_size": 286736, "raw_average_value_size": 25, "num_data_blocks": 105, "num_entries": 11065, "num_filter_entries": 0, "num_deletions": 0, "num_merge_operands": 0, "num_range_deletions": 0, "format_version": 6, "fixed_key_len": 0, "filter_policy": "", "column_family_name": "default", "column_family_id": 0, "comparator": "leveldb.BytewiseComparator", "user_defined_timestamps_persisted": 1, "key_largest_seqno": 55325, "merge_operator": "nullptr", "prefix_extractor_name": "nullptr", "property_collectors": "[]", "compression": "Snappy", "compression_options": "window_bits=-14; level=32767; strategy=0; max_dict_bytes=0; zstd_max_train_bytes=0; enabled=0; max_dict_buffer_bytes=0; use_zstd_dict_trainer=1; ", "creation_time": 1773071109, "oldest_key_time": 1773071109, "newest_key_time": 0, "file_creation_time": 0, "slow_compression_estimated_data_size": 0, "fast_compression_estimated_data_size": 0, "db_id": "91fac5e2-1bc6-11f1-8ec9-001a7dda7114", "db_session_id": "8QZFSDXMBTHCJAM98UCN", "orig_file_number": 39, "seqno_to_time_mapping": "N/A"}}
+2026/03/09-16:45:09.493588 b51c EVENT_LOG_v1 {"time_micros": 1773071109493580, "job": 1, "event": "recovery_finished"}
+2026/03/09-16:45:09.493986 b51c [db\version_set.cc:5553] Creating manifest 41
+2026/03/09-16:45:09.515440 b51c [db\db_impl\db_impl_open.cc:2252] SstFileManager instance 0000014555DE1450
+2026/03/09-16:45:09.517043 b51c [file\delete_scheduler.cc:78] Deleted file datasets/dump/smartbench/small//properties/000032.log immediately, rate_bytes_per_sec 0, total_trash_size 0, total_size 732523, max_trash_db_ratio 0.250000
+2026/03/09-16:45:09.517304 b51c [db\db_impl\db_impl_files.cc:394] [JOB 2] Tried to delete a non-existing file datasets/dump/smartbench/small//properties/MANIFEST-000033 type=3 #33 -- IO error: No such file or directory: Failed to delete: datasets/dump/smartbench/small//properties/MANIFEST-000033: The system cannot find the file specified.
+
+2026/03/09-16:45:09.517321 b51c DB pointer 00000145552D6FC0
+2026/03/09-16:45:11.032348 b51c [db\db_impl\db_impl.cc:500] Shutdown: canceling all background work
+2026/03/09-16:45:11.040874 b51c [db\db_impl\db_impl.cc:709] Shutdown complete
