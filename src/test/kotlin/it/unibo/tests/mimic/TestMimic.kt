@@ -22,9 +22,9 @@ class TestMimic {
 
     @BeforeAll
     fun setup() {
-         graph = MemoryGraphACID.readFromDisk("datasets/dump/mimic/100/") // Reload from disk
-         val tsm = AsterixDBTSM.createDefault(graph!!, dataverse = "mimic_100")
-         graph!!.tsm = tsm
+        graph = MemoryGraphACID.readFromDisk("datasets/dump/mimic/100/") // Reload from disk
+        val tsm = AsterixDBTSM.createDefault(graph!!, dataverse = "mimic_100")
+        graph!!.tsm = tsm
     }
 
     @AfterAll
