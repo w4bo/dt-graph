@@ -7,8 +7,6 @@ import it.unibo.graph.query.*
 import it.unibo.graph.utils.Measurement
 import it.unibo.graph.utils.Person
 import it.unibo.graph.utils.VALUE
-import it.unibo.stats.Loader
-import it.unibo.stats.loadDataset
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
@@ -16,7 +14,7 @@ import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TestMimic {
+class TestMimicQuery {
 
     var graph: Graph? = null
 
@@ -77,28 +75,5 @@ class TestMimic {
             by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG))
         )
         assertEquals(1, result.size)
-    }
-
-    val limit = 100L
-    val threads = 1
-    val machines = 1
-
-    fun load(loader: Loader, model: String, dataset: String) {
-        loadDataset(loader, model, threads, machines, dataset, limit.toString())
-    }
-
-    @Test
-    fun `ingest STGraph`() {
-        load(MimicIVSTGraph(limit), "stgraph", "mimic-iv")
-    }
-
-    @Test
-    fun `ingest Neo4J`() {
-        load(MimicIVNeo4J(limit), "neo4j", "mimic-iv")
-    }
-
-    @Test
-    fun `ingest PGAge`() {
-        load(MimicIVPGAge(limit), "pgage", "mimic-iv")
     }
 }
