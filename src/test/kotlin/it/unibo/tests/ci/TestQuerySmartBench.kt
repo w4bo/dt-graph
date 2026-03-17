@@ -4,7 +4,6 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.AfterAll
@@ -164,7 +163,7 @@ class TestQuerySmartBench {
         val simplePattern = listOf(
             listOf(
                 Step(Infrastructure, alias = "Environment"),
-                EdgeStep(hasCoverage, direction = Direction.IN ),
+                EdgeStep(hasCoverage, direction = Direction.IN),
                 Step(Sensor, alias = "Device"),
                 null,
                 null,

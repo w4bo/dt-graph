@@ -18,7 +18,8 @@ class AsterixDBHTTPClient(
         private val dataverse: String,
         datatype: String,
         private val tsId: Long,
-        get : Boolean = false
+        get : Boolean = false,
+        createSpatialIndex: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
     private val feedName: String = "$DATAFEED_PREFIX$tsId"

@@ -23,6 +23,9 @@ open class R(
     @Transient val fromDisk: Boolean = false
 ): ElemP {
 
+    constructor(id: Long, labelName: String, fromN: Long, toN: Long, fromNextRel: Long? = null, toNextRel: Long? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE, nextProp: Long? = null, properties: MutableList<P> = mutableListOf(), g: Graph, fromDisk: Boolean = false)
+            : this(id, labelFromString(labelName), fromN, toN, fromNextRel, toNextRel, fromTimestamp, toTimestamp, nextProp, properties, g, fromDisk)
+
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): R {
             val buffer = ByteBuffer.wrap(bytes)
@@ -30,7 +33,7 @@ open class R(
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
-            val label = Label.entries[labelOrdinal] // Convert ordinal to enum
+            val label = Label.entries[labelOrdinal]!! // Convert ordinal to enum
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val fromN = buffer.long
             val toN = buffer.long
@@ -48,11 +51,11 @@ open class R(
         buffer.putLong(fromTimestamp)                // 8 bytes
         buffer.putLong(toTimestamp)                  // 8 bytes
         buffer.putInt(label.ordinal)                 // 4 bytes
-        buffer.putLong(nextProp?: Long.MIN_VALUE)    // 8 bytes
+        buffer.putLong(nextProp?: Long.MIN_VALUE)           // 8 bytes
         buffer.putLong(fromN)                        // 8 bytes
         buffer.putLong(toN)                          // 8 bytes
-        buffer.putLong(fromNextRel?: Long.MIN_VALUE) // 8 bytes
-        buffer.putLong(toNextRel?: Long.MIN_VALUE)   // 8 bytes
+        buffer.putLong(fromNextRel?: Long.MIN_VALUE)        // 8 bytes
+        buffer.putLong(toNextRel?: Long.MIN_VALUE)          // 8 bytes
         return buffer.array()                               // Total: 68 bytes
     }
 

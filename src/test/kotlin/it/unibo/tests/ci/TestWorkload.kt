@@ -3,10 +3,9 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Label.*
+import it.unibo.graph.utils.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import kotlin.test.Test
 

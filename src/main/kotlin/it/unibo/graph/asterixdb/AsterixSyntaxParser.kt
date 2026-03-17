@@ -149,7 +149,7 @@ fun jsonToProp(json: JSONObject, sourceId: Long, sourceType: Boolean, key: Strin
 
 fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Graph): R {
     val id = DUMMY_ID
-    val edge = R(id = id, label = Label.entries[json.getInt(LABEL)], fromN = json.getLong(FROM_N), toN = json.getLong(TO_N), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
+    val edge = R(id = id, label = Label.entries[json.getInt(LABEL)]!!, fromN = json.getLong(FROM_N), toN = json.getLong(TO_N), fromTimestamp = fromTimestamp, toTimestamp = toTimestamp, g = g)
     json.keys()
         .forEach { key ->
             if (!listOf(ID, LABEL, FROM_N, TO_N).contains(key)) {
@@ -185,7 +185,7 @@ fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
 
     val entity = N(
         id = id,
-        label = Label.entries[node.getInt(LABEL)],
+        label = Label.entries[node.getInt(LABEL)]!!,
         fromTimestamp = fromTimestamp,
         toTimestamp = toTimestamp,
         value = if (id != DUMMY_ID) node.getLong(VALUE) else null,

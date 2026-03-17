@@ -1,6 +1,5 @@
 package it.unibo.graph.interfaces
 
-import it.unibo.graph.interfaces.Label.HasTS
 import it.unibo.graph.utils.*
 import org.apache.commons.lang3.NotImplementedException
 import java.nio.ByteBuffer
@@ -26,6 +25,10 @@ open class N(
     @Transient final override var g: Graph
 ) : ElemP {
 
+    // Secondary constructor: accepts label as String
+    constructor(id: Long, labelName: String, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE, nextEdge: Long? = null, nextProp: Long? = null, isTs: Boolean = false, value: Long? = null, edges: MutableList<R> = mutableListOf(), properties: MutableList<P> = mutableListOf(), g: Graph)
+            : this(id, labelFromString(labelName), fromTimestamp, toTimestamp, nextEdge, nextProp, isTs, value, edges, properties, g)
+
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): N {
             val buffer = ByteBuffer.wrap(bytes)
@@ -33,7 +36,7 @@ open class N(
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
-            val label = Label.entries[labelOrdinal] // Convert ordinal to enum
+            val label = Label.entries[labelOrdinal]!! // Convert ordinal to enum
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val nextEdge = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val isTs = buffer.get() != 0.toByte()

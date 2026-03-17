@@ -39,13 +39,15 @@ class AsterixDBTSM private constructor(
         return queryAsterixDB(clusterControllerHost, query, checkResults = true)
     }
 
-    override fun addTS(id: Long): TS {
-        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype)
+    fun addAsterixTS(id: Long, createSpatialIndex: Boolean): TS {
+        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = false, createSpatialIndex = createSpatialIndex)
         return newTS
     }
 
+    override fun addTS(id: Long): TS = addAsterixTS(id, false)
+
     override fun getTS(id: Long): TS {
-        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true)
+        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true, createSpatialIndex = false)
     }
 
     override fun clear() {

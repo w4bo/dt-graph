@@ -1,7 +1,6 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.interfaces.Label.HasTS
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
@@ -101,7 +100,7 @@ private fun join(
             props.forEach { p ->
                 curMatch.add(
                     Step(
-                        step.type,
+                        step.label,
                         step.properties + Filter(
                             curJoinFilter.property,
                             curJoinFilter.operator,
@@ -475,7 +474,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val alias: String? = step?.alias // get the alias (if any)
                 val c: Compare? = if (alias !== null) mapWhere[alias] else null // get the comparison operator (if any)
                 if ((step == null || ( // no filter
-                            (step.type === null || step.type === curElem.e.label)  // filter on label
+                            (step.label === null || step.label == curElem.e.label.name)  // filter on label
                                 && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware).any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) }}})) // filter on properties
                                 && curElem.e.timeOverlap(timeaware, curElem.from, curElem.to) // check time overlap
                                 && (c === null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
@@ -495,7 +494,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                 }
                         } else { // is edge...
                             val r = (curElem.e as R)
-                            if (curElem.e.label === HasTS) { // ... to time series
+                            if (curElem.e.label.name == HasTS) { // ... to time series
                                 launched++
                                 if (LIMIT == 1) {
                                     try {
@@ -512,7 +511,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                         completed.incrementAndGet()
                                         wait.release()
                                     }
-                                }else{
+                                } else {
                                     launch(executor) {
                                         try {
                                             g.getTSM()

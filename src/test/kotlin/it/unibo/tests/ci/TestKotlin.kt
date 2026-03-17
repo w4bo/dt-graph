@@ -5,7 +5,6 @@ import it.unibo.graph.inmemory.MemoryGraph
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.inmemory.MemoryTSM
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.utils.*
@@ -451,23 +450,23 @@ class TestKotlin {
 
             val w1 = listOf(Compare("b", "a", LOCATION, Operators.ST_CONTAINS))
             val w2 = listOf(Compare("a", "b", LOCATION, Operators.ST_CONTAINS))
-            assertEquals(1, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w1).size)
-            assertEquals(0, search(g, listOf(Step(alias = "a", type = A), null, Step(alias = "b", type = B)), where = w2).size)
-            assertEquals(0, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w1).size)
-            assertEquals(1, search(g, listOf(Step(alias = "b", type = A), null, Step(alias = "a", type = B)), where = w2).size)
+            assertEquals(1, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w1).size)
+            assertEquals(0, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w2).size)
+            assertEquals(0, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w1).size)
+            assertEquals(1, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w2).size)
 
             val n12 = g.addNode(C, isTs = true)
             val ts = g.getTSM().addTS(n12.id)
             ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
             g.addEdge(Foo, n11.id, n12.id)
 
-            assertEquals(1, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w1).size)
-            assertEquals(0, search(g, listOf(Step(alias = "b", type = B), null, Step(type = C), null, Step(alias="a", type = Measurement)), where = w2).size)
-            assertEquals(0, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w1).size)
-            assertEquals(1, search(g, listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(alias="b", type = Measurement)), where = w2).size)
+            assertEquals(1, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w1).size)
+            assertEquals(0, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w2).size)
+            assertEquals(0, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w1).size)
+            assertEquals(1, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w2).size)
 
-            assertEquals(1, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22L, attrFirst = true))))).size)
-            assertEquals(0, search(g,listOf(Step(alias = "a", type = B), null, Step(type = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25L, attrFirst = true))))).size)
+            assertEquals(1, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22L, attrFirst = true))))).size)
+            assertEquals(0, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25L, attrFirst = true))))).size)
         }
     }
 
@@ -662,10 +661,10 @@ class TestKotlin {
 
         val pattern1 = listOf(
             listOf(Step(A, alias = "Environment")),
-            listOf(Step(C), null, Step(alias="Measurement", type = Measurement)),
+            listOf(Step(C), null, Step(alias="Measurement", label = Measurement)),
         )
         val pattern2 = listOf(
-            listOf(Step(C), null, Step(alias="Measurement", type = Measurement)),
+            listOf(Step(C), null, Step(alias="Measurement", label = Measurement)),
             listOf(Step(A, alias = "Environment"))
         )
         assertEquals(1, query(g, pattern1, where = w1).size)

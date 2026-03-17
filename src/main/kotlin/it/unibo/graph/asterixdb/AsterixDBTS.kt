@@ -22,7 +22,8 @@ class AsterixDBTS(
     nodeControllersIPs: List<String>,
     private val dataverse: String,
     datatype: String,
-    get : Boolean = false
+    get : Boolean = false,
+    createSpatialIndex: Boolean,
 ) : TS {
 
     private var dataset: String
@@ -37,7 +38,7 @@ class AsterixDBTS(
     private var isFeedConnectionOpen: Boolean = false
 
     init {
-        asterixHTTPClient = AsterixDBHTTPClient(clusterControllerHost, dataFeedIp, dataFeedPort, dataverse, datatype, id, get = get)
+        asterixHTTPClient = AsterixDBHTTPClient(clusterControllerHost, dataFeedIp, dataFeedPort, dataverse, datatype, id, get = get, createSpatialIndex = createSpatialIndex)
         dataset = asterixHTTPClient.getDataset()
         dataFeedPort = asterixHTTPClient.getDataFeedPort() // DataFeedPort might be changed if connection failed
     }

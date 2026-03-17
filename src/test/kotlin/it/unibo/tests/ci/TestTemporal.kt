@@ -3,7 +3,6 @@ package it.unibo.tests.ci
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.interfaces.Label.*
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.timeOverlap
@@ -11,9 +10,7 @@ import it.unibo.graph.query.Filter
 import it.unibo.graph.query.Operators
 import it.unibo.graph.query.Step
 import it.unibo.graph.query.search
-import it.unibo.graph.utils.DUMMY_ID
-import it.unibo.graph.utils.EDGE
-import it.unibo.graph.utils.EPSILON
+import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -170,9 +167,7 @@ class TestTemporal {
     @Test
     fun testSearch6() {
         val g = setup()
-        val steps = listOf(
-            Step(Person, listOf(Filter("name", Operators.EQ, "Alice"), Filter("address", Operators.EQ, "Foo")))
-        )
+        val steps = listOf(Step(Person, listOf(Filter("name", Operators.EQ, "Alice"), Filter("address", Operators.EQ, "Foo"))))
         assertEquals(1, search(g, steps, timeaware = true, from = 0, to = 0).size)
         assertEquals(1, search(g, steps, timeaware = false).size)
         assertEquals(0, search(g, steps, timeaware = true, from = 2).size)
