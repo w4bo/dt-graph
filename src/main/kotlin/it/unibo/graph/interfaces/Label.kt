@@ -2,8 +2,8 @@ package it.unibo.graph.interfaces
 
 import org.yaml.snakeyaml.Yaml
 import java.io.File
-import java.io.InputStream
 import java.io.FileWriter
+import java.io.InputStream
 
 open class LabelString(override val ordinal: Int, override val name: String) : Label {
 
@@ -24,10 +24,11 @@ interface Label {
     val name: String
 
     companion object {
+        val path = "src/main/resources/labels.yaml"
         private val stringToId = mutableMapOf<String, Int>()
         val entries = mutableMapOf<Int, Label>()
         private val yaml = Yaml()
-        private val yamlFile = File("labels.yaml")
+        private val yamlFile = File(path)
 
         init {
             loadYamlLabels()
@@ -41,7 +42,7 @@ interface Label {
         private fun loadYamlLabels() {
             val stream: InputStream? =
                 if (yamlFile.exists()) yamlFile.inputStream()
-                else Label::class.java.getResourceAsStream("/src/main/resources/labels.yaml")
+                else Label::class.java.getResourceAsStream(path)
 
             if (stream != null) {
                 val data = yaml.load<Map<String, List<String>>>(stream)

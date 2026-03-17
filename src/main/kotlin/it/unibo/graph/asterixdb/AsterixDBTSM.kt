@@ -4,10 +4,6 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.utils.*
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 val props = loadProps()
 
@@ -55,21 +51,8 @@ class AsterixDBTSM private constructor(
     }
 
     // Private utility functions
-    private fun queryAsterixDB(host: String, query: String, checkResults: Boolean = false): Boolean {
-        val uri = URI(host)
-        val connection = uri.toURL().openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to query, "pretty" to "true", "mode" to "immediate", "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-        connection.outputStream.use { it.write(postData.toByteArray()) }
+    private fun queryAsterixDB(host: String, sql: String, checkResults: Boolean = false): Boolean {
+        val connection = query(sql, host, dataverse)
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {

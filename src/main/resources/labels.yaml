@@ -59,4 +59,38 @@ labels:
   - occupancy
   - hasType_
   - hasTemperature
+  - Temperature  - HR
+  - hasParameters
+  - ABPs
+  - ABPd
+  - ABPm
+  - RR
+  - SpO2
+  - Temperature F
+  - O2 Flow
+  - FiO2
+  - Braden Sensory Perception
+  - Braden Moisture
+  - Braden Activity
+  - Braden Mobility
+  - Braden Nutrition
+  - Braden Friction/Shear
+  - Parameters Checked
+  - Alarms On
+  - Skin Care
+  - Back Care
+  - Arterial Line placed in outside facility
+  - 20 Gauge placed in outside facility
+  - Subglottal Suctioning
+  - Glucose (whole blood)
+  - Trach Care
+  - Arterial Line Dressing Occlusive
+  - History of falling (within 3 mnths)*
+  - Secondary diagnosis
+  - Ambulatory aid
+  - IV/Saline lock
+  - Gait/Transferring
+  - Mental status
+  - 20 Gauge Dressing Occlusive
+  - 20 Gauge placed in the field
   - Temperature

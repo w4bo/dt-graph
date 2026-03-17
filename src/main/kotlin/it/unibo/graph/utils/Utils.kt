@@ -4,6 +4,10 @@ import it.unibo.graph.interfaces.Elem
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import java.io.*
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -130,4 +134,26 @@ fun incPort(): Int {
 @OptIn(ExperimentalAtomicApi::class)
 fun resetPort() {
     atomicPort.store(FIRSTFEEDPORT)
+}
+
+fun query(sql: String, host: String, dataverse: String): HttpURLConnection {
+    val uri = URI(host)
+    val connection = uri.toURL().openConnection() as HttpURLConnection
+    connection.requestMethod = "POST"
+    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+    connection.doOutput = true
+
+    val params = mapOf(
+        "statement" to sql,
+        "pretty" to "true",
+        "mode" to "immediate",
+        "dataverse" to dataverse
+    )
+
+    val postData = params.entries.joinToString("&") {
+        "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
+    }
+
+    connection.outputStream.use { it.write(postData.toByteArray()) }
+    return connection
 }

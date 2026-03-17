@@ -1,7 +1,6 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.Direction
-import it.unibo.graph.interfaces.Label
 
 interface IStep {
     val label: String?

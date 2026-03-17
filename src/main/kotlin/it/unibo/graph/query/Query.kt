@@ -475,7 +475,14 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val c: Compare? = if (alias !== null) mapWhere[alias] else null // get the comparison operator (if any)
                 if ((step == null || ( // no filter
                             (step.label === null || step.label == curElem.e.label.name)  // filter on label
-                                && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware).any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) }}})) // filter on properties
+                                && step
+                                    .properties
+                                    .filter { f -> !by.filter { it.operator != null }.map { it.property }.contains(f.property) } // do not apply filter on the result of group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
+                                    .all { f -> // for all filters...
+                                        curElem.e
+                                            .getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware) // ... a certain time-aware property must match
+                                            .any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) } }
+                                        })) // filter on properties
                                 && curElem.e.timeOverlap(timeaware, curElem.from, curElem.to) // check time overlap
                                 && (c === null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
                 ) {
@@ -504,9 +511,6 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                             .forEach {
                                                 mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                             }
-                                        // } catch (e: Exception) {
-                                        //     e.printStackTrace()
-                                        //     throw IllegalArgumentException(e.message)
                                     } finally {
                                         completed.incrementAndGet()
                                         wait.release()
@@ -520,9 +524,6 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                                 .forEach {
                                                     mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                                 }
-                                            // } catch (e: Exception) {
-                                            //     e.printStackTrace()
-                                            //     throw IllegalArgumentException(e.message)
                                         } finally {
                                             completed.incrementAndGet()
                                             wait.release()

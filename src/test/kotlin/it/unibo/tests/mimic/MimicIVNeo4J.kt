@@ -1,6 +1,9 @@
 package it.unibo.tests.mimic
 
-import org.neo4j.driver.*
+import org.neo4j.driver.AuthTokens
+import org.neo4j.driver.Driver
+import org.neo4j.driver.GraphDatabase
+import org.neo4j.driver.Session
 import kotlin.math.roundToLong
 
 class MimicIVNeo4J(

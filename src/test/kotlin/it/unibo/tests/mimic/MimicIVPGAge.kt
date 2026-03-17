@@ -18,57 +18,58 @@ class MimicIVPGAge(
     private lateinit var insertMeasurement: PreparedStatement
     init {
         conn.createStatement().use { st ->
-            st.execute("CREATE EXTENSION IF NOT EXISTS age")
-            st.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
-            st.execute("LOAD 'age';")
-            st.execute("SET search_path = ag_catalog, \"$user\", public;")
-            // Drop graph if it exists
+            // Helper function for safe execution
+            fun safeExec(sql: String) {
+                try {
+                    st.execute(sql)
+                } catch (e: SQLException) {
+                    println("Warning executing SQL: $sql")
+                    e.printStackTrace()
+                }
+            }
+
+            // Load extensions
+            safeExec("CREATE EXTENSION IF NOT EXISTS age")
+            safeExec("CREATE EXTENSION IF NOT EXISTS timescaledb")
+            safeExec("LOAD 'age';")
+
+            // Set search path to allow AGE operations
+            safeExec("SET search_path = ag_catalog, \"$user\", public;")
+
+            // Drop the graph if it exists
             try {
                 st.execute("SELECT drop_graph('$graphName', true)")
-            } catch (_: SQLException) {
-                // Ignore if it doesn't exist
-            }
-
-            try {
-                st.execute("SELECT create_graph('$graphName')")
             } catch (e: SQLException) {
-                e.printStackTrace()
+                println("Graph $graphName did not exist, skipping drop.")
             }
-            st.execute("SET search_path = $graphName, \"$user\", public;")
-            // create measurement hypertable
-            st.execute(
-                """
-                DROP TABLE IF EXISTS Measurements
-                """.trimIndent()
-            )
 
-            st.execute(
-                """
-                CREATE TABLE IF NOT EXISTS Measurements(
+            // Create graph safely
+            safeExec("SELECT create_graph('$graphName')")
+
+            // Switch to the graph schema for subsequent operations
+            safeExec("SET search_path = $graphName, \"$user\", public;")
+
+            safeExec("""
+                CREATE TABLE IF NOT EXISTS measurements (
                     ts_id BIGINT,
                     timestamp BIGINT,
                     value BIGINT
-                )
-                """.trimIndent()
-            )
+                )""".trimIndent())
 
-            st.execute(
-                """
+            safeExec("TRUNCATE TABLE Measurements")
+
+            // Convert table to hypertable (Timescale)
+            safeExec("""
                 SELECT create_hypertable(
-                    'Measurements',
+                    'measurements',
                     'timestamp',
                     if_not_exists => TRUE
                 )
-                """.trimIndent()
-            )
+                """.trimIndent())
         }
 
-        insertMeasurement = conn.prepareStatement(
-            """
-            INSERT INTO ${graphName}.Measurements(ts_id, timestamp, value)
-            VALUES (?, ?, ?)
-            """.trimIndent()
-        )
+        // Prepare statement for inserting measurements
+        insertMeasurement = conn.prepareStatement("""INSERT INTO ${graphName}.measurements(ts_id, timestamp, value) VALUES (?, ?, ?)""".trimIndent())
     }
 
     override fun addPerson(subjectId: Int): Long {

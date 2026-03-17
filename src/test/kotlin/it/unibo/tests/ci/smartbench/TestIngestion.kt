@@ -8,7 +8,6 @@ import it.unibo.stats.loadDataset
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
-import java.util.UUID
 
 class TestIngestion {
     private val logger = LoggerFactory.getLogger(TestIngestion::class.java)
@@ -45,15 +44,12 @@ class TestIngestion {
                 resetPort()
                 checkFolder(graphDataFolder)
                 checkFolder(asterixDataFolder)
-
                 val graph = MemoryGraphACID(path = "datasets/dump/$dataset/$size")
-                val tsm = AsterixDBTSM.Companion.createDefault(graph, dataverse = "${dataset}_$size")
+                val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size")
                 graph.tsm = tsm
                 graph.clear()
                 tsm.clear()
-
                 loadDataset(loader = SmartBenchDataLoader(graph, threads, data), "stgraph", threads, numMachines, dataset, size)
-
                 graph.close()
             }
         }

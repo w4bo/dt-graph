@@ -8,52 +8,24 @@ repositories {
     mavenCentral()
 }
 
-val porcodio = 21
+val jVersion = 17
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_21
+        jvmTarget = JvmTarget.JVM_17
     }
-    jvmToolchain(porcodio)
+    jvmToolchain(jVersion)
 }
-
-//java {
-//    toolchain {
-//        languageVersion = JavaLanguageVersion.of(javaVersion)
-//    }
-//}
 
 tasks.withType<Test>().configureEach {
      javaLauncher = javaToolchains.launcherFor {
-         languageVersion = JavaLanguageVersion.of(porcodio)
+         languageVersion = JavaLanguageVersion.of(jVersion)
      }
     testLogging {
-//        events "passed", "skipped", "failed"
+        events("passed", "skipped", "failed")
     }
     useJUnitPlatform()
 }
-//tasks.named("testClasses") {
-//    dependsOn(tasks.named("compileTestKotlin"))
-//}
-
-//test {
-//
-//}
-
-//jar {
-//    manifest {
-//        attributes(
-//                'Main-Class': 'AsterixDataSource'
-//        )
-//    }
-//}
-//
-//idea {
-//    module {
-//        downloadJavadoc = true
-//        downloadSources = true
-//    }
-//}
 
 dependencies {
     implementation("org.apache.commons:commons-lang3:3.20.0")
@@ -81,4 +53,4 @@ tasks.jar {
     exclude("datasets/**")
 }
 
-defaultTasks("clean", "build", "check") // , "shadowJar"
+defaultTasks("clean", "build", "check")

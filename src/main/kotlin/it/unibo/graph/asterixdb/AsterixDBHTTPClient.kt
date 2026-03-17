@@ -1,14 +1,10 @@
 package it.unibo.graph.asterixdb
 
-import it.unibo.graph.utils.DATAFEED_PREFIX
-import it.unibo.graph.utils.DATASET_PREFIX
-import it.unibo.graph.utils.LOCATION
-import it.unibo.graph.utils.incPort
+import it.unibo.graph.utils.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
-import java.net.*
-import java.nio.charset.StandardCharsets
+import java.net.Socket
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 class AsterixDBHTTPClient(
@@ -19,7 +15,7 @@ class AsterixDBHTTPClient(
         datatype: String,
         private val tsId: Long,
         get : Boolean = false,
-        createSpatialIndex: Boolean,
+        val createSpatialIndex: Boolean,
 ) {
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
     private val feedName: String = "$DATAFEED_PREFIX$tsId"
@@ -45,11 +41,9 @@ class AsterixDBHTTPClient(
     fun stopFeed() = queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
 
     fun createDataset(dataType: String): Boolean {
-        val datasetSetupQuery = """
-                USE $dataverse;
-                CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key id;
-                CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;
-            """.trimIndent()
+        var datasetSetupQuery = "USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key id;".trimIndent()
+        if (createSpatialIndex)
+            datasetSetupQuery += "CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;"
         return queryAsterixDB(datasetSetupQuery)
     }
 
@@ -125,25 +119,8 @@ class AsterixDBHTTPClient(
         }
     }
 
-    private fun queryAsterixDB(query: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
-        val uri = URI(clusterControllerHost)
-        val connection = uri.toURL().openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to query,
-            "pretty" to "true",
-            "mode" to "immediate",
-            "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-
-        connection.outputStream.use { it.write(postData.toByteArray()) }
+    private fun queryAsterixDB(sql: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
+        val connection = query(sql, clusterControllerHost, dataverse)
         val responseCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
@@ -170,38 +147,25 @@ class AsterixDBHTTPClient(
         queryAsterixDB(upsertStatement)
     }
 
-    fun selectFromAsterixDB(queryStatement: String, isGroupBy: Boolean = false): AsterixDBResult {
-        val connection = URL(clusterControllerHost).openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-        val params = mapOf(
-            "statement" to queryStatement,
-            "pretty" to "true",
-            "mode" to "immediate",
-            "dataverse" to dataverse
-        )
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-        connection.outputStream.use { it.write(postData.toByteArray()) }
-        val statusCode = connection.responseCode
+    fun selectFromAsterixDB(sql: String, isGroupBy: Boolean = false): AsterixDBResult {
+        val connection = query(sql, clusterControllerHost, dataverse)
+        val responseCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (_: Exception) {
             val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned ts in TS yet
-                throw UnsupportedOperationException(errMsg)
+                throw UnsupportedOperationException("SQL:\n ${sql}\nError:\nerrMsg")
             } else {
                 errMsg
             }
         }
 
-        return when (statusCode) {
+        return when (responseCode) {
             in 200..299 -> {
-                val cleanedQuery = queryStatement.substringAfter(";").trimStart()
+                val cleanedQuery = sql.substringAfter(";").trimStart()
                 if (cleanedQuery.startsWith("SELECT", ignoreCase = true)) {
-                    return try {
+                    try {
                         val jsonResponse = JSONObject(responseText)
                         val resultArray = jsonResponse.getJSONArray("results")
                         if (!isGroupBy) {
@@ -224,7 +188,7 @@ class AsterixDBHTTPClient(
                     AsterixDBResult.GroupByResult(JSONArray())
                 }
 
-            else -> throw UnsupportedOperationException("Query failed with status code $statusCode: $responseText")
+            else -> throw UnsupportedOperationException("Query failed with status code $responseCode: $responseText")
         }
     }
 }

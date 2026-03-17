@@ -1,11 +1,9 @@
 package it.unibo.tests.mimic
 import it.unibo.stats.Loader
-import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.use
 
 fun s2ts(s: String): Long = LocalDateTime.parse(s.replace(" ", "T")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 

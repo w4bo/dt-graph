@@ -110,7 +110,7 @@ class AsterixDBTS(
         var selectQuery: String
 
         val filters = filters
-            .map { if (it.property == FROM_TIMESTAMP || it.property == TO_TIMESTAMP) Filter(ID, it.operator, it.value, it.attrFirst) else it }
+            .map { if (it.property == FROM_TIMESTAMP || it.property == TO_TIMESTAMP) Filter(ID, it.operator, it.value, it.attrFirst) else it } // rename id into TO/FROM TIMESTAMP
             .map { f ->
                 if (!firstCitizens.contains(f.property)) {
                     Pair(f.property ,  Filter(f.property + ".$VALUE", f.operator, f.value, f.attrFirst))
@@ -124,7 +124,9 @@ class AsterixDBTS(
                 .filter { it.operator == null }
                 .map { f -> f.property!! }
                 .toMutableSet()
-        groupby += filters.filter { it.first != ID }.map { (orig, _) -> orig }
+        groupby += filters
+            .filter { f -> !by.map { it.property }.contains(f.second.property) } // cannot select an attribute that I should also aggregate (e.g., SELECT value, SUM(value) ... GROUP BY value)
+            .filter { it.first != ID }.map { (orig, _) -> orig }
         groupby += listOf(LABEL)
 
         val aggregators: MutableSet<String> =
@@ -165,7 +167,7 @@ class AsterixDBTS(
                     .map { it as JSONObject }
                     .map { json ->
                         val aggOperator = by.first { it.operator != null }.property!!
-                        json.put(aggOperator, JSONObject().let { it ->
+                        json.put(aggOperator, JSONObject().let {
                             it.put(VALUE, Pair((json[aggOperator] as? Number)?.toDouble(), (json[COUNT] as? Number)?.toDouble()))
                             it.put(TYPE, PropType.NULL.ordinal)
                         })
