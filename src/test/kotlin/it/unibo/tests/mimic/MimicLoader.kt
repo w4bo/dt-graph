@@ -48,6 +48,10 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                 val rs: ResultSet = stmt.executeQuery()
                 val meta = rs.metaData
                 val columnCount = meta.columnCount
+                var prevTime = System.currentTimeMillis()
+                var addedTS = 0
+                var addedGS = 0
+                var addedMeas = 0
                 while (rs.next()) {
                     val row = mutableMapOf<String, Any?>()
                     for (i in 1..columnCount) {
@@ -55,7 +59,13 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                         val value = rs.getObject(i)
                         row[columnName] = value
                     }
-                    if (i++ % 100 == 0) print("$i... ")
+                    if (++i % 100 == 0) {
+                        println("$i... Elapsed time: ${(System.currentTimeMillis() - prevTime)}, GS: $addedGS, TS: $addedTS, Mea: $addedMeas")
+                        prevTime = System.currentTimeMillis()
+                        addedGS = 0
+                        addedMeas = 0
+                        addedTS = 0
+                    }
                     val subjectId: Int = row["subject_id"].toString().toInt()
                     val itemId: Int = row["itemid"].toString().toInt()
                     if (subjectId != lastSubjectId) {
@@ -63,16 +73,20 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                         val startTime = System.currentTimeMillis()
                         person = addPerson(subjectId)
                         gsTime += System.currentTimeMillis() - startTime
+                        addedGS++
                     }
                     if (itemId != lastItemId) {
                         lastItemId = itemId
                         val startTime = System.currentTimeMillis()
                         addTimeseries(row, person!!)
                         gsTime += System.currentTimeMillis() - startTime
+                        addedGS++
+                        addedTS++
                     }
                     val startTime = System.currentTimeMillis()
                     addMeasurement(row)
                     tsTime += System.currentTimeMillis() - startTime
+                    addedMeas++
                 }
             }
         }

@@ -4,6 +4,7 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.utils.FIRSTFEEDPORT
 import it.unibo.graph.utils.LASTFEEDPORT
 import it.unibo.graph.utils.Measurement
 import it.unibo.graph.utils.Person
@@ -36,7 +37,8 @@ class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
         g.addProperty(n.id, key = "itemid", value = row["itemid"].toString().toInt(), PropType.INT)
         g.addProperty(n.id, key = "param_type", value = row["param_type"].toString(), PropType.STRING)
         ts?.closeDataFeedConnection(closeRemote = true)
-        if (i++ > LASTFEEDPORT - LASTFEEDPORT * 0.1) {
+        val portRange = LASTFEEDPORT - FIRSTFEEDPORT
+        if (i++ > portRange - portRange * 0.2) {
             resetPort()
             i = 0
         }
