@@ -1,7 +1,6 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
-import it.unibo.graph.interfaces.Labels.HasTS
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
@@ -101,7 +100,7 @@ private fun join(
             props.forEach { p ->
                 curMatch.add(
                     Step(
-                        step.type,
+                        step.label,
                         step.properties + Filter(
                             curJoinFilter.property,
                             curJoinFilter.operator,
@@ -342,12 +341,10 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 }
                 if (lastAggregation) v.first / v.second else v
             }
-            AggOperator.SUM -> {
-                cNumbers.sumOf { it.first }
-            }
-            AggOperator.MAX -> {
-                cNumbers.maxOf { it.first }
-            }
+
+            AggOperator.SUM -> cNumbers.sumOf { it.first }
+            AggOperator.MAX -> cNumbers.maxOf { it.first }
+            AggOperator.COUNT -> cNumbers.sumOf { it.second }
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
@@ -477,8 +474,15 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 val alias: String? = step?.alias // get the alias (if any)
                 val c: Compare? = if (alias !== null) mapWhere[alias] else null // get the comparison operator (if any)
                 if ((step == null || ( // no filter
-                            (step.type === null || step.type === curElem.e.label)  // filter on label
-                                && step.properties.all { f -> curElem.e.getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware).any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) }}})) // filter on properties
+                            (step.label === null || step.label == curElem.e.label.name)  // filter on label
+                                && step
+                                    .properties
+                                    .filter { f -> !by.filter { it.operator != null }.map { it.property }.contains(f.property) } // do not apply filter on the result of group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
+                                    .all { f -> // for all filters...
+                                        curElem.e
+                                            .getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware) // ... a certain time-aware property must match
+                                            .any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) } }
+                                        })) // filter on properties
                                 && curElem.e.timeOverlap(timeaware, curElem.from, curElem.to) // check time overlap
                                 && (c === null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
                 ) {
@@ -491,13 +495,13 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                         if (curElem.index % 2 == 0) { // is node
                             val nextStep: IStep? = if (curElem.index + 1 < match.size) match[curElem.index + 1] else null // get the next step
                             (curElem.e as N)
-                                .getRels(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
+                                .getEdges(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
                                 .forEach {
                                     mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                 }
                         } else { // is edge...
                             val r = (curElem.e as R)
-                            if (curElem.e.label === HasTS) { // ... to time series
+                            if (curElem.e.label.name == HasTS) { // ... to time series
                                 launched++
                                 if (LIMIT == 1) {
                                     try {
@@ -507,14 +511,11 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                             .forEach {
                                                 mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                             }
-                                        // } catch (e: Exception) {
-                                        //     e.printStackTrace()
-                                        //     throw IllegalArgumentException(e.message)
                                     } finally {
                                         completed.incrementAndGet()
                                         wait.release()
                                     }
-                                }else{
+                                } else {
                                     launch(executor) {
                                         try {
                                             g.getTSM()
@@ -523,9 +524,6 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                                 .forEach {
                                                     mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                                                 }
-                                            // } catch (e: Exception) {
-                                            //     e.printStackTrace()
-                                            //     throw IllegalArgumentException(e.message)
                                         } finally {
                                             completed.incrementAndGet()
                                             wait.release()

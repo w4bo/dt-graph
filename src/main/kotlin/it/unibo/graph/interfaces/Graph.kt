@@ -5,16 +5,20 @@ import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwise
 import it.unibo.graph.utils.encodeBitwise
 import org.locationtech.jts.io.WKTReader
+import org.rocksdb.RocksDB
 
 interface Graph {
+    val path: String
+    var dynamicDb: RocksDB?
     var tsm: TSManager?
+
     fun getTSM(): TSManager = tsm!!
     fun close() {}
     fun clear()
-    fun createNode(label: Label, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long, isTs: Boolean): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, isTs = isTs, g = this)
+    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long, isTs: Boolean): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, isTs = isTs, g = this)
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
-    fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
+    fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Long = nextPropertyId(), from: Long, to: Long): P =
         P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)
@@ -50,7 +54,7 @@ interface Graph {
         }
     }
 
-    fun createEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
+    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
     fun nextEdgeId(): Long
     fun addEdge(r: R): R {
         val (source, key) = decodeBitwise(r.fromN)
@@ -65,12 +69,12 @@ interface Graph {
     fun addEdgeTS(tsId: Long, key: Long, r: R): R {
         val ts = tsm!!.getTS(tsId)
         val n = ts.get(key)
-        n.relationships += r
+        n.edges += r
         ts.add(n, isUpdate = true)
         return r
     }
 
-    fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
+    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>

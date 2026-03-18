@@ -3,11 +3,7 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.utils.loadProps
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+import it.unibo.graph.utils.*
 
 val props = loadProps()
 
@@ -23,10 +19,8 @@ class AsterixDBTSM private constructor(
 
     init {
         if (!checkRestore(dataverse)) {
-            val result = createTSMEnvironment()
-            if (!result) {
-                println("Something went wrong while creating $dataverse environment")
-                throw Exception()
+            if (!createTSMEnvironment()) {
+                throw Exception("Something went wrong while creating $dataverse")
             }
         }
     }
@@ -41,13 +35,15 @@ class AsterixDBTSM private constructor(
         return queryAsterixDB(clusterControllerHost, query, checkResults = true)
     }
 
-    override fun addTS(id: Long): TS {
-        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype)
+    fun addAsterixTS(id: Long, createSpatialIndex: Boolean): TS {
+        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = false, createSpatialIndex = createSpatialIndex)
         return newTS
     }
 
+    override fun addTS(id: Long): TS = addAsterixTS(id, false)
+
     override fun getTS(id: Long): TS {
-        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true)
+        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true, createSpatialIndex = false)
     }
 
     override fun clear() {
@@ -55,35 +51,15 @@ class AsterixDBTSM private constructor(
     }
 
     // Private utility functions
-    private fun queryAsterixDB(host: String, query: String, checkResults: Boolean = false): Boolean {
-        val uri = URI(host)
-        val connection = uri.toURL().openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to query, "pretty" to "true", "mode" to "immediate", "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${
-                URLEncoder.encode(
-                    it.value, StandardCharsets.UTF_8.name()
-                )
-            }"
-        }
-
-        connection.outputStream.use { it.write(postData.toByteArray()) }
-
-
+    private fun queryAsterixDB(host: String, sql: String, checkResults: Boolean = false): Boolean {
+        val connection = query(sql, host, dataverse)
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(e)
+            e.printStackTrace()
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            throw UnsupportedOperationException(errMsg)
         }
-
         if (connection.responseCode in 200..299) {
             // If I just want the request to return successfully
             if (!checkResults) {
@@ -109,49 +85,33 @@ class AsterixDBTSM private constructor(
                 CREATE DATAVERSE $dataverse;
                 USE $dataverse;
 
-                CREATE TYPE PropertyValue AS OPEN {
-                    stringValue: string?,
-                    doubleValue: double?,
-                    intValue: int?,
-                    geometryValue: string?
+                CREATE TYPE Property AS OPEN {
+                    `$KEY`: string,
+                    `$TYPE`: int
                 };
 
-                CREATE TYPE Property AS CLOSED {
-                    sourceId: bigint,
-                    sourceType: Boolean,
-                    `key`: string,
-                    `value`: PropertyValue,
-                    `type`: int,
-                    fromTimestamp: DATETIME?,
-                    toTimestamp: DATETIME?
+                CREATE TYPE Edge AS CLOSED {
+                    $LABEL: int,
+                    $FROM_N: bigint,
+                    $TO_N: bigint
                 };
 
-                CREATE TYPE NodeRelationship AS CLOSED {
-                    `type`: string,
-                    fromN: bigint,
-                    toN: bigint,
-                    fromTimestamp: DATETIME?,
-                    toTimestamp: DATETIME?,
-                    properties: [Property]?
-                };
-
-                CREATE TYPE Measurement AS OPEN {
-                    timestamp: int,
-                    property: STRING,
-                    location: geometry?,
-                    relationships: [NodeRelationship]?,
-                    properties: [Property]?
+                CREATE TYPE Event AS OPEN {
+                    $ID: bigint,
+                    $LABEL: int,
+                    $LOCATION: geometry?,
+                    $EDGES: [Edge]?
                 };
             """.trimIndent()
     }
 
     companion object {
-        fun createDefault(g: Graph): AsterixDBTSM {
+        fun createDefault(g: Graph, dataverse: String = props["default_dataverse"].toString()): AsterixDBTSM {
             return AsterixDBTSM(
                 g,
                 System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
                 props["default_cc_port"].toString(),
-                props["default_dataverse"].toString(),
+                dataverse,
                 System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
                 props["default_datatype"].toString(),
             )

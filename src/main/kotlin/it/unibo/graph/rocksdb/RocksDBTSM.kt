@@ -6,8 +6,6 @@ import it.unibo.graph.interfaces.TSManager
 import org.rocksdb.Options
 import org.rocksdb.RocksDB
 
-const val DB_NAME = "db_ts"
-
 class RocksDBTSM(override val g: Graph): TSManager {
     val db: RocksDB
 
@@ -15,7 +13,7 @@ class RocksDBTSM(override val g: Graph): TSManager {
         val options = Options()
         options.setCreateIfMissing(true)
         options.setCreateMissingColumnFamilies(true)
-        db = RocksDB.open(options, DB_NAME)
+        db = RocksDB.open(options, "${g.path}/ts_rocksdb")
     }
 
     override fun getTS(id: Long): TS {

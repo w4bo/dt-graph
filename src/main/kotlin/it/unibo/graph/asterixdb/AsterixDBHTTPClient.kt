@@ -1,13 +1,11 @@
 package it.unibo.graph.asterixdb
 
-import it.unibo.graph.utils.DATAFEED_PREFIX
-import it.unibo.graph.utils.DATASET_PREFIX
-import it.unibo.graph.utils.FIRSTFEEDPORT
-import it.unibo.graph.utils.LASTFEEDPORT
+import it.unibo.graph.utils.*
+import org.json.JSONArray
 import org.json.JSONObject
-import java.net.*
-import java.nio.charset.StandardCharsets
-import kotlin.random.Random
+import org.slf4j.LoggerFactory
+import java.net.Socket
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 class AsterixDBHTTPClient(
         private val clusterControllerHost: String,
@@ -16,21 +14,18 @@ class AsterixDBHTTPClient(
         private val dataverse: String,
         datatype: String,
         private val tsId: Long,
-        seed: Long,
-        get : Boolean = false
+        get : Boolean = false,
+        val createSpatialIndex: Boolean,
 ) {
+    private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
     private val feedName: String = "$DATAFEED_PREFIX$tsId"
     private val dataset: String = "$DATASET_PREFIX$tsId"
-
-
     fun getDataset(): String = dataset
     fun getDataFeedPort(): Int = dataFeedPort
 
     init {
         if (!get) {
-            // If it's not, just try to use the old port
-            initializeTS(dataFeedIp, dataFeedPort, datatype)
-            Random(seed)
+            initializeTS(dataFeedIp, dataFeedPort, datatype)  // If it's not, just try to use the old port
         }
     }
 
@@ -43,232 +38,157 @@ class AsterixDBHTTPClient(
         return queryAsterixDB(checkDatasetExistence, checkResults = true)
     }
 
-    fun isDatasetEmpty(dataverse : String, dataset : String) : Boolean {
-        val checkDatasetExistence = """
-            USE $dataverse;
-            SELECT *
-            FROM $dataset
-            LIMIT 1;
-        """.trimIndent()
-        return !queryAsterixDB(checkDatasetExistence, checkResults = true)
+    fun stopFeed() = queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
+
+    fun createDataset(dataType: String): Boolean {
+        var datasetSetupQuery = "USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key id;".trimIndent()
+        if (createSpatialIndex)
+            datasetSetupQuery += "CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;"
+        return queryAsterixDB(datasetSetupQuery)
     }
 
-    private fun initializeTS(dataFeedIp: String, feedPort: Int, dataType: String) : Boolean{
-        var newDataFeedPort = feedPort
-
-        val datasetSetupQuery = """
-            USE $dataverse;
-            CREATE DATASET $dataset($dataType)IF NOT EXISTS primary key timestamp;
-            CREATE INDEX measurement_location_$tsId on $dataset(location) type rtree;
-        """.trimIndent()
+    @OptIn(ExperimentalAtomicApi::class)
+    private fun initializeTS(dataFeedIp: String, feedPort: Int, dataType: String) : Boolean {
+        dataFeedPort = feedPort
         val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
-        val dataFeedSetupQuery = """
-                    USE $dataverse;
-                    DROP FEED $feedName IF EXISTS;
-                    CREATE FEED $feedName WITH {
-                      "adapter-name": "socket_adapter",
-                      "sockets": "${hostIP}:$newDataFeedPort",
-                      "address-type": "IP",
-                      "type-name": "$dataType",
-                      "policy": "Spill",
-                      "format": "adm"
-                    };
-                    CONNECT FEED MeasurementsFeed_$tsId TO DATASET $dataset;
-                    START FEED $feedName;
-                """.trimIndent()
-        val datasetExists = checkDatasetExists(dataverse, dataset)
-        var datasetSetup = false
 
-        // IF dataset does not exist, create it
-        if (!datasetExists) {
-            datasetSetup = queryAsterixDB(datasetSetupQuery)
+        var datasetExists = checkDatasetExists(dataverse, dataset)
+        if (!datasetExists) { // If the dataset does not exist, create it
+            datasetExists = createDataset(dataType)
         }
-        try{
-            //If dataset already existed or I've successfully created it
-            if(datasetSetup || datasetExists){
-                var socketConnect: Boolean
-                // Try to set up a DataFeed
-                var datafeedSetup = queryAsterixDB(dataFeedSetupQuery)
-                // Try to connect to it
-                socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
-                // Until I've successfully created a DataFeed and I can actually connect to it
-                while(!datafeedSetup || !socketConnect){
-                    // TODO: cap the number of retries and fail if it doesn't work
-                    // TODO: Update this new port generation, should be more deterministic
-                    newDataFeedPort = randomDataFeedPort()
-                    datafeedSetup = setupDataFeed(hostIP, newDataFeedPort, dataverse, feedName, dataset, dataType)
-
-                    if(datafeedSetup){
-                        socketConnect = tryDataFeedConnection(dataFeedIp, newDataFeedPort)
+        var failures = 0
+        if (datasetExists) { // If dataset already existed or I have successfully created it
+            do { // Until I have successfully created a DataFeed and I can actually connect to it
+                var datafeedSetup = false
+                var socketConnect = false
+                try {
+                    stopFeed()
+                    datafeedSetup = setupDataFeed(hostIP, dataFeedPort, dataverse, feedName, dataset, dataType)
+                    if (!datafeedSetup) {
+                        val msg = "Cannot setup feed: $dataFeedPort"
+                        logger.warn(msg)
+                        failures += 1
+                        throw IllegalArgumentException(msg)
                     }
+                    socketConnect = tryDataFeedConnection(dataFeedIp, dataFeedPort) // Try to connect to it
+                    if (!socketConnect) {
+                        val msg = "Cannot connect to feed: $dataFeedPort"
+                        logger.warn(msg)
+                        failures += 1
+                        throw IllegalArgumentException(msg)
+                    }
+                    if (failures > 0) logger.warn("Failures: $failures")
+                    return true
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    dataFeedPort = incPort()
                 }
-                dataFeedPort = newDataFeedPort
-                return true
-            }else{
-                return false
-            }
-        } catch(_: Exception){
-            newDataFeedPort = randomDataFeedPort()
-            return initializeTS(dataFeedIp, newDataFeedPort, dataType)
+            } while (!datafeedSetup && !socketConnect)
         }
+        return false
     }
 
-    private fun setupDataFeed(dataFeedIp: String, dataFeedPort: Int, dataverse: String, feedName: String, dataset: String, dataType: String) : Boolean{
+    fun dropFeed(): Boolean {
+        return queryAsterixDB("USE $dataverse; DROP FEED $feedName IF EXISTS;")
+    }
+
+    private fun setupDataFeed(dataFeedIp: String, dataFeedPort: Int, dataverse: String, feedName: String, dataset: String, dataType: String): Boolean {
         val dataFeedSetupQuery = """
-                    USE $dataverse;
-                    DROP FEED $feedName IF EXISTS;
-                    CREATE FEED $feedName WITH {
-                      "adapter-name": "socket_adapter",
-                      "sockets": "$dataFeedIp:$dataFeedPort",
-                      "address-type": "IP",
-                      "type-name": "$dataType",
-                      "policy": "Spill",
-                      "format": "adm"
-                    };
-                    CONNECT FEED $feedName TO DATASET $dataset;
-                    START FEED $feedName;
-                """.trimIndent()
+            USE $dataverse;
+            DROP FEED $feedName IF EXISTS;
+            CREATE FEED $feedName WITH {
+                "adapter-name": "socket_adapter",
+                "sockets": "$dataFeedIp:$dataFeedPort",
+                "address-type": "IP",
+                "type-name": "$dataType",
+                "policy": "Spill",
+                "format": "adm"
+            };
+            CONNECT FEED $feedName TO DATASET $dataset;
+            START FEED $feedName;
+        """.trimIndent()
         return queryAsterixDB(dataFeedSetupQuery)
     }
 
-    private fun tryDataFeedConnection(dataFeedIp: String, dataFeedPort: Int): Boolean{
+    private fun tryDataFeedConnection(dataFeedIp: String, dataFeedPort: Int): Boolean {
         try {
-            val testSocket = Socket(dataFeedIp, dataFeedPort)
-            testSocket.close()
+            Socket(dataFeedIp, dataFeedPort).close()
             return true
-        }catch(e: Exception){
-            println("Failed to open a socket, stopping datafeed and will try to open a new one")
-            deleteTs(deleteDataset = false)
+        } catch (_: Exception) {
             return false
         }
     }
 
-    fun randomDataFeedPort(): Int{
-        return generateSequence { (FIRSTFEEDPORT + tsId.toInt()..LASTFEEDPORT).random() }
-            .distinct()
-            .firstOrNull() ?: throw IllegalStateException("No available port found")
-    }
-
-    private fun queryAsterixDB(query: String, checkResults: Boolean = false): Boolean {
-        val uri = URI(clusterControllerHost)
-        val connection = uri.toURL().openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to query,
-            "pretty" to "true",
-            "mode" to "immediate",
-            "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-
-        connection.outputStream.use { it.write(postData.toByteArray()) }
-
+    private fun queryAsterixDB(sql: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
+        val connection = query(sql, clusterControllerHost, dataverse)
+        val responseCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(e)
+        } catch (_: Exception) {
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            if (blockOnError) throw UnsupportedOperationException(errMsg)
+            errMsg
         }
 
-        if(connection.responseCode in 200..299) {
-            // If I just want the request to return successfully
-            if(!checkResults){
+        if (responseCode in 200..299) {
+            if (!checkResults) { // If I just want the request to return successfully
                 return true
-            }else{
+            } else {
                 // Check if it returned something
                 val isEmpty = Regex("\"results\"\\s*:\\s*\\[\\s*]").containsMatchIn(responseText)
                 return !isEmpty
             }
-        }
-        else {
-            println(responseText)
+        } else {
             return false
         }
-
     }
 
     fun updateTs(upsertStatement: String) {
         queryAsterixDB(upsertStatement)
     }
 
-    fun selectFromAsterixDB(queryStatement: String, isGroupBy: Boolean = false): AsterixDBResult {
-        val connection = URL(clusterControllerHost).openConnection() as HttpURLConnection
-        connection.requestMethod = "POST"
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-        connection.doOutput = true
-
-        val params = mapOf(
-            "statement" to queryStatement,
-            "pretty" to "true",
-            "mode" to "immediate",
-            "dataverse" to dataverse
-        )
-
-        val postData = params.entries.joinToString("&") {
-            "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
-        }
-
-        connection.outputStream.use { it.write(postData.toByteArray()) }
-
-        val statusCode = connection.responseCode
+    fun selectFromAsterixDB(sql: String, isGroupBy: Boolean = false): AsterixDBResult {
+        val connection = query(sql, clusterControllerHost, dataverse)
+        val responseCode = connection.responseCode
         val responseText = try {
             connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            println(e)
-            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw Exception()
+        } catch (_: Exception) {
+            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+            if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned ts in TS yet
+                throw UnsupportedOperationException("SQL:\n ${sql}\nError:\nerrMsg")
+            } else {
+                errMsg
+            }
         }
 
-        return when {
-            statusCode in 200..299 -> {
-                val cleanedQuery = queryStatement.substringAfter(";").trimStart()
+        return when (responseCode) {
+            in 200..299 -> {
+                val cleanedQuery = sql.substringAfter(";").trimStart()
                 if (cleanedQuery.startsWith("SELECT", ignoreCase = true)) {
-                    return try {
+                    try {
                         val jsonResponse = JSONObject(responseText)
                         val resultArray = jsonResponse.getJSONArray("results")
-                        if(!isGroupBy){
+                        if (!isGroupBy) {
                             AsterixDBResult.SelectResult(resultArray)
-                        }else{
+                        } else {
                             AsterixDBResult.GroupByResult(resultArray)
                         }
                     } catch (e: Exception) {
-                        println(e)
-                        println("Error parsing JSON response: ${e.message}")
                         throw Exception("Error parsing JSON response: ${e.message}")
                     }
                 } else {
                     AsterixDBResult.InsertResult
                 }
             }
-            else -> {
-                println("Query failed with status code $statusCode")
-                throw Exception("Query failed with status code $statusCode")
-            }
-        }
-    }
 
-    fun deleteTs(deleteDataset: Boolean = true){
-        val sqlStatement : String
-        sqlStatement = if(deleteDataset) {
-            """
-            USE $dataverse;
-            STOP FEED $feedName;
-            DROP FEED $feedName;
-            DROP dataset $dataset;
-            """.trimIndent()
-        }else{
-            """ 
-            USE $dataverse;
-            STOP FEED $feedName;
-            DROP FEED $feedName;
-            """.trimIndent()
+            400 ->
+                if (!isGroupBy) {
+                    AsterixDBResult.SelectResult(JSONArray())
+                } else {
+                    AsterixDBResult.GroupByResult(JSONArray())
+                }
+
+            else -> throw UnsupportedOperationException("Query failed with status code $responseCode: $responseText")
         }
-        queryAsterixDB(sqlStatement)
     }
 }

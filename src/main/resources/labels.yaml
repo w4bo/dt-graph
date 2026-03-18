@@ -1,0 +1,97 @@
+labels:
+  - AgriFarm
+  - AgriParcel
+  - Device
+  - Person
+  - Humidity
+  - SolarRadiation
+  - Measurement
+  - Environment
+  - A
+  - B
+  - C
+  - D
+  - E
+  - F
+  - G
+  - HasTS
+  - HasParcel
+  - HasDevice
+  - HasOwner
+  - HasManutentor
+  - HasFriend
+  - HasHumidity
+  - HasTemperature
+  - HasSolarRadiation
+  - Foo
+  - TargetLocation
+  - NDVI
+  - HasNDVI
+  - Drone
+  - HasDrone
+  - User
+  - Infrastructure
+  - InfrastructureType
+  - Group
+  - Observation
+  - Platform
+  - PlatformType
+  - Sensor
+  - SensorType
+  - hasOwner
+  - hasType
+  - hasInfrastructure
+  - hasSensor
+  - hasObservation
+  - hasGroups
+  - hasCoverage
+  - Presence
+  - Occupancy
+  - SemanticObservationType
+  - VirtualSensorType
+  - hasInputType
+  - hasSemanticObservationType
+  - VirtualSensor
+  - hasPresence
+  - hasLocation
+  - location
+  - hasOccupancy
+  - occupancy
+  - hasType_
+  - hasTemperature
+  - Temperature  - HR
+  - hasParameters
+  - ABPs
+  - ABPd
+  - ABPm
+  - RR
+  - SpO2
+  - Temperature F
+  - O2 Flow
+  - FiO2
+  - Braden Sensory Perception
+  - Braden Moisture
+  - Braden Activity
+  - Braden Mobility
+  - Braden Nutrition
+  - Braden Friction/Shear
+  - Parameters Checked
+  - Alarms On
+  - Skin Care
+  - Back Care
+  - Arterial Line placed in outside facility
+  - 20 Gauge placed in outside facility
+  - Subglottal Suctioning
+  - Glucose (whole blood)
+  - Trach Care
+  - Arterial Line Dressing Occlusive
+  - History of falling (within 3 mnths)*
+  - Secondary diagnosis
+  - Ambulatory aid
+  - IV/Saline lock
+  - Gait/Transferring
+  - Mental status
+  - 20 Gauge Dressing Occlusive
+  - 20 Gauge placed in the field
+  - Temperature
+  - HR

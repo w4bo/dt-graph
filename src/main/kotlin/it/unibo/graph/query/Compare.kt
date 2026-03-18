@@ -14,7 +14,6 @@ class Compare(val first: Any, val second: Any, val property: String, val operato
         }
     }
     private fun compareIfSameType(a: Any, b: Any, operator: Operators): Boolean {
-
         if (operator == Operators.EQ) return a == b
 
         if (a is Comparable<*> && b is Comparable<*>) {
@@ -29,11 +28,10 @@ class Compare(val first: Any, val second: Any, val property: String, val operato
                 Operators.GTE -> compA >= compB
                 Operators.ST_CONTAINS -> geometryCheck(a, b, operator)
                 Operators.ST_INTERSECTS -> geometryCheck(a,b, operator)
-
-                else -> false
+                else -> throw UnsupportedOperationException("$operator is not supported.")
             }
         }
-        return false
+        throw UnsupportedOperationException("Cannot compare $first $operator $second")
     }
 
     private fun geometryCheck(a: Any, b: Any, operator: Operators): Boolean {

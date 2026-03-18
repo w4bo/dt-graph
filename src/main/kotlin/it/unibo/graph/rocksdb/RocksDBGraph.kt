@@ -1,52 +1,47 @@
 package it.unibo.graph.rocksdb
 
 import it.unibo.graph.interfaces.*
+import it.unibo.graph.utils.PATH
 import org.apache.commons.lang3.NotImplementedException
 import org.rocksdb.*
+import java.io.File
 
-class RocksDBGraph : Graph {
+class RocksDBGraph(override val path: String = PATH, override var dynamicDb: RocksDB? = null) : Graph {
 
-    companion object {
-        private var db: RocksDB? = null
-        private const val DB_NAME = "db_graph"
-        var nodes: ColumnFamilyHandle? = null
-        var edges: ColumnFamilyHandle? = null
-        var properties: ColumnFamilyHandle? = null
+    var nodes: ColumnFamilyHandle? = null
+    var edges: ColumnFamilyHandle? = null
+    var properties: ColumnFamilyHandle? = null
+    val options = DBOptions()
+    val cfHandles: List<ColumnFamilyHandle> = ArrayList()
 
-        // Synchronized function to ensure thread safety
-        @Synchronized
-        fun getInstance(): RocksDB {
-            if (db == null) {
-                val options = DBOptions()
-                options.setCreateIfMissing(true)
-                options.setCreateMissingColumnFamilies(true)
-                val cfDescriptors = listOf(
-                    ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
-                    ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions()),
-                    ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions()),
-                    ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
-                )
-                val cfHandles: List<ColumnFamilyHandle> = ArrayList()
-                db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
-                nodes = cfHandles[1]
-                edges = cfHandles[2]
-                properties = cfHandles[3]
-            }
-            return db!!
-        }
+    init {
+
+        options.setCreateIfMissing(true)
+        options.setCreateMissingColumnFamilies(true)
+        val cfDescriptors = listOf(
+            ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("nodes".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("edges".toByteArray(), ColumnFamilyOptions()),
+            ColumnFamilyDescriptor("properties".toByteArray(), ColumnFamilyOptions())
+        )
+
+        dynamicDb = RocksDB.open(options, "${path}/graph_rocksdb", cfDescriptors, cfHandles)
+        nodes = cfHandles[1]
+        edges = cfHandles[2]
+        properties = cfHandles[3]
     }
+
     override var tsm: TSManager? = null
-    private val db = getInstance()
     private var nodeId = 0L
     private var edgeId = 0L
     private var propId = 0L
 
     override fun clear() {
         listOf(nodes, edges, properties).forEach {
-            val iterator = db.newIterator(it)
+            val iterator = dynamicDb!!.newIterator(it)
             iterator.seekToFirst()
             while (iterator.isValid) {
-                db.delete(it, iterator.key())
+                dynamicDb!!.delete(it, iterator.key())
                 iterator.next()
             }
         }
@@ -56,8 +51,10 @@ class RocksDBGraph : Graph {
     }
 
     override fun close() {
-        // db.close()
-        // options.close()
+        cfHandles.forEach { it.close() }
+        dynamicDb?.closeE()
+        options.close()
+        File("$path/properties/LOCK").delete()
     }
 
     override fun nextNodeId(): Long = nodeId++
@@ -67,17 +64,17 @@ class RocksDBGraph : Graph {
     override fun nextEdgeId(): Long = edgeId++
 
     override fun addNode(n: N): N {
-        db.put(nodes, "${n.id}".toByteArray(), n.serialize())
+        dynamicDb!!.put(nodes, "${n.id}".toByteArray(), n.serialize())
         return n
     }
 
     override fun addPropertyLocal(key: Long, p: P): P {
-        db.put(properties, "${p.id}".toByteArray(), p.serialize())
+        dynamicDb!!.put(properties, "${p.id}".toByteArray(), p.serialize())
         return p
     }
 
     override fun addEdgeLocal(key: Long, r: R): R {
-        db.put(edges, "${r.id}".toByteArray(), r.serialize())
+        dynamicDb!!.put(edges, "${r.id}".toByteArray(), r.serialize())
         return r
     }
 
@@ -87,7 +84,7 @@ class RocksDBGraph : Graph {
 
     override fun getNodes(): MutableList<N> {
         val acc: MutableList<N> = mutableListOf()
-        val iterator = db.newIterator(nodes)
+        val iterator = dynamicDb!!.newIterator(nodes)
         iterator.seekToFirst()
         while (iterator.isValid) {
             acc += N.fromByteArray(iterator.value(), this)
@@ -101,17 +98,17 @@ class RocksDBGraph : Graph {
     }
 
     override fun getProp(id: Long): P {
-        val b = db.get(properties, "$id".toByteArray())
+        val b = dynamicDb!!.get(properties, "$id".toByteArray())
         return P.fromByteArray(b, this)
     }
 
     override fun getNode(id: Long): N {
-        val b = db.get(nodes, "$id".toByteArray())
+        val b = dynamicDb!!.get(nodes, "$id".toByteArray())
         return N.fromByteArray(b, this)
     }
 
     override fun getEdge(id: Long): R {
-        val b = db.get(edges, "$id".toByteArray())
+        val b = dynamicDb!!.get(edges, "$id".toByteArray())
         return R.fromByteArray(b, this)
     }
 }
