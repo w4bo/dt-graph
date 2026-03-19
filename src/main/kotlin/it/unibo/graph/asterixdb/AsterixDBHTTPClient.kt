@@ -5,57 +5,31 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.net.Socket
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 class AsterixDBHTTPClient(
-        private val clusterControllerHost: String,
-        dataFeedIp: String,
-        private var dataFeedPort: Int,
-        private val dataverse: String,
-        datatype: String,
-        private val tsId: Long,
-        get : Boolean = false,
-        val createSpatialIndex: Boolean,
+    private val clusterControllerHost: String,
+    val dataFeedIp: String,
+    var dataFeedPort: Int,
+    private val dataverse: String,
+    val dataType: String,
+    private val tsId: Long = 0L,
+    val dataset: String = "$DATASET_PREFIX$tsId",
+    val feedName: String = "$DATAFEED_PREFIX$tsId"
 ) {
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
-    private val feedName: String = "$DATAFEED_PREFIX$tsId"
-    private val dataset: String = "$DATASET_PREFIX$tsId"
-    fun getDataset(): String = dataset
-    fun getDataFeedPort(): Int = dataFeedPort
-
-    init {
-        if (!get) {
-            initializeTS(dataFeedIp, dataFeedPort, datatype)  // If it's not, just try to use the old port
-        }
-    }
-
-    fun checkDatasetExists(dataverse : String, dataset : String) : Boolean {
-        val checkDatasetExistence = """
-            SELECT VALUE ds
-            FROM Metadata.`Dataset` ds
-            WHERE ds.DataverseName = "$dataverse" AND ds.DatasetName = "$dataset";      
-        """.trimIndent()
-        return queryAsterixDB(checkDatasetExistence, checkResults = true)
-    }
 
     fun stopFeed() = queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
 
     fun createDataset(dataType: String): Boolean {
-        var datasetSetupQuery = "USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key id;".trimIndent()
-        if (createSpatialIndex)
-            datasetSetupQuery += "CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;"
-        return queryAsterixDB(datasetSetupQuery)
+        return queryAsterixDB("USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key $TSID, $ID;")
     }
 
-    @OptIn(ExperimentalAtomicApi::class)
-    private fun initializeTS(dataFeedIp: String, feedPort: Int, dataType: String) : Boolean {
-        dataFeedPort = feedPort
-        val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
+    fun createSpatialIndex(): Boolean {
+        return queryAsterixDB("USE $dataverse; CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;")
+    }
 
-        var datasetExists = checkDatasetExists(dataverse, dataset)
-        if (!datasetExists) { // If the dataset does not exist, create it
-            datasetExists = createDataset(dataType)
-        }
+    fun initializeTS() : Boolean {
+        val datasetExists = createDataset(dataType)
         var failures = 0
         if (datasetExists) { // If dataset already existed or I have successfully created it
             do { // Until I have successfully created a DataFeed and I can actually connect to it
@@ -63,7 +37,7 @@ class AsterixDBHTTPClient(
                 var socketConnect = false
                 try {
                     stopFeed()
-                    datafeedSetup = setupDataFeed(hostIP, dataFeedPort, dataverse, feedName, dataset, dataType)
+                    datafeedSetup = setupDataFeed(/*hostIP*/) // val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
                     if (!datafeedSetup) {
                         val msg = "Cannot setup feed: $dataFeedPort"
                         logger.warn(msg)
@@ -92,7 +66,7 @@ class AsterixDBHTTPClient(
         return queryAsterixDB("USE $dataverse; DROP FEED $feedName IF EXISTS;")
     }
 
-    private fun setupDataFeed(dataFeedIp: String, dataFeedPort: Int, dataverse: String, feedName: String, dataset: String, dataType: String): Boolean {
+    fun setupDataFeed(): Boolean {
         val dataFeedSetupQuery = """
             USE $dataverse;
             DROP FEED $feedName IF EXISTS;
@@ -101,7 +75,6 @@ class AsterixDBHTTPClient(
                 "sockets": "$dataFeedIp:$dataFeedPort",
                 "address-type": "IP",
                 "type-name": "$dataType",
-                "policy": "Spill",
                 "format": "adm"
             };
             CONNECT FEED $feedName TO DATASET $dataset;
@@ -155,7 +128,7 @@ class AsterixDBHTTPClient(
         } catch (_: Exception) {
             val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
             if (!errMsg.contains("ASX1077")) { // The dataset could not exist: e.g. when a GS node does not have an assigned ts in TS yet
-                throw UnsupportedOperationException("SQL:\n ${sql}\nError:\nerrMsg")
+                throw UnsupportedOperationException("SQL:\n ${sql}\nError:\n$errMsg")
             } else {
                 errMsg
             }
@@ -190,5 +163,34 @@ class AsterixDBHTTPClient(
 
             else -> throw UnsupportedOperationException("Query failed with status code $responseCode: $responseText")
         }
+    }
+
+    fun createTSMEnvironment(): Boolean {
+        val sql =
+            """
+                DROP dataverse $dataverse IF EXISTS;
+                CREATE DATAVERSE $dataverse;
+                USE $dataverse;
+
+                CREATE TYPE Property AS OPEN {
+                    `$KEY`: string,
+                    `$TYPE`: int
+                };
+
+                CREATE TYPE Edge AS CLOSED {
+                    $LABEL: int,
+                    $FROM_N: bigint,
+                    $TO_N: bigint
+                };
+
+                CREATE TYPE Event AS OPEN {
+                    $TSID: bigint,
+                    $ID: bigint,
+                    $LABEL: int,
+                    $LOCATION: geometry?,
+                    $EDGES: [Edge]?
+                };
+            """.trimIndent()
+        return queryAsterixDB(sql)
     }
 }

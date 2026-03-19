@@ -4,11 +4,7 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.utils.FIRSTFEEDPORT
-import it.unibo.graph.utils.LASTFEEDPORT
-import it.unibo.graph.utils.Measurement
-import it.unibo.graph.utils.Person
-import it.unibo.graph.utils.resetPort
+import it.unibo.graph.utils.*
 import kotlin.math.roundToLong
 
 class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
@@ -36,13 +32,12 @@ class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
         g.addProperty(n.id, key = "label", value = row["label"].toString(), PropType.STRING)
         g.addProperty(n.id, key = "itemid", value = row["itemid"].toString().toInt(), PropType.INT)
         g.addProperty(n.id, key = "param_type", value = row["param_type"].toString(), PropType.STRING)
-        ts?.closeDataFeedConnection(closeRemote = true)
         val portRange = LASTFEEDPORT - FIRSTFEEDPORT
         if (i++ > portRange - portRange * 0.2) {
             resetPort()
             i = 0
         }
-        ts = (g.getTSM() as AsterixDBTSM).addAsterixTS(n.id, false) as AsterixDBTS
+        ts = g.getTSM().addTS(n.id) as AsterixDBTS
         g.addEdge("hasParameters", fromNode = person, toNode = n.id)
     }
 

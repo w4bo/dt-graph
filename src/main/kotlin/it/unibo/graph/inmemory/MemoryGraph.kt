@@ -104,5 +104,6 @@ open class MemoryGraph(
         dynamicDb?.closeE()
         options.close()
         File("$path/properties/LOCK").delete()
+        tsm?.close()
     }
 }

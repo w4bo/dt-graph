@@ -14,7 +14,8 @@ class TestIngestion {
 
     @Test
     fun testSmartBenchIngestion() {
-        val sizes = listOf("small") // listOf("small", "medium", "large") // System.getenv("DATASET_SIZE")
+        // val sizes = listOf("small") // System.getenv("DATASET_SIZE")
+        val sizes = listOf("small", "medium", "large")
 
         val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "datasets/dump/asterixdb"
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
@@ -43,7 +44,7 @@ class TestIngestion {
                 logger.info("\n--- Ingesting $dataset/$size. Iteration: #${i + 1}")
                 resetPort()
                 checkFolder(graphDataFolder)
-                checkFolder(asterixDataFolder)
+                // checkFolder(asterixDataFolder)
                 val graph = MemoryGraphACID(path = "datasets/dump/$dataset/$size")
                 val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size")
                 graph.tsm = tsm

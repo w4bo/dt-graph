@@ -159,8 +159,9 @@ fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Grap
     return edge
 }
 
-fun nodeToJson(n: N, isUpdate: Boolean): String {
+fun nodeToJson(n: N, isUpdate: Boolean, tsId: Long): String {
     return """{
+                "$TSID": $tsId,
                 "$ID": ${n.fromTimestamp},
                 "$LABEL": ${n.label.ordinal},
                 ${edgesToAsterixCitizen(n.edges, isUpdate)}
@@ -193,7 +194,7 @@ fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
     )
     node.keys()
         .forEach { key ->
-            if ((id == DUMMY_ID && key == VALUE) || !listOf(ID, LABEL, VALUE, FROM_TIMESTAMP, TO_TIMESTAMP).contains(key)) {
+            if ((id == DUMMY_ID && key == VALUE) || !listOf(ID, LABEL, VALUE, FROM_TIMESTAMP, TO_TIMESTAMP, TSID).contains(key)) {
                 when (key) {
                     EDGES -> node.getJSONArray(EDGES)
                         ?.let { array -> List(array.length()) { array.getJSONObject(it) } }

@@ -25,7 +25,7 @@ class TestKotlin {
      */
     private fun matrix(f: (Graph) -> Unit) {
 
-        listOf(MemoryGraphACID::class, MemoryGraph::class, RocksDBGraph::class)
+        listOf(MemoryGraph::class, MemoryGraphACID::class,  RocksDBGraph::class)
             .forEach { graphClass ->
                 listOf(
                     { graph: Graph -> AsterixDBTSM.createDefault(graph) },

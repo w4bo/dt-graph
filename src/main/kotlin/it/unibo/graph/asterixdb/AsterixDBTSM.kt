@@ -3,7 +3,11 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
-import it.unibo.graph.utils.*
+import it.unibo.graph.utils.incPort
+import it.unibo.graph.utils.loadProps
+import java.io.OutputStream
+import java.io.PrintWriter
+import java.net.Socket
 
 val props = loadProps()
 
@@ -12,97 +16,69 @@ class AsterixDBTSM private constructor(
     host: String,
     port: String,
     val dataverse: String,
-    val nodeControllersIPs: List<String>,
-    val datatype: String,
+    nodeControllersIPs: List<String>,
+    datatype: String,
 ) : TSManager {
-    val clusterControllerHost: String = "http://$host:$port/query/service"
 
-    init {
-        if (!checkRestore(dataverse)) {
-            if (!createTSMEnvironment()) {
-                throw Exception("Something went wrong while creating $dataverse")
+    val clusterControllerHost: String = "http://$host:$port/query/service"
+    val asterixHTTPClient: AsterixDBHTTPClient
+    val dataFeedIp : String = getDataFeedIP(0, nodeControllersIPs)
+    private lateinit var socket: Socket
+    private lateinit var outputStream: OutputStream
+    private lateinit var writer: PrintWriter
+    private var isFeedConnectionOpen: Boolean = false
+
+    private fun getDataFeedIP(id: Long, ipList: List<String>): String {
+        val hash = id.hashCode()
+        val index = (hash and 0x7FFFFFFF) % ipList.size
+        return ipList[index]
+    }
+
+    fun openDataFeedConnection(dataFeedPort: Int) {
+        try {
+            asterixHTTPClient.setupDataFeed()
+        } catch (_: Exception) {
+            // the datafeed could be already opened and started, if so do nothing
+        }
+        socket = Socket(dataFeedIp, dataFeedPort)
+        outputStream = socket.getOutputStream()
+        writer = PrintWriter(outputStream, true)
+        isFeedConnectionOpen = true
+    }
+
+    fun closeDataFeedConnection(closeRemote: Boolean = false) {
+        if (this::writer.isInitialized) {
+            writer.close()
+            outputStream.close()
+            socket.close()
+            isFeedConnectionOpen = false
+            if (closeRemote) {
+                asterixHTTPClient.stopFeed()
+                asterixHTTPClient.dropFeed()
             }
         }
     }
 
-    // Check if dataverse already exists
-    private fun checkRestore(dataverse: String): Boolean {
-        val query = """
-            SELECT VALUE dv
-            FROM Metadata.`Dataverse` dv
-            WHERE dv.DataverseName = "$dataverse";
-        """.trimIndent()
-        return queryAsterixDB(clusterControllerHost, query, checkResults = true)
+    init {
+        asterixHTTPClient = AsterixDBHTTPClient(clusterControllerHost, dataFeedIp, incPort(), dataverse, datatype)
     }
 
-    fun addAsterixTS(id: Long, createSpatialIndex: Boolean): TS {
-        val newTS = AsterixDBTS(g, id + 1, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = false, createSpatialIndex = createSpatialIndex)
-        return newTS
+    override fun addTS(id: Long): TS {
+        if (!isFeedConnectionOpen)
+            openDataFeedConnection(asterixHTTPClient.dataFeedPort)
+        return AsterixDBTS(g, id + 1,  dataverse, asterixHTTPClient, writer)
     }
-
-    override fun addTS(id: Long): TS = addAsterixTS(id, false)
 
     override fun getTS(id: Long): TS {
-        return AsterixDBTS(g, id, clusterControllerHost, nodeControllersIPs, dataverse, datatype, get = true, createSpatialIndex = false)
+        if (!isFeedConnectionOpen)
+            openDataFeedConnection(asterixHTTPClient.dataFeedPort)
+        return AsterixDBTS(g, id, dataverse, asterixHTTPClient, writer)
     }
 
     override fun clear() {
-        queryAsterixDB(clusterControllerHost, getDataverseCreationQuery(dataverse))
-    }
-
-    // Private utility functions
-    private fun queryAsterixDB(host: String, sql: String, checkResults: Boolean = false): Boolean {
-        val connection = query(sql, host, dataverse)
-        val responseText = try {
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            val errMsg = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-            throw UnsupportedOperationException(errMsg)
-        }
-        if (connection.responseCode in 200..299) {
-            // If I just want the request to return successfully
-            if (!checkResults) {
-                return true
-            } else {
-                // Check if it returned something
-                val isEmpty = Regex("\"results\"\\s*:\\s*\\[\\s*]").containsMatchIn(responseText)
-                return !isEmpty
-            }
-        } else {
-            println(responseText)
-            return false
-        }
-    }
-
-    private fun createTSMEnvironment(): Boolean {
-        return queryAsterixDB(clusterControllerHost, getDataverseCreationQuery(dataverse))
-    }
-
-    private fun getDataverseCreationQuery(dataverse: String): String {
-        return """
-                DROP dataverse $dataverse IF EXISTS;
-                CREATE DATAVERSE $dataverse;
-                USE $dataverse;
-
-                CREATE TYPE Property AS OPEN {
-                    `$KEY`: string,
-                    `$TYPE`: int
-                };
-
-                CREATE TYPE Edge AS CLOSED {
-                    $LABEL: int,
-                    $FROM_N: bigint,
-                    $TO_N: bigint
-                };
-
-                CREATE TYPE Event AS OPEN {
-                    $ID: bigint,
-                    $LABEL: int,
-                    $LOCATION: geometry?,
-                    $EDGES: [Edge]?
-                };
-            """.trimIndent()
+        closeDataFeedConnection()
+        asterixHTTPClient.createTSMEnvironment()
+        asterixHTTPClient.initializeTS()
     }
 
     companion object {
@@ -116,5 +92,9 @@ class AsterixDBTSM private constructor(
                 props["default_datatype"].toString(),
             )
         }
+    }
+
+    override fun close() {
+        closeDataFeedConnection(true)
     }
 }

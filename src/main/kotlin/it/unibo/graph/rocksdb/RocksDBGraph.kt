@@ -15,7 +15,6 @@ class RocksDBGraph(override val path: String = PATH, override var dynamicDb: Roc
     val cfHandles: List<ColumnFamilyHandle> = ArrayList()
 
     init {
-
         options.setCreateIfMissing(true)
         options.setCreateMissingColumnFamilies(true)
         val cfDescriptors = listOf(
@@ -55,6 +54,7 @@ class RocksDBGraph(override val path: String = PATH, override var dynamicDb: Roc
         dynamicDb?.closeE()
         options.close()
         File("$path/properties/LOCK").delete()
+        tsm?.close()
     }
 
     override fun nextNodeId(): Long = nodeId++

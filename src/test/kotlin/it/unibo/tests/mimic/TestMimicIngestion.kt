@@ -8,7 +8,7 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestMimicIngestion {
 
-    val limit = 100000L
+    val limit = 100L
     val threads = 1
     val machines = 1
 

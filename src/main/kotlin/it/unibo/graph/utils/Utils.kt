@@ -142,18 +142,16 @@ fun query(sql: String, host: String, dataverse: String): HttpURLConnection {
     connection.requestMethod = "POST"
     connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
     connection.doOutput = true
-
+    // println(sql)
     val params = mapOf(
         "statement" to sql,
         "pretty" to "true",
         "mode" to "immediate",
         "dataverse" to dataverse
     )
-
     val postData = params.entries.joinToString("&") {
         "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
     }
-
     connection.outputStream.use { it.write(postData.toByteArray()) }
     return connection
 }

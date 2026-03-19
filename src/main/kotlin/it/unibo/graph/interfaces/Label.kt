@@ -67,7 +67,7 @@ interface Label {
             val isNewFile = !yamlFile.exists()
             FileWriter(yamlFile, true).use { writer ->
                 if (isNewFile) writer.write("labels:\n")
-                writer.write("  - $labelName\n")
+                writer.write("  - \"$labelName\"\n")
             }
         }
     }

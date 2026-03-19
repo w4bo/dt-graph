@@ -22,131 +22,107 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.logging.Logger
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataPath: List<String>): Loader {
+    val logger = Logger.getLogger(this.javaClass.name)
     private val mapper: ObjectMapper = jacksonObjectMapper()
     private val tsm = graph.getTSM() as AsterixDBTSM
-    private var gsTime: Long = -1
-    private var tsTime: Long = -1
+    private var gsTime: Long = 0
+    private var tsTime: Long = 0
 
     // JSON-id -> graph node-id
     private val graphIdList: MutableMap<String, Long> = mutableMapOf()
-
     // Edges failed to create because some entity did not exist
     private val leftoverEdgesList: MutableList<Triple<String, Long, String>> = mutableListOf()
-
     // Label caching
     private val edgeLabelCache: MutableMap<String, String> = mutableMapOf()
 
-    private fun hasLabel(key: String): String =
-        edgeLabelCache.getOrPut(key) { "has${key.replaceFirstChar {
-            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-        }}" }
+    private fun hasLabel(key: String): String = edgeLabelCache.getOrPut(key) { "has${key.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}" }
 
     override fun loadData() {
         val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
         val tsList: MutableMap<TS, String> = mutableMapOf()
 
-        val graphLoadingTime = measureTimeMillis {
-            for (file in dataPath) {
-                val path = Paths.get(file.toString()).toAbsolutePath().normalize()
-                require(Files.exists(path)) { "File not found: $file" }
-                var count = 0
-                val fileTime = measureTimeMillis {
-                    for (obj in loadJsonObjects(path.toUri(), mapper)) {
-                        count++
 
-                        val typeVal = (obj[TYPE] as? String) ?: error("Missing \"${TYPE}\" in JSON object")
-                        val entityId = obj[ID] as? String ?: error("Missing \"${ID}\" in JSON object")
-                        val nodeLabel =
-                            typeVal.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        for (file in dataPath) {
+            logger.info { "Loading $file..." }
+            val path = Paths.get(file).toAbsolutePath().normalize()
+            require(Files.exists(path)) { "File not found: $file" }
+            for (obj in loadJsonObjects(path.toUri(), mapper)) {
+                val typeVal = (obj[TYPE] as? String) ?: error("Missing \"${TYPE}\" in JSON object")
+                val entityId = obj[ID] as? String ?: error("Missing \"${ID}\" in JSON object")
+                val nodeLabel = typeVal.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
-                        if (!graphIdList.contains(entityId)) {
-                            // Add static node
-                            val node = graph.addNode(nodeLabel)
-                            val nodeId = node.id
-                            graphIdList[entityId] = nodeId
+                gsTime += measureTimeMillis {
+                    if (!graphIdList.contains(entityId)) {
+                        // Add static node
+                        val node = graph.addNode(nodeLabel)
+                        val nodeId = node.id
+                        graphIdList[entityId] = nodeId
 
-                            // Parse its properties
-                            for ((key, value) in obj) {
-                                when (value) {
-                                    is Map<*, *> -> {
-                                        val destId = value[ID] as? String
-                                        if (destId != null) {
-                                            val edgeLabel = hasLabel(key)
-                                            val targetId = graphIdList[destId]
-                                            if (targetId != null) {
-                                                graph.addEdge(edgeLabel, nodeId, targetId)
-                                            } else {
-                                                leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
-                                            }
+                        // Parse its properties
+                        for ((key, value) in obj) {
+                            when (value) {
+                                is Map<*, *> -> {
+                                    val destId = value[ID] as? String
+                                    if (destId != null) {
+                                        val edgeLabel = hasLabel(key)
+                                        val targetId = graphIdList[destId]
+                                        if (targetId != null) {
+                                            graph.addEdge(edgeLabel, nodeId, targetId)
+                                        } else {
+                                            leftoverEdgesList += Triple(edgeLabel, nodeId, destId)
                                         }
-                                    }
-
-                                    is List<*> -> {
-                                        for (subVal in value) {
-                                            processProperty(subVal!!, key, nodeId)
-                                        }
-                                    }
-
-                                    else -> {
-                                        processProperty(value, key, nodeId)
                                     }
                                 }
+
+                                is List<*> -> {
+                                    for (subVal in value) {
+                                        processProperty(subVal!!, key, nodeId)
+                                    }
+                                }
+
+                                else -> processProperty(value, key, nodeId)
                             }
+                        }
 
-                            // If it's a sensor, check if it has a TS attached
-                            if (typeVal == Sensor || typeVal == VirtualSensor) {
-                                val sensorId = obj["id"] as String
-                                val labelString = if (typeVal == Sensor) "Temperature" else "Presence"
-
-                                val sensorTsFilePath = path.parent
-                                    ?.resolve("timeseries")
-                                    ?.resolve("$sensorId.json")
-                                    ?.toAbsolutePath()
-                                    ?.normalize()
-
-                                if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
-                                    val newNode = graph.addNode(labelString, isTs = true)
-                                    val newTs = tsm.addTS(newNode.id)
-                                    graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
-                                    tsList[newTs] = sensorTsFilePath.toString()
-                                }
+                        // If it's a sensor, check if it has a TS attached
+                        if (typeVal == Sensor || typeVal == VirtualSensor) {
+                            val sensorId = obj["id"] as String
+                            val labelString = if (typeVal == Sensor) "Temperature" else "Presence"
+                            val sensorTsFilePath = path.parent
+                                ?.resolve("timeseries")
+                                ?.resolve("$sensorId.json")
+                                ?.toAbsolutePath()
+                                ?.normalize()
+                            if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
+                                val newNode = graph.addNode(labelString, isTs = true)
+                                val newTs = tsm.addTS(newNode.id)
+                                graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
+                                tsList[newTs] = sensorTsFilePath.toString()
                             }
                         }
                     }
                 }
-                println("Processed $count entities from $file in $fileTime ms")
-            }
-
-            val latentTime = measureTimeMillis {
-                for ((label, source, destId) in leftoverEdgesList) {
-                    val target = graphIdList[destId] ?: continue
-                    graph.addEdge(label, source, target)
-                }
-            }
-            println("Processed latent edges in $latentTime ms")
-        }
-
-        println("Starting TS data loading...")
-        val tsLoadingTime = measureTimeMillis {
-            if (threads > 1) {
-                runBlocking {
-                    val jobs = tsList.map { row ->
-                        launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
-                    }
-                    jobs.joinAll()
-                }
-            } else {
-                tsList.forEach { ts -> loadTS(ts.key as AsterixDBTS, ts.value) }
             }
         }
-        println("IT TOOK $tsLoadingTime ms to load TS data")
-        println("TOTAL ingestion time: ${graphLoadingTime + tsLoadingTime} ms")
-        print("Graph contains ${graph.getNodes().size} nodes and  ${graph.getEdges().size} edges")
-        gsTime = graphLoadingTime
-        tsTime = tsLoadingTime
+        gsTime += measureTimeMillis {
+            for ((label, source, destId) in leftoverEdgesList) {
+                val target = graphIdList[destId] ?: continue
+                graph.addEdge(label, source, target)
+            }
+        }
+        runBlocking {
+            val jobs = tsList.map { row ->
+                launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
+            }
+            jobs.joinAll()
+        }
+        tsm.asterixHTTPClient.stopFeed()
+        tsm.asterixHTTPClient.dropFeed()
+        tsm.asterixHTTPClient.createSpatialIndex()
     }
 
     private fun processProperty(property: Any, key: String, nodeId: Long) {
@@ -168,23 +144,23 @@ class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataP
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
         val filePath = projectRoot.resolve(path).normalize()
         if (Files.exists(filePath)) {
-            ts.openDataFeedConnection()
             Files.newBufferedReader(filePath).useLines { lines ->
                 for (line in lines) {
                     if (line.isNotBlank()) {
                         val json: JsonNode = mapper.readTree(line)
                         val label = if (json.get(TYPE).textValue() == "Temperature") "temperature" else "presence"
-                        ts.add(
-                            label = json.get(TYPE).textValue(),
-                            timestamp = dateToTimestamp(json.get("timestamp").textValue()),
-                            location = json.get(LOCATION).textValue(),
-                            value = json.get("payload").get(label).longValue(), // TODO: attualmente è fissato sulla sintassi SmartBench
-                            isUpdate = false
-                        )
+                        tsTime += measureTimeMillis {
+                            ts.add(
+                                label = json.get(TYPE).textValue(),
+                                timestamp = dateToTimestamp(json.get("timestamp").textValue()),
+                                location = json.get(LOCATION).textValue(),
+                                value = json.get("payload").get(label).longValue(),
+                                isUpdate = false
+                            )
+                        }
                     }
                 }
             }
-            ts.closeDataFeedConnection(closeRemote = true)
         } else {
             throw UnsupportedOperationException("File not found: $filePath")
         }

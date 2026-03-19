@@ -5,4 +5,5 @@ interface TSManager {
     fun addTS(id: Long): TS
     fun getTS(id: Long): TS
     fun clear()
+    fun close() { }
 }
