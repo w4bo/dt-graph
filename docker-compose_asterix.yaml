@@ -3,7 +3,6 @@ services:
     image: mp4sini/asterixdb:latest
     hostname: asterixdb
     container_name: asterixdb
-    user: "0:0"
     command:
       - /bin/bash
       - -c
