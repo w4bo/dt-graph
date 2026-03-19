@@ -19,7 +19,12 @@ open class MemoryGraph(
         options.setCreateIfMissing(true)
         options.setCreateMissingColumnFamilies(true)
         val cfDescriptors = listOf(ColumnFamilyDescriptor("default".toByteArray(), ColumnFamilyOptions()))
-        dynamicDb = RocksDB.open(options, "$path/properties", cfDescriptors, cfHandles)
+        val propertyPath = "$path/properties"
+        val dir = File(propertyPath)
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        dynamicDb = RocksDB.open(options, propertyPath, cfDescriptors, cfHandles)
     }
 
     override fun equals(other: Any?): Boolean {

@@ -7,21 +7,17 @@ import kotlin.math.round
 interface Loader {
     fun getGSTime(): Long
     fun getTSTime(): Long
+    fun getIndexTime(): Long
     fun loadData()
 }
 
-const val resultPath = "results/dt_graph/ingestion_time"
-val resultFolder = File(resultPath)
-val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
-
-fun checkFolder(folderPath: String) {
-    val folder = File(folderPath)
-    if (!folder.exists()) throw IllegalStateException("Folder $folderPath does not exist")
-}
+private const val resultPath = "results/dt_graph/ingestion_time"
+private val resultFolder = File(resultPath)
+private val statisticsFile = File(resultFolder, "ingestion_statistics.csv")
 
 private fun getFolderSize(folderPath: String): Long {
     val folder = File(folderPath)
-    val sizeBytes = folder.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+    val sizeBytes = folder.walkTopDown().filter { it.isFile }.sumOf { it.length() }
     return round(sizeBytes.toDouble() / (1024 * 1024)).toLong() // Converti in MB
 }
 
@@ -42,7 +38,8 @@ fun loadDataset(loader: Loader, model: String, threads: Int, numMachines: Int, d
         "threads" to threads,
         "graphElapsedTime" to loader.getGSTime(),
         "tsElapsedTime" to loader.getTSTime(),
-        "elapsedTime" to loader.getGSTime() + loader.getTSTime(),
+        "indexTime" to loader.getIndexTime(),
+        "elapsedTime" to loader.getGSTime() + loader.getTSTime() + loader.getIndexTime(),
         "numMachines" to numMachines,
         "storage" to gsStorage + tsStorage,
         "tsStorage" to tsStorage,

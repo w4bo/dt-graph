@@ -135,6 +135,11 @@ class MemoryGraphACID(
         wal.log(WALSource.Properties, p.id * PROPERTY_SIZE, p.serialize())
         return super.addPropertyLocal(key, p)
     }
+
+    override fun close() {
+        flushToDisk()
+        super.close()
+    }
 }
 
 enum class WALSource { Nodes, Edges, Properties }

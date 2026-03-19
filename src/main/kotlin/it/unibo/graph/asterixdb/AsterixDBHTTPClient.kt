@@ -75,7 +75,8 @@ class AsterixDBHTTPClient(
                 "sockets": "$dataFeedIp:$dataFeedPort",
                 "address-type": "IP",
                 "type-name": "$dataType",
-                "format": "adm"
+                "format": "adm",
+                "policy": "spill"
             };
             CONNECT FEED $feedName TO DATASET $dataset;
             START FEED $feedName;

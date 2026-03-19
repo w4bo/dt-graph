@@ -2,6 +2,9 @@ package it.unibo.tests.mimic
 
 import it.unibo.stats.Loader
 import it.unibo.stats.loadDataset
+import it.unibo.tests.mimic.loaders.MimicIVNeo4J
+import it.unibo.tests.mimic.loaders.MimicIVPGAge
+import it.unibo.tests.mimic.loaders.MimicIVSTGraph
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.Test
 
