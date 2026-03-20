@@ -134,7 +134,7 @@ class AsterixDBTS(
                     GROUP BY ${groupby.joinToString(","){ removeAlias(it).replace(".$VALUE", "") }}
                 """.trimIndent()
         } else {
-            selectQuery = """
+            selectQuery += """
                     SELECT *
                     FROM ${asterixHTTPClient.dataset}
                     ${applyFilters(filters.map { it.second })}

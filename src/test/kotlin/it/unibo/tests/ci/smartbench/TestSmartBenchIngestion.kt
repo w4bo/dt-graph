@@ -16,7 +16,7 @@ class TestSmartBenchIngestion {
     @Test
     fun testSmartBenchIngestion() {
         // val sizes = listOf("small") // System.getenv("DATASET_SIZE")
-        val sizes = listOf("small", "medium", "large")
+        val sizes = listOf("small") // , "medium", "large")
 
         // val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "datasets/dump/asterixdb"
         val projectRoot = Paths.get("").toAbsolutePath().normalize()

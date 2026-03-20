@@ -25,7 +25,7 @@ import it.unibo.stats.Querying
 import kotlin.system.measureTimeMillis
 
 class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
-    override val queryId = "AgentHistory"
+    override val queryId = "AgentOutlier"
     override fun runQuery(): QueryResultData {
         /*
          * AgentOutlier: List the max value measured for each agent in each environment
@@ -45,7 +45,6 @@ class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Query
         )
 
         val edgesDirectionResult: List<Any>
-
         val edgesDirectionTime = measureTimeMillis {
             edgesDirectionResult = query(
                 graph, edgesDirectionPattern,

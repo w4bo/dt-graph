@@ -23,9 +23,9 @@ private fun getFolderSize(folderPath: String): Long {
 
 fun loadDataset(loader: Loader, model: String, threads: Int, numMachines: Int, dataset: String, size: String) {
     if (!resultFolder.exists()) resultFolder.mkdirs()
-    val startTimestamp = System.currentTimeMillis() / 1000
+    val startTimestamp = System.currentTimeMillis()
     loader.loadData()
-    val endTimestamp = System.currentTimeMillis() / 1000
+    val endTimestamp = System.currentTimeMillis()
     val gsStorage = -1
     val tsStorage = -1
     val row = linkedMapOf(

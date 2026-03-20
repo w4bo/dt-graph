@@ -47,8 +47,9 @@ class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataP
     // Label caching
     private val edgeLabelCache: MutableMap<String, String> = mutableMapOf()
 
-    private fun hasLabel(key: String): String = edgeLabelCache.getOrPut(key) { "has${key.replaceFirstChar { if (it.isLowerCase()) it.titlecase(
-        Locale.getDefault()) else it.toString() }}" }
+    private fun hasLabel(key: String): String = edgeLabelCache.getOrPut(key) {
+        "has${key.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}"
+    }
 
     override fun loadData() {
         val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()

@@ -27,7 +27,7 @@ class TestSmartBenchQuery {
     val machines = 1
     private val testIterations = System.getenv("QUERY_ITERATIONS")?.toInt() ?: 1
     private val size = System.getenv("DATASET_SIZE") ?: "small"
-    private val querySelectivity = System.getenv("QUERY_SELECTIVITY") ?: "increased" // equal
+    private val querySelectivity = System.getenv("QUERY_SELECTIVITY") ?: "increased" // increased, equal
 
     fun loadYamlAsMap(resourcePath: String): Map<String, Any> {
         val inputStream = this::class.java.classLoader.getResourceAsStream(resourcePath) ?: throw IllegalArgumentException("$resourcePath not found in classpath")
@@ -39,8 +39,8 @@ class TestSmartBenchQuery {
 
     @BeforeAll
     fun setup() {
-        graph = MemoryGraphACID.Companion.readFromDisk("datasets/dump/smartbench/$size/") // Reload from disk
-        val tsm = AsterixDBTSM.Companion.createDefault(graph)
+        graph = MemoryGraphACID.readFromDisk("datasets/dump/smartbench/$size/") // Reload from disk
+        val tsm = AsterixDBTSM.createDefault(graph, dataverse = "smartbench_$size")
         graph.tsm = tsm
 
         println("Loaded graph with nodes ${graph.getNodes().size}")

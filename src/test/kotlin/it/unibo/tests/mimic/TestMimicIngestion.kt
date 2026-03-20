@@ -11,26 +11,26 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestMimicIngestion {
 
-    val limit = 100L
+    val limits = listOf(1_000_000L)//100L, 100_000L, Long.MAX_VALUE)
     val threads = 1
     val machines = 1
 
-    fun load(loader: Loader, model: String, dataset: String) {
+    fun load(loader: Loader, model: String, dataset: String, limit: Long) {
         loadDataset(loader, model, threads, machines, dataset, limit.toString())
     }
 
     @Test
     fun `ingest STGraph`() {
-        load(MimicIVSTGraph(limit), "stgraph", "mimic-iv")
+        limits.forEach { limit -> load(MimicIVSTGraph(limit), "stgraph", "mimic-iv", limit) }
     }
 
     @Test
     fun `ingest Neo4J`() {
-        load(MimicIVNeo4J(limit), "neo4j", "mimic-iv")
+        limits.forEach { limit -> load(MimicIVNeo4J(limit), "neo4j", "mimic-iv", limit) }
     }
 
     @Test
     fun `ingest PGAge`() {
-        load(MimicIVPGAge(limit), "pgage", "mimic-iv")
+        limits.forEach { limit -> load(MimicIVPGAge(limit), "pgage", "mimic-iv", limit) }
     }
 }

@@ -45,7 +45,6 @@ class MaintenanceOwners(val graph: Graph, val temporalConstraints: TimeRange) : 
                 Step(User, alias = "Owner")
             )
         )
-
         val edgesDirectionResult: List<Any>
         val edgesDirectionQueryTime = measureTimeMillis {
             edgesDirectionResult = query(

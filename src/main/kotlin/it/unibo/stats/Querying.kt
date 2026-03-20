@@ -2,6 +2,7 @@ package it.unibo.stats
 
 import java.io.File
 import java.util.UUID
+import kotlin.system.measureTimeMillis
 
 private const val resultPath = "results/dt_graph/query_time"
 private val resultFolder = File(resultPath)
@@ -15,9 +16,12 @@ interface Querying {
 
 fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, dataset: String, size: String) {
     if (!resultFolder.exists()) resultFolder.mkdirs()
-    val startTimestamp = System.currentTimeMillis() / 1000
-    val data = querying.runQuery()
-    val endTimestamp = System.currentTimeMillis() / 1000
+
+    val data: QueryResultData
+    val elpsedTime = measureTimeMillis {
+        data = querying.runQuery()
+    }
+
     val row = linkedMapOf(
         "test_id" to UUID.randomUUID().toString(),
         "queryid" to querying.queryId, // Q1, Q2, ...
@@ -25,7 +29,7 @@ fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, 
         "dataset" to dataset, // SmartBench, Mimic-IV
         "datasetSize" to size, // small, medium, ...
         "threads" to threads,
-        "elapsedTime" to endTimestamp - startTimestamp,
+        "elapsedTime" to elpsedTime,
         "numMachines" to numMachines,
         "cardinality" to data.card
     )
