@@ -1,3 +1,9 @@
+## [1.2.30](https://github.com/w4bo/dt-graph/compare/1.2.29...1.2.30) (2026-03-21)
+
+### Bug Fixes
+
+* **deps:** update jackson monorepo to v2.21.2 ([#171](https://github.com/w4bo/dt-graph/issues/171)) ([169bdf3](https://github.com/w4bo/dt-graph/commit/169bdf34f308eca3835f9d0cd15f01507c850463))
+
 ## [1.2.29](https://github.com/w4bo/dt-graph/compare/1.2.28...1.2.29) (2026-03-02)
 
 ### Bug Fixes
