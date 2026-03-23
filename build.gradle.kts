@@ -21,13 +21,14 @@ tasks.withType<Test>().configureEach {
      javaLauncher = javaToolchains.launcherFor {
          languageVersion = JavaLanguageVersion.of(jVersion)
      }
-    jvmArgs = listOf(
+    jvmArgs(
         "-Dcom.sun.management.jmxremote",
         "-Dcom.sun.management.jmxremote.port=9010",
         "-Dcom.sun.management.jmxremote.rmi.port=9010",
         "-Dcom.sun.management.jmxremote.authenticate=false",
         "-Dcom.sun.management.jmxremote.ssl=false",
         // "-Djava.rmi.server.hostname=172.27.236.32"
+        // "-XX:-Inline"
     )
     testLogging {
         events("passed", "skipped", "failed")
