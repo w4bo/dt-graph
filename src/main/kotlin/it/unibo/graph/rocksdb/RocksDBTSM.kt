@@ -3,6 +3,7 @@ package it.unibo.graph.rocksdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
+import it.unibo.graph.interfaces.TsMode
 import org.rocksdb.Options
 import org.rocksdb.RocksDB
 
@@ -16,7 +17,7 @@ class RocksDBTSM(override val g: Graph): TSManager {
         db = RocksDB.open(options, "${g.path}/ts_rocksdb")
     }
 
-    override fun getTS(id: Long): TS {
+    override fun getTS(id: Long, mode: TsMode): TS {
         return RocksDBTS(g, id, db)
     }
 

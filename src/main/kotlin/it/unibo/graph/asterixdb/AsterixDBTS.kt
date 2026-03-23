@@ -24,7 +24,7 @@ class AsterixDBTS(
     // get : Boolean = false,
     //val dataset: String,
     val asterixHTTPClient: AsterixDBHTTPClient,
-    val writer: PrintWriter
+    val writer: PrintWriter?
 ) : TS {
 
 
@@ -71,6 +71,7 @@ class AsterixDBTS(
             //     closeFeed = true
             // }
             val event = nodeToJson(n, isUpdate = false, tsId = id)
+            if (writer == null) { throw IllegalArgumentException("writer has not been set") }
             writer.println(event)
             if (writer.checkError()) {
                 throw Exception("Couldn't insert data into AsterixDB")

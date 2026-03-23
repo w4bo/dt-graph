@@ -200,9 +200,6 @@ class TestWorkload {
     fun environmentAggregate(){
         val g = setup(dynamicDevices=true)
         val tau = NDVI
-
-        // TODO
-
         // v.1 Following graph edges
         val pattern = dynamicDevicePattern + listOf(
             null,

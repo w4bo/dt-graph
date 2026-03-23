@@ -2,31 +2,15 @@ package it.unibo.tests.ci.smartbench.queries
 
 import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph
-import it.unibo.graph.query.AggOperator
-import it.unibo.graph.query.Aggregate
-import it.unibo.graph.query.Compare
-import it.unibo.graph.query.EdgeStep
-import it.unibo.graph.query.Filter
-import it.unibo.graph.query.Operators
-import it.unibo.graph.query.Step
-import it.unibo.graph.query.query
-import it.unibo.graph.utils.HasTS
-import it.unibo.graph.utils.Infrastructure
-import it.unibo.graph.utils.Sensor
-import it.unibo.graph.utils.Temperature
-import it.unibo.graph.utils.TimeRange
-import it.unibo.graph.utils.User
-import it.unibo.graph.utils.VALUE
-import it.unibo.graph.utils.hasCoverage
-import it.unibo.graph.utils.hasOwner
-import it.unibo.graph.utils.hasTemperature
+import it.unibo.graph.query.*
+import it.unibo.graph.utils.*
 import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
 import kotlin.system.measureTimeMillis
 
 class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
     override val queryId = "AgentOutlier"
-    override fun runQuery(): QueryResultData {
+    override fun runQuery(threads: Int): QueryResultData {
         /*
          * AgentOutlier: List the max value measured for each agent in each environment
          */
@@ -55,7 +39,8 @@ class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Query
                 ),
                 from = tA,
                 to = tB,
-                timeaware = true
+                timeaware = true,
+                threads = threads
             )
         }
         return QueryResultData(edgesDirectionTime, edgesDirectionResult.size)

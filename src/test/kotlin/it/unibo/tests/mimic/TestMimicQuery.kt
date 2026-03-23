@@ -37,7 +37,7 @@ class TestMimicQuery {
 
     @Test
     fun `get person with ts`() {
-        assertEquals(1, query(graph!!, listOf(Step(Person), null, Step(label = "Temperature F"))).size)
+        assertEquals(1, query(graph!!, listOf(Step(Person), null, Step(label = "Heart Rate"))).size)
     }
 
     @Test
@@ -46,7 +46,7 @@ class TestMimicQuery {
             4,
             query(
                 graph!!,
-                listOf(Step(Person), null, Step("Temperature F"), null, Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 10L))))
+                listOf(Step(Person), null, Step("Heart Rate"), null, Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 10L))))
             ).size
         )
     }
@@ -55,7 +55,7 @@ class TestMimicQuery {
     fun `get average measurements`() {
         val result = query(
             graph!!,
-            listOf(Step(Person), null, Step(alias = "ts", label = "Temperature F"), null, Step(alias = "m", label = Measurement)),
+            listOf(Step(Person), null, Step(alias = "ts", label = "Heart Rate"), null, Step(alias = "m", label = Measurement)),
             by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG))
         )
         assertEquals(1, result.size)
@@ -68,7 +68,7 @@ class TestMimicQuery {
             listOf(
                 Step(Person),
                 null,
-                Step(alias = "ts", label = "Temperature F"),
+                Step(alias = "ts", label = "Heart Rate"),
                 null,
                 Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 10L)))
             ),

@@ -24,7 +24,6 @@ class TestKotlin {
      * - Closes the Graph afterward to release resources.
      */
     private fun matrix(f: (Graph) -> Unit) {
-
         listOf(MemoryGraph::class, MemoryGraphACID::class,  RocksDBGraph::class)
             .forEach { graphClass ->
                 listOf(
@@ -244,47 +243,49 @@ class TestKotlin {
     @Test
     fun testJoin() {
         val g = setup1()
-        var patterns = listOf(
-            listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
-            listOf(Step(D, alias = "d"), null, Step(E), null, Step(F))
-        )
-        assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "name", Operators.EQ))).size)
-        assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "name", Operators.EQ))).size)
-        patterns = listOf(
-            listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
-            listOf(Step(D), null, Step(E, alias = "d"), null, Step(F))
-        )
-        assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ))).size)
-        assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ))).size)
-        assertEquals(
-            listOf(listOf("Errano", "Errano", "Errano")),
-            query(g, 
-                listOf(
-                    listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
-                    listOf(Step(D, alias = "d"), null, Step(E, alias = "e"), null, Step(F))
-                ),
-                where = listOf(Compare("e", "a", "lastname", Operators.EQ)),
-                by = listOf(Aggregate("a", property = "name"), Aggregate("d", property = "name"), Aggregate("e", property = "lastname"))
+        listOf(1, 2, 4).forEach { threads ->
+            var patterns = listOf(
+                listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
+                listOf(Step(D, alias = "d"), null, Step(E), null, Step(F))
             )
-        )
+            assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "name", Operators.EQ)), threads = threads).size)
+            assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "name", Operators.EQ)), threads = threads).size)
+            patterns = listOf(
+                listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
+                listOf(Step(D), null, Step(E, alias = "d"), null, Step(F))
+            )
+            assertEquals(1, query(g, patterns, where = listOf(Compare("a", "d", "lastname", Operators.EQ)), threads = threads).size)
+            assertEquals(1, query(g, patterns, where = listOf(Compare("d", "a", "lastname", Operators.EQ)), threads = threads).size)
+            assertEquals(
+                listOf(listOf("Errano", "Errano", "Errano")),
+                query(g,
+                    listOf(
+                        listOf(Step(A, alias = "a"), null, Step(B), null, Step(C)),
+                        listOf(Step(D, alias = "d"), null, Step(E, alias = "e"), null, Step(F))
+                    ),
+                    where = listOf(Compare("e", "a", "lastname", Operators.EQ)),
+                    by = listOf(Aggregate("a", property = "name"), Aggregate("d", property = "name"), Aggregate("e", property = "lastname")),
+                    threads = threads
+                )
+            )
+        }
         g.close()
     }
 
     @Test
     fun testJoin1() {
         val g = setup1()
-        val res =
-            query(g, 
-                listOf(
-                    listOf(Step(A, alias= "a"), null, Step(B), null, Step(C)),
-                    listOf(Step(D), null, Step(E), null, Step(F))
+        listOf(1, 2, 4).forEach { threads ->
+            val res =
+                query(g,
+                    listOf(
+                        listOf(Step(A, alias= "a"), null, Step(B), null, Step(C)),
+                        listOf(Step(D), null, Step(E), null, Step(F))
+                    ),
+                    threads = threads
                 )
-            )
-        assertEquals(
-            4,
-            res.size,
-            res.toString()
-        )
+            assertEquals(4, res.size, res.toString())
+        }
         g.close()
     }
 

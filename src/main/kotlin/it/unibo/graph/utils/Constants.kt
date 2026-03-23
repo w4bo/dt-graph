@@ -1,9 +1,6 @@
 package it.unibo.graph.utils
 
-val LIMIT : Int = System.getenv("THREAD")?.toInt() ?: 1
 const val PATH = "datasets/test/"
-const val HIGHPRIORITY = 0
-const val LOWPRIORITY = 1
 const val FROM_TIMESTAMP = "fromTimestamp"
 const val TO_TIMESTAMP = "toTimestamp"
 const val KEY = "key"

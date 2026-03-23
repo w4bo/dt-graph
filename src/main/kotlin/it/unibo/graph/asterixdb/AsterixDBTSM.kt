@@ -3,6 +3,7 @@ package it.unibo.graph.asterixdb
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
+import it.unibo.graph.interfaces.TsMode
 import it.unibo.graph.utils.incPort
 import it.unibo.graph.utils.loadProps
 import java.io.OutputStream
@@ -37,7 +38,8 @@ class AsterixDBTSM private constructor(
     fun openDataFeedConnection(dataFeedPort: Int) {
         try {
             asterixHTTPClient.setupDataFeed()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             // the datafeed could be already opened and started, if so do nothing
         }
         socket = Socket(dataFeedIp, dataFeedPort)
@@ -69,10 +71,10 @@ class AsterixDBTSM private constructor(
         return AsterixDBTS(g, id + 1,  dataverse, asterixHTTPClient, writer)
     }
 
-    override fun getTS(id: Long): TS {
-        if (!isFeedConnectionOpen)
+    override fun getTS(id: Long, mode: TsMode): TS {
+        if (mode === TsMode.WRITE && !isFeedConnectionOpen)
             openDataFeedConnection(asterixHTTPClient.dataFeedPort)
-        return AsterixDBTS(g, id, dataverse, asterixHTTPClient, writer)
+        return AsterixDBTS(g, id, dataverse, asterixHTTPClient, if (mode === TsMode.WRITE) writer else null)
     }
 
     override fun clear() {

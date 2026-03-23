@@ -15,15 +15,11 @@ class TestSmartBenchIngestion {
 
     @Test
     fun testSmartBenchIngestion() {
-        // val sizes = listOf("small") // System.getenv("DATASET_SIZE")
-        val sizes = listOf("small") // , "medium", "large")
+        val sizes = listOf("small") // , "medium", "large", System.getenv("DATASET_SIZE")
 
-        // val asterixDataFolder = System.getenv("ASTERIXDB_DATA_FOLDER") ?: "datasets/dump/asterixdb"
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
         val path = "$projectRoot/datasets"
         val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
-        val threads = System.getenv("THREAD")?.toInt() ?: 1
-        val numMachines = System.getenv("DEFAULT_NC_POOL")?.split(',')?.size ?: 1
         val dataset = "smartbench"
 
         sizes.forEach { size ->
@@ -53,7 +49,7 @@ class TestSmartBenchIngestion {
                 graph.tsm = tsm
                 graph.clear()
                 tsm.clear()
-                loadDataset(loader = SmartBenchDataLoader(graph, threads, data), "stgraph", threads, numMachines, dataset, size)
+                loadDataset(loader = SmartBenchDataLoader(graph, threads = 1, data), "stgraph", threads = 1, numMachines = 1, dataset, size)
                 graph.close()
             }
         }

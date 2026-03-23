@@ -10,12 +10,7 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.asterixdb.dateToTimestamp
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
-import it.unibo.graph.utils.ID
-import it.unibo.graph.utils.LOCATION
-import it.unibo.graph.utils.Sensor
-import it.unibo.graph.utils.TYPE
-import it.unibo.graph.utils.VirtualSensor
-import it.unibo.graph.utils.propTypeFromValue
+import it.unibo.graph.utils.*
 import it.unibo.stats.Loader
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
@@ -25,11 +20,9 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.logging.Logger
-import kotlin.collections.get
-import kotlin.collections.iterator
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataPath: List<String>): Loader {

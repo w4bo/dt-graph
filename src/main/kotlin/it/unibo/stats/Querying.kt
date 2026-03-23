@@ -1,7 +1,7 @@
 package it.unibo.stats
 
 import java.io.File
-import java.util.UUID
+import java.util.*
 import kotlin.system.measureTimeMillis
 
 private const val resultPath = "results/dt_graph/query_time"
@@ -11,7 +11,7 @@ private val statisticsFile = File(resultFolder, "query_statistics.csv")
 class QueryResultData(val timeMs: Long, val card: Int)
 interface Querying {
     val queryId: String
-    fun runQuery(): QueryResultData
+    fun runQuery(threads: Int): QueryResultData
 }
 
 fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, dataset: String, size: String) {
@@ -19,7 +19,7 @@ fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, 
 
     val data: QueryResultData
     val elpsedTime = measureTimeMillis {
-        data = querying.runQuery()
+        data = querying.runQuery(threads)
     }
 
     val row = linkedMapOf(

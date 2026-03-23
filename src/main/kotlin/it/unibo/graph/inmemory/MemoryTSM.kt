@@ -3,11 +3,12 @@ package it.unibo.graph.inmemory
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
+import it.unibo.graph.interfaces.TsMode
 
 class MemoryTSM(override val g: Graph): TSManager {
     private val tss: MutableMap<Long, TS> = mutableMapOf()
 
-    override fun getTS(id: Long): TS {
+    override fun getTS(id: Long, mode: TsMode): TS {
         return tss[id]!!
     }
 

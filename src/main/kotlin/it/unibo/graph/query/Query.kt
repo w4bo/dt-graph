@@ -6,8 +6,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
@@ -16,12 +16,12 @@ import kotlin.math.min
 
 
 @JvmName("query")
-fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
-    return query(g, listOf(match), where, by, from, to, timeaware)
+fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1): List<Any> {
+    return query(g, listOf(match), where, by, from, to, timeaware, threads)
 }
 
 @JvmName("queryJoin")
-fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -32,12 +32,12 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
             }
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
-    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val pattern1 = search(g, match[0], (where - joinFilters.toSet()).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by, threads) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
     var result =
         if (match.size == 1) {
             pattern1
         } else {
-            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by)
+            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by, threads)
         }
 
     result = result.flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
@@ -61,24 +61,16 @@ private fun join(
     from: Long,
     to: Long,
     timeaware: Boolean,
-    by: List<Aggregate>
+    by: List<Aggregate>,
+    threads: Int
 ): List<Path> {
-
-    val result = mutableListOf<Path>()
-    val mutex = Mutex()
-
+    val result = ConcurrentLinkedQueue<Path>()
     // Funzione ricorsiva locale
     fun rec(curMatch: MutableList<Step?>, index: Int, fromLimit: Long, toLimit: Long, row: Path, acc: MutableList<Path>) {
         if (index >= match[1].size) {
-            val paths = search(
-                g,
-                curMatch,
-                (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 },
-                fromLimit,
-                toLimit,
-                timeaware,
-                by = by
-            ).map { Path(row.result + it.result, it.from, it.to) }
+            val paths =
+                search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, fromLimit, toLimit, timeaware, by = by,threads)
+                    .map { Path(row.result + it.result, it.from, it.to) }
             acc.addAll(paths)
             return
         }
@@ -95,8 +87,7 @@ private fun join(
         if (curJoinFilters.isNotEmpty()) {
             val curJoinFilter = curJoinFilters.first()
             val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second
-            val props = row.result[mapAliases[cAlias]!!.second]
-                .getProps(name = curJoinFilter.property, fromTimestamp = fromLimit, toTimestamp = toLimit, timeaware = timeaware)
+            val props = row.result[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = fromLimit, toTimestamp = toLimit, timeaware = timeaware)
             props.forEach { p ->
                 curMatch.add(
                     Step(
@@ -120,29 +111,18 @@ private fun join(
         }
     }
 
-    if (LIMIT <= 1) {
-        // Single-thread
-        pattern1.forEach { row ->
-            val acc = mutableListOf<Path>()
-            rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
-            result.addAll(acc)
-        }
-    } else {
-        // Parallel
-        val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
-        runBlocking {
-            val jobs = pattern1.map { row ->
-                launch(executor) {
-                    val acc = mutableListOf<Path>()
-                    rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
-                    mutex.withLock { result += acc }
-                }
+    val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
+    runBlocking {
+        val jobs = pattern1.map { row ->
+            launch(executor) {
+                val acc = mutableListOf<Path>()
+                rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
+                result += acc
             }
-            jobs.joinAll()
         }
+        jobs.joinAll()
     }
-
-    return result
+    return result.toList()
 }
 
 
@@ -439,106 +419,118 @@ fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String
     }
 }
 
-class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from: Long, val to: Long, val priority: Int): Comparable<ExploredPath> {
-    override fun compareTo(other: ExploredPath): Int = priority.compareTo(other.priority)
+class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from: Long, val to: Long)
+
+fun buildAliasMap(match: List<Step?>): Map<String, Int> =
+    match
+        .mapIndexed { a, b -> Pair(a, b) }
+        .filter { it.second?.alias !== null }
+        .associate { it.second?.alias!! to it.first }
+
+fun buildWhereMap(where: List<Compare>, mapAlias: Map<String, Int>): Map<String, Compare> =
+    where
+        .associateBy {
+            mapAlias
+                .filterKeys { it in where.flatMap { listOf(it.first, it.second) }.toSet() }
+                .maxByOrNull { it.value }?.key!!
+        }
+
+fun initializeQueue(g: Graph, from: Long, to: Long): Queue<ExploredPath> {
+    val acc = ConcurrentLinkedQueue<ExploredPath>()
+    // val acc = ArrayDeque<ExploredPath>()
+    acc.addAll(g.getNodes().map { ExploredPath(it, 0, emptyList(), from, to) })
+    return acc
 }
 
-fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf()): List<Path> {
-    val acc: MutableList<Path> = mutableListOf()
-    val mapAlias: Map<String, Int> = match.mapIndexed { a, b -> Pair(a, b) }.filter { it.second?.alias !== null }.associate { it.second?.alias!! to it.first }
-    val mapWhere: Map<String, Compare> = where.associateBy{mapAlias.filterKeys{it in where.flatMap { listOf(it.first, it.second) }.toSet()}.maxByOrNull { it.value }?.key!!}
+fun matchesStep(cur: ExploredPath, match: List<Step?>, by: List<Aggregate>, timeaware: Boolean, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>): Boolean {
+    val step = match[cur.index]
+    val alias = step?.alias
+    val compare = alias?.let { mapWhere[it] }
 
-    val executor = Executors.newFixedThreadPool(LIMIT).asCoroutineDispatcher()
-    val mutex = Mutex(locked = false)
+    return (step == null || ( // no filter
+                            (step.label == null || step.label == cur.e.label.name)  // filter on label
+                                && step
+                                    .properties
+                                    .filter { f -> !by.filter { it.operator != null }.map { it.property }.contains(f.property) } // do not apply filter on the result of group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
+                                    .all { f -> // for all filters...
+                                        cur.e
+                                            .getProps(name = f.property, fromTimestamp = cur.from, toTimestamp = cur.to, timeaware = timeaware) // ... a certain time-aware property must match
+                                            .any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) } }
+                                        })) // filter on properties
+                        && cur.e.timeOverlap(timeaware, cur.from, cur.to) // check time overlap
+                        && (compare == null || whereClause(cur.e, cur.path, alias, mapWhere, compare, timeaware, mapAlias))
+
+}
+
+fun updatePath(cur: ExploredPath): Triple<Long, Long, List<ElemP>> {
+    val newFrom = max(cur.e.fromTimestamp, cur.from)
+    val newTo = min(cur.e.toTimestamp, cur.to)
+    val newPath = cur.path + cur.e
+    return Triple(newFrom, newTo, newPath)
+}
+
+fun isCompletePath(path: List<Elem>, match: List<Step?>): Boolean =
+    path.size == match.size
+
+fun expandNode(cur: ExploredPath, path: List<ElemP>, from: Long, to: Long, match: List<Step?>): List<ExploredPath> {
+    val nextStep = match.getOrNull(cur.index + 1)
+    return (cur.e as N)
+        .getEdges(
+            direction = if (nextStep is EdgeStep) nextStep.direction else Direction.OUT,
+            includeHasTs = true
+        )
+        .map { ExploredPath(it, cur.index + 1, path, from, to) }
+}
+
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf(), threads: Int = 1): List<Path> {
+    val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
     val wait = Semaphore(0) // Mutex(locked = true)
-    val priorityQueue = mutableListOf<ExploredPath>() // PriorityQueue<ExploredPath>()
-
-    for (node in g.getNodes()) {
-        priorityQueue.add(ExploredPath(node, 0, emptyList(), from, to, LOWPRIORITY))
-    }
-
     val completed = AtomicInteger(0)
     var launched = 0
 
+    val acc = mutableListOf<Path>()
+    val mapAlias = buildAliasMap(match)
+    val mapWhere = buildWhereMap(where, mapAlias)
+    val queue = initializeQueue(g, from, to)
+
     runBlocking {
         while (true) {
-            if (mutex.withLock { priorityQueue.isEmpty() }) {
+            if (queue.isEmpty()) {
                 if (completed.get() < launched) {
                     wait.acquire()
                 } else {
                     break
                 }
             } else {
-                val curElem = mutex.withLock { priorityQueue.removeAt(0) } // priorityQueue.poll()
-                val step: IStep? = match[curElem.index] // get the current step
-                val alias: String? = step?.alias // get the alias (if any)
-                val c: Compare? = if (alias !== null) mapWhere[alias] else null // get the comparison operator (if any)
-                if ((step == null || ( // no filter
-                            (step.label === null || step.label == curElem.e.label.name)  // filter on label
-                                && step
-                                    .properties
-                                    .filter { f -> !by.filter { it.operator != null }.map { it.property }.contains(f.property) } // do not apply filter on the result of group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
-                                    .all { f -> // for all filters...
-                                        curElem.e
-                                            .getProps(name = f.property, fromTimestamp = curElem.from, toTimestamp = curElem.to, timeaware = timeaware) // ... a certain time-aware property must match
-                                            .any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) } }
-                                        })) // filter on properties
-                                && curElem.e.timeOverlap(timeaware, curElem.from, curElem.to) // check time overlap
-                                && (c === null || whereClause(curElem.e, curElem.path, alias!!, mapWhere, c, timeaware, mapAlias)) // apply the where clause
-                ) {
-                    val from = max(curElem.e.fromTimestamp, curElem.from)
-                    val to = min(curElem.e.toTimestamp, curElem.to)
-                    val curPath = curElem.path + curElem.e
-                    if (curPath.size == match.size) {
-                        acc.add(Path(curPath, curElem.from, curElem.to))
-                    } else {
-                        if (curElem.index % 2 == 0) { // is node
-                            val nextStep: IStep? = if (curElem.index + 1 < match.size) match[curElem.index + 1] else null // get the next step
-                            (curElem.e as N)
-                                .getEdges(direction = if (nextStep is EdgeStep) { nextStep.direction } else { Direction.OUT }, includeHasTs = true)
-                                .forEach {
-                                    mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
-                                }
-                        } else { // is edge...
-                            val r = (curElem.e as R)
-                            if (curElem.e.label.name == HasTS) { // ... to time series
-                                launched++
-                                if (LIMIT == 1) {
-                                    try {
-                                        g.getTSM()
-                                            .getTS(r.toN)
-                                            .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
-                                            .forEach {
-                                                mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
-                                            }
-                                    } finally {
-                                        completed.incrementAndGet()
-                                        wait.release()
-                                    }
-                                } else {
-                                    launch(executor) {
-                                        try {
-                                            g.getTSM()
-                                                .getTS(r.toN)
-                                                .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, from, to, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
-                                                .forEach {
-                                                    mutex.withLock { priorityQueue.add(ExploredPath(it, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
-                                                }
-                                        } finally {
-                                            completed.incrementAndGet()
-                                            wait.release()
-                                        }
-                                    }
-                                }
-                            } else { // ... or to graph node
-                                val n = g.getNode(if (step is EdgeStep && step.direction === Direction.IN) { r.fromN } else { r.toN })
-                                mutex.withLock { priorityQueue.add(ExploredPath(n, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
+                val curElem = queue.poll()// .removeAt(0)
+                if (!matchesStep(curElem, match, by, timeaware, mapAlias, mapWhere)) continue
+                val (newFrom, newTo, curPath) = updatePath(curElem)
+                if (isCompletePath(curPath, match)) {
+                    acc.add(Path(curPath, newFrom, newTo))
+                } else {
+                    if (curElem.index % 2 == 0) { // is node
+                        queue.addAll(expandNode(curElem, curPath, newFrom, newTo, match))
+                    } else { // is edge...
+                        val r = (curElem.e as R)
+                        if (curElem.e.label.name == HasTS) { // ... to time series
+                            launched++
+                            launch(executor) {
+                                val res = g.getTSM()
+                                    .getTS(r.toN, mode = TsMode.READ)
+                                    .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, newFrom, newTo, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
+                                    .map { ExploredPath(it, curElem.index + 1, curPath, newFrom, newTo) }
+                                queue.addAll(res)
+                                completed.incrementAndGet()
+                                wait.release()
                             }
+                        } else { // ... or to graph node
+                            val step = match[curElem.index]
+                            val n = g.getNode(if (step is EdgeStep && step.direction === Direction.IN) { r.fromN } else { r.toN })
+                            queue.add(ExploredPath(n, curElem.index + 1, curPath, newFrom, newTo))
                         }
                     }
                 }
             }
-
         }
     }
     return acc

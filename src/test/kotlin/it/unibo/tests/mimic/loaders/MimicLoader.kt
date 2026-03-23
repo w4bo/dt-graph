@@ -1,9 +1,11 @@
 package it.unibo.tests.mimic.loaders
 import it.unibo.stats.Loader
+import java.io.File
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlin.system.measureTimeMillis
 
 fun s2ts(s: String): Long = LocalDateTime.parse(s.replace(" ", "T")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
@@ -29,66 +31,69 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
     override fun getIndexTime(): Long = 0L
 
     override fun loadData() {
-        val sql = """
-        select *
-        from (SELECT * FROM chartevents where valuenum is not null ${if (limit == Long.MAX_VALUE) "" else { "LIMIT $limit" }}) c 
-            JOIN d_items i ON (c.itemid = i.itemid)
-            JOIN icustays s ON (c.stay_id = s.stay_id)
-        order by c.subject_id, c.itemid, c.charttime
-    """.trimIndent()
-
-        var lastSubjectId: Int? = null
         var lastItemId: Int? = null
         var person: Long? = null
         var i = 0
         println("=== Loader: ${javaClass}: ")
-
-        DriverManager.getConnection(url, user, password).use { conn ->
-            conn.autoCommit = false
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.fetchSize = 1000
-                val rs: ResultSet = stmt.executeQuery()
-                val meta = rs.metaData
-                val columnCount = meta.columnCount
-                var prevTime = System.currentTimeMillis()
-                var addedTS = 0
-                var addedGS = 0
-                var addedMeas = 0
-                while (rs.next()) {
-                    val row = mutableMapOf<String, Any?>()
-                    for (i in 1..columnCount) {
-                        val columnName = meta.getColumnLabel(i)   // works with aliases
-                        val value = rs.getObject(i)
-                        row[columnName] = value
+        var count = 0L
+        File("src/main/resources/mimic-iv_subjectids.csv").useLines { lines ->
+            lines.drop(1).forEach { line ->  // skip first line
+                val subjectId = line.trim()
+                if (subjectId.isEmpty()) return@forEach
+                val sql = """
+                    SELECT *
+                    FROM chartevents c JOIN d_items i ON (c.itemid = i.itemid) JOIN icustays s ON (c.stay_id = s.stay_id)
+                    WHERE c.subject_id = '$subjectId' and valuenum is not null
+                    ORDER BY c.subject_id, c.item_id, c.charttime
+                    ${if (limit != Long.MAX_VALUE) "LIMIT $limit" else ""}
+                    """.trimIndent()
+                var first = true
+                DriverManager.getConnection(url, user, password).use { conn ->
+                    conn.autoCommit = false
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.fetchSize = 1000
+                        val rs: ResultSet = stmt.executeQuery()
+                        val meta = rs.metaData
+                        val columnCount = meta.columnCount
+                        var prevTime = System.currentTimeMillis()
+                        var addedTS = 0
+                        var addedGS = 0
+                        var addedMeas = 0
+                        while (rs.next()) {
+                            val row = mutableMapOf<String, Any?>()
+                            for (i in 1..columnCount) {
+                                val columnName = meta.getColumnLabel(i)   // works with aliases
+                                val value = rs.getObject(i)
+                                row[columnName] = value
+                            }
+                            if (++i % 100 == 0) {
+                                println("$i... Elapsed time: ${(System.currentTimeMillis() - prevTime)}, GS: $addedGS, TS: $addedTS, Mea: $addedMeas")
+                                prevTime = System.currentTimeMillis()
+                                addedGS = 0
+                                addedMeas = 0
+                                addedTS = 0
+                            }
+                            val subjectId: Int = row["subject_id"].toString().toInt()
+                            val itemId: Int = row["itemid"].toString().toInt()
+                            if (first) {
+                                first = false
+                                gsTime += measureTimeMillis {  person = addPerson(subjectId) }
+                                addedGS++
+                            }
+                            if (itemId != lastItemId) {
+                                lastItemId = itemId
+                                gsTime += measureTimeMillis { addTimeseries(row, person!!) }
+                                addedGS++
+                                addedTS++
+                            }
+                            tsTime += measureTimeMillis { addMeasurement(row) }
+                            addedMeas++
+                            if (++count > limit) {
+                                close()
+                                return
+                            }
+                        }
                     }
-                    if (++i % 100 == 0) {
-                        println("$i... Elapsed time: ${(System.currentTimeMillis() - prevTime)}, GS: $addedGS, TS: $addedTS, Mea: $addedMeas")
-                        prevTime = System.currentTimeMillis()
-                        addedGS = 0
-                        addedMeas = 0
-                        addedTS = 0
-                    }
-                    val subjectId: Int = row["subject_id"].toString().toInt()
-                    val itemId: Int = row["itemid"].toString().toInt()
-                    if (subjectId != lastSubjectId) {
-                        lastSubjectId = subjectId
-                        val startTime = System.currentTimeMillis()
-                        person = addPerson(subjectId)
-                        gsTime += System.currentTimeMillis() - startTime
-                        addedGS++
-                    }
-                    if (itemId != lastItemId) {
-                        lastItemId = itemId
-                        val startTime = System.currentTimeMillis()
-                        addTimeseries(row, person!!)
-                        gsTime += System.currentTimeMillis() - startTime
-                        addedGS++
-                        addedTS++
-                    }
-                    val startTime = System.currentTimeMillis()
-                    addMeasurement(row)
-                    tsTime += System.currentTimeMillis() - startTime
-                    addedMeas++
                 }
             }
         }
