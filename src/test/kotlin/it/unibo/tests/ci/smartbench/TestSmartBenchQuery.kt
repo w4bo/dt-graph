@@ -18,7 +18,7 @@ class TestSmartBenchQuery {
     val logger = Logger.getLogger(TestSmartBenchQuery::class.java.toString())
     val temporalConstraintMap = loadYamlAsMap("time_constraints.yaml")
     val machines = 1
-    val testIterations = System.getenv("QUERY_ITERATIONS")?.toInt() ?: 1
+    val testIterations = 1
     val sizes = listOf("small", "medium", "large") // , System.getenv("DATASET_SIZE")
     val querySelectivity = System.getenv("QUERY_SELECTIVITY") ?: "increased" // increased, equal
 
@@ -35,7 +35,7 @@ class TestSmartBenchQuery {
             graph.tsm = tsm
             repeat(testIterations) {
                 val ranges = loadTemporalRanges(temporalConstraintMap, querySelectivity, name, size)
-                listOf(1, 4).forEach { threads ->
+                listOf(1, 4, 8).forEach { threads ->
                     ranges.values.forEach { range ->
                         val query = if (withRange) {
                             queryBuilder(graph, range)

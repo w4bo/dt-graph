@@ -11,8 +11,8 @@ fun s2ts(s: String): Long = LocalDateTime.parse(s.replace(" ", "T")).atZone(Zone
 
 interface MimicIVLoader: Loader {
     fun addPerson(subjectId: Int): Long
-    fun addTimeseries(row: Map<String, Any?>, person: Long)
-    fun addMeasurement(row: Map<String, Any?>)
+    fun addTimeseries(row: ResultSet, person: Long)
+    fun addMeasurement(row: ResultSet)
     fun close()
 }
 
@@ -36,45 +36,37 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
         var i = 0
         println("=== Loader: ${javaClass}: ")
         var count = 0L
-        File("src/main/resources/mimic-iv_subjectids.csv").useLines { lines ->
-            lines.drop(1).forEach { line ->  // skip first line
-                val subjectId = line.trim()
-                if (subjectId.isEmpty()) return@forEach
-                val sql = """
-                    SELECT *
-                    FROM chartevents c JOIN d_items i ON (c.itemid = i.itemid) JOIN icustays s ON (c.stay_id = s.stay_id)
-                    WHERE c.subject_id = '$subjectId' and valuenum is not null
-                    ORDER BY c.subject_id, c.item_id, c.charttime
-                    ${if (limit != Long.MAX_VALUE) "LIMIT $limit" else ""}
-                    """.trimIndent()
-                var first = true
-                DriverManager.getConnection(url, user, password).use { conn ->
-                    conn.autoCommit = false
+        DriverManager.getConnection(url, user, password).use { conn ->
+            conn.autoCommit = false
+            File("src/main/resources/mimic-iv_subjectids.csv").useLines { lines ->
+                lines.drop(1).forEach { line ->  // skip first line
+                    val subjectId = line.trim()
+                    if (subjectId.isEmpty()) return@forEach
+                    val sql = """
+                        SELECT c.subject_id, c.itemid, unitname, category, label, param_type, charttime, abbreviation, valuenum
+                        FROM chartevents c JOIN d_items i ON (c.itemid = i.itemid) JOIN icustays s ON (c.stay_id = s.stay_id)
+                        WHERE c.subject_id = '$subjectId' and valuenum is not null
+                        ORDER BY c.subject_id, c.itemid, c.charttime
+                        ${if (limit != Long.MAX_VALUE) "LIMIT $limit" else ""}
+                        """.trimIndent()
+                    var first = true
                     conn.prepareStatement(sql).use { stmt ->
-                        stmt.fetchSize = 1000
+                        stmt.fetchSize = 100_000
                         val rs: ResultSet = stmt.executeQuery()
-                        val meta = rs.metaData
-                        val columnCount = meta.columnCount
                         var prevTime = System.currentTimeMillis()
                         var addedTS = 0
                         var addedGS = 0
                         var addedMeas = 0
                         while (rs.next()) {
-                            val row = mutableMapOf<String, Any?>()
-                            for (i in 1..columnCount) {
-                                val columnName = meta.getColumnLabel(i)   // works with aliases
-                                val value = rs.getObject(i)
-                                row[columnName] = value
-                            }
-                            if (++i % 100 == 0) {
+                            if (++i % 10000 == 0) {
                                 println("$i... Elapsed time: ${(System.currentTimeMillis() - prevTime)}, GS: $addedGS, TS: $addedTS, Mea: $addedMeas")
                                 prevTime = System.currentTimeMillis()
                                 addedGS = 0
                                 addedMeas = 0
                                 addedTS = 0
                             }
-                            val subjectId: Int = row["subject_id"].toString().toInt()
-                            val itemId: Int = row["itemid"].toString().toInt()
+                            val subjectId: Int = rs.getString("subject_id").toInt()
+                            val itemId: Int = rs.getString("itemid").toInt()
                             if (first) {
                                 first = false
                                 gsTime += measureTimeMillis {  person = addPerson(subjectId) }
@@ -82,11 +74,11 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                             }
                             if (itemId != lastItemId) {
                                 lastItemId = itemId
-                                gsTime += measureTimeMillis { addTimeseries(row, person!!) }
+                                gsTime += measureTimeMillis { addTimeseries(rs, person!!) }
                                 addedGS++
                                 addedTS++
                             }
-                            tsTime += measureTimeMillis { addMeasurement(row) }
+                            tsTime += measureTimeMillis { addMeasurement(rs) }
                             addedMeas++
                             if (++count > limit) {
                                 close()

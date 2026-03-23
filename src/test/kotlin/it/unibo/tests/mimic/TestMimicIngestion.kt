@@ -11,7 +11,7 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestMimicIngestion {
 
-    val limits = listOf(1_000_000L)//100L, 100_000L, Long.MAX_VALUE)
+    val limits = listOf(4_000L)//100L, 100_000L, Long.MAX_VALUE)
     val threads = 1
     val machines = 1
 

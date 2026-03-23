@@ -4,11 +4,22 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
+import java.sql.ResultSet
 import kotlin.math.roundToLong
+
+fun limitToPort(limit: Long): Int {
+    return if (limit < 5_000_000) {
+        8687
+    } else if (limit < 50_000_000) {
+        8688
+    } else {
+        8689
+    }
+}
 
 class MimicIVNeo4J(
     limit: Long,
-    uri: String = "bolt://localhost:7687",
+    uri: String = "bolt://localhost:${limitToPort(limit)}",
     user: String = "neo4j",
     password: String = "password"
 ) : AbstractMimicIVLoader(limit) {
@@ -38,17 +49,17 @@ class MimicIVNeo4J(
         return result.single()["id"].asLong()
     }
 
-    override fun addTimeseries(row: Map<String, Any?>, person: Long) {
+    override fun addTimeseries(row: ResultSet, person: Long) {
         val result = session.run(
             """
             MATCH (p) WHERE id(p) = $person
-            CREATE (ts:Timeseries {
-                abbreviation: '${row["abbreviation"]}',
-                unitname: '${row["unitname"]}',
-                category: '${row["category"]}',
-                label: '${row["label"]}',
-                itemid: '${row["itemid"]}',
-                param_type: '${row["param_type"]}'
+            CREATE (ts:TimeSeries {
+                abbreviation: '${row.getString("abbreviation")}',
+                unitname: '${row.getString("unitname")}',
+                category: '${row.getString("category")}',
+                label: '${row.getString("label")}',
+                itemid: '${row.getString("itemid")}',
+                param_type: '${row.getString("param_type")}'
             })
             CREATE (p)-[:HAS_PARAMETERS]->(ts)
             RETURN id(ts) AS id
@@ -57,10 +68,10 @@ class MimicIVNeo4J(
         currentTSNode = result.single()["id"].asLong()
     }
 
-    override fun addMeasurement(row: Map<String, Any?>) {
+    override fun addMeasurement(row: ResultSet) {
         val tsNode = currentTSNode ?: return
-        val timestamp = s2ts(row["charttime"].toString())
-        val value = row["valuenum"].toString().toDouble().roundToLong()
+        val timestamp = s2ts(row.getString("charttime"))
+        val value = row.getString("valuenum").toDouble().roundToLong()
 
         session.run(
             """

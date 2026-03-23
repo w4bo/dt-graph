@@ -18,7 +18,7 @@ fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, 
     if (!resultFolder.exists()) resultFolder.mkdirs()
 
     val data: QueryResultData
-    val elpsedTime = measureTimeMillis {
+    val elapsedTime = measureTimeMillis {
         data = querying.runQuery(threads)
     }
 
@@ -29,7 +29,7 @@ fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, 
         "dataset" to dataset, // SmartBench, Mimic-IV
         "datasetSize" to size, // small, medium, ...
         "threads" to threads,
-        "elapsedTime" to elpsedTime,
+        "elapsedTime" to elapsedTime,
         "numMachines" to numMachines,
         "cardinality" to data.card
     )

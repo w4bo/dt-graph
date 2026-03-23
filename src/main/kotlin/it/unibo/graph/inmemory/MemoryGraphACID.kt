@@ -12,6 +12,7 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.ConcurrentLinkedQueue
 
 interface Flushable {
     fun flushToDisk()
@@ -95,24 +96,17 @@ class MemoryGraphACID(
 
     @Throws(IOException::class)
     override fun flushToDisk() {
-        synchronized(wal.toWrite) { // Lock the list to avoid concurrent modifications
-            val iterator = wal.toWrite.iterator() // Create an iterator for the list
-            while (iterator.hasNext()) {
-                val it = iterator.next()
-                if (it.flushedOnLog) {
-                    // Access file channel based on the source type
-                    val file: FileChannel = when (it.file) {
-                        WALSource.Nodes -> nodeChannel
-                        WALSource.Edges -> edgeChannel
-                        else -> propertyChannel
-                    }
-                    // Write data to the correct file channel at the specified offset
-                    file.position(it.offset)
-                    file.write(ByteBuffer.wrap(it.payload))
-                    // After processing the item, remove it from the list
-                    iterator.remove()
-                }
+        while (true) {
+            val it = wal.toWrite.poll() ?: break  // remove + get in O(1)
+            if (!it.flushedOnLog) continue
+            val file: FileChannel = when (it.file) {
+                WALSource.Nodes -> nodeChannel
+                WALSource.Edges -> edgeChannel
+                else -> propertyChannel
             }
+
+            file.position(it.offset)
+            file.write(ByteBuffer.wrap(it.payload))
         }
     }
 
@@ -153,9 +147,9 @@ class WALRecord(val file: WALSource, val offset: Long, val payload: ByteArray, v
     }
 }
 
-class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 1000) {
+class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 10_000) {
     private val logChannel: FileChannel
-    val toWrite: MutableList<WALRecord> = mutableListOf()
+    val toWrite = ConcurrentLinkedQueue<WALRecord>()
     private var flushable: Flushable? = null
     private var i = 0
     init {
@@ -169,7 +163,7 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
     }
 
     fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
-        toWrite.add(WALRecord(fileChannel, offset, payload, true))
+        toWrite.offer(WALRecord(fileChannel, offset, payload, true))
         i = (i + 1) % frequency
         if (i == 0) {
             val serializedRecords = toWrite.map { serialize(it) }

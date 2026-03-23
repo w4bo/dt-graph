@@ -5,6 +5,7 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.utils.*
+import java.sql.ResultSet
 import kotlin.math.roundToLong
 
 class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
@@ -26,13 +27,14 @@ class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
         return person.id
     }
 
-    override fun addTimeseries(row: Map<String, Any?>, person: Long) {
-        val n = g.addNode(row["abbreviation"].toString(), isTs = true)
-        g.addProperty(n.id, key = "unitname", value = row["unitname"].toString(), PropType.STRING)
-        g.addProperty(n.id, key = "category", value = row["category"].toString(), PropType.STRING)
-        g.addProperty(n.id, key = "label", value = row["label"].toString(), PropType.STRING)
-        g.addProperty(n.id, key = "itemid", value = row["itemid"].toString().toInt(), PropType.INT)
-        g.addProperty(n.id, key = "param_type", value = row["param_type"].toString(), PropType.STRING)
+    override fun addTimeseries(row: ResultSet, person: Long) {
+        val n = g.addNode(row.getString("abbreviation"), isTs = true)
+        val unitname: String? = row.getString("unitname")
+        if (unitname != null) g.addProperty(n.id, key = "unitname", value = unitname, PropType.STRING)
+        g.addProperty(n.id, key = "category", value = row.getString("category"), PropType.STRING)
+        g.addProperty(n.id, key = "label", value = row.getString("label"), PropType.STRING)
+        g.addProperty(n.id, key = "itemid", value = row.getString("itemid").toInt(), PropType.INT)
+        // g.addProperty(n.id, key = "param_type", value = row.getString("param_type"), PropType.STRING)
         val portRange = LASTFEEDPORT - FIRSTFEEDPORT
         if (i++ > portRange - portRange * 0.2) {
             resetPort()
@@ -42,8 +44,12 @@ class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
         g.addEdge("hasParameters", fromNode = person, toNode = n.id)
     }
 
-    override fun addMeasurement(row: Map<String, Any?>) {
-        ts!!.add(Measurement, timestamp = s2ts(row["charttime"].toString()), value = row["valuenum"].toString().toDouble().roundToLong())
+    override fun addMeasurement(row: ResultSet) {
+        ts!!.add(
+            Measurement,
+            timestamp = s2ts(row.getString("charttime")),
+            value = row.getString("valuenum").toDouble().roundToLong()
+        )
     }
 
     override fun close() {

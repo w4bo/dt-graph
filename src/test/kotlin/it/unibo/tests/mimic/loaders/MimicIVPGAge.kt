@@ -3,6 +3,7 @@ package it.unibo.tests.mimic.loaders
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
+import java.sql.ResultSet
 import java.sql.SQLException
 import kotlin.math.roundToLong
 
@@ -89,13 +90,13 @@ class MimicIVPGAge(
         }
     }
 
-    override fun addTimeseries(row: Map<String, Any?>, person: Long) {
-        val abbreviation = row["abbreviation"]
-        val unitname = row["unitname"]
-        val category = row["category"]
-        val label = row["label"]
-        val itemid = row["itemid"]
-        val paramType = row["param_type"]
+    override fun addTimeseries(row: ResultSet, person: Long) {
+        val abbreviation = row.getString("abbreviation")
+        val unitname = row.getString("unitname")
+        val category = row.getString("category")
+        val label = row.getString("label")
+        val itemid = row.getString("itemid")
+        val paramType = row.getString("param_type")
 
         conn.createStatement().use { st ->
             st.execute("LOAD 'age';")
@@ -110,8 +111,7 @@ class MimicIVPGAge(
                     unitname:"$unitname",
                     category:"$category",
                     label:"$label",
-                    itemid:$itemid,
-                    param_type:"$paramType"
+                    itemid:$itemid
                 })
                 CREATE (p)-[:HAS_PARAMETERS]->(ts)
                 RETURN id(ts)
@@ -123,10 +123,10 @@ class MimicIVPGAge(
         }
     }
 
-    override fun addMeasurement(row: Map<String, Any?>) {
+    override fun addMeasurement(row: ResultSet) {
         val tsId = currentTSId ?: return
-        val timestamp = s2ts(row["charttime"].toString())
-        val value = row["valuenum"].toString().toDouble().roundToLong()
+        val timestamp = s2ts(row.getString("charttime"))
+        val value = row.getString("valuenum").toDouble().roundToLong()
         insertMeasurement.setLong(1, tsId)
         insertMeasurement.setLong(2, timestamp)
         insertMeasurement.setLong(3, value)

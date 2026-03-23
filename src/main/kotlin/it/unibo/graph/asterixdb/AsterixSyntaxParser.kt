@@ -112,24 +112,14 @@ fun propertiesToAsterixCitizen(props: List<P>, isUpdate: Boolean): String =
     props.joinToString(",", transform = { p -> propToJson(p, isUpdate) }).let { if (it.isNotEmpty()) "$it," else "" }
 
 fun edgeToJson(edge: R, isUpdate: Boolean): String {
-    return """{
-            "$LABEL": ${edge.label.ordinal},
-            ${propertiesToAsterixCitizen(edge.properties, isUpdate)}
-            "$FROM_N": ${edge.fromN},
-            "$TO_N": ${edge.toN}
-        }""".trimIndent()
+    return """{"$LABEL": ${edge.label.ordinal},${propertiesToAsterixCitizen(edge.properties, isUpdate)}"$FROM_N": ${edge.fromN},"$TO_N": ${edge.toN}}"""
 }
 
 fun propToJson(property: P, isUpdate: Boolean): String {
     return if (property.key == LOCATION) {
         "\"${property.key}\": ${valueToJson(property.value, isUpdate)}"
     } else {
-        """
-            "${property.key}": {
-                "$VALUE": ${valueToJson(property.value, isUpdate)},
-                "$TYPE": ${property.type.ordinal}
-            }
-        """.trimIndent()
+        """"${property.key}": {"$VALUE": ${valueToJson(property.value, isUpdate)},"$TYPE": ${property.type.ordinal}}"""
     }
 }
 
@@ -160,14 +150,7 @@ fun jsonToEdge(json: JSONObject, fromTimestamp: Long, toTimestamp: Long, g: Grap
 }
 
 fun nodeToJson(n: N, isUpdate: Boolean, tsId: Long): String {
-    return """{
-                "$TSID": $tsId,
-                "$ID": ${n.fromTimestamp},
-                "$LABEL": ${n.label.ordinal},
-                ${edgesToAsterixCitizen(n.edges, isUpdate)}
-                ${propertiesToAsterixCitizen(n.properties, isUpdate)}
-                "$VALUE": ${n.value ?: 0}
-            }""".trimIndent().replace("\\s+".toRegex(), " ")
+    return """{"$TSID": $tsId, "$ID": ${n.fromTimestamp}, "$LABEL": ${n.label.ordinal}, ${edgesToAsterixCitizen(n.edges, isUpdate)} ${propertiesToAsterixCitizen(n.properties, isUpdate)} "$VALUE": ${n.value ?: 0}}"""
 }
 
 fun jsonToNode(tsId: Long, g: Graph, node: JSONObject): N {
