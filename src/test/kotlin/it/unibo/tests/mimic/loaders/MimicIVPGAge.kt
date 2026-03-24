@@ -1,10 +1,6 @@
 package it.unibo.tests.mimic.loaders
 
-import java.sql.Connection
-import java.sql.DriverManager
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.SQLException
+import java.sql.*
 import kotlin.math.roundToLong
 
 class MimicIVPGAge(
@@ -16,7 +12,7 @@ class MimicIVPGAge(
     private val graphName = "mimic_${if (limit == Long.MAX_VALUE) "full" else limit}"
     private val conn: Connection = DriverManager.getConnection(url, user, password)
     private var currentTSId: Long? = null
-    private lateinit var insertMeasurement: PreparedStatement
+    private var insertMeasurement: PreparedStatement
     init {
         conn.createStatement().use { st ->
             // Helper function for safe execution
@@ -33,7 +29,6 @@ class MimicIVPGAge(
             safeExec("CREATE EXTENSION IF NOT EXISTS age")
             safeExec("CREATE EXTENSION IF NOT EXISTS timescaledb")
             safeExec("LOAD 'age';")
-
             // Set search path to allow AGE operations
             safeExec("SET search_path = ag_catalog, \"$user\", public;")
 
@@ -96,28 +91,24 @@ class MimicIVPGAge(
         val category = row.getString("category")
         val label = row.getString("label")
         val itemid = row.getString("itemid")
-        val paramType = row.getString("param_type")
 
         conn.createStatement().use { st ->
             st.execute("LOAD 'age';")
             st.execute("SET search_path = ag_catalog, public;")
-            val rs = st.executeQuery(
-                """
-            SELECT *
-            FROM cypher('$graphName', $$
-                MATCH (p) WHERE id(p) = $person
-                CREATE (ts:Timeseries {
-                    abbreviation:"$abbreviation",
-                    unitname:"$unitname",
-                    category:"$category",
-                    label:"$label",
-                    itemid:$itemid
-                })
-                CREATE (p)-[:HAS_PARAMETERS]->(ts)
-                RETURN id(ts)
-            $$) as (id agtype)
-            """.trimIndent()
-            )
+            val rs = st.executeQuery("""
+                SELECT *
+                FROM cypher('$graphName', $$
+                    MATCH (p) WHERE id(p) = $person
+                    CREATE (ts:TimeSeries {
+                        abbreviation:"$abbreviation",
+                        unitname:"$unitname",
+                        category:"$category",
+                        label:"$label",
+                        itemid:$itemid
+                    })
+                    CREATE (p)-[:HAS_PARAMETERS]->(ts)
+                    RETURN id(ts)
+                $$) as (id agtype)""".trimIndent())
             rs.next()
             currentTSId = rs.getString(1).replace("\"","").toLong()
         }

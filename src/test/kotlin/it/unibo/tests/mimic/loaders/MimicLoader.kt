@@ -43,7 +43,7 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                     val subjectId = line.trim()
                     if (subjectId.isEmpty()) return@forEach
                     val sql = """
-                        SELECT c.subject_id, c.itemid, unitname, category, label, param_type, charttime, abbreviation, valuenum
+                        SELECT DISTINCT c.subject_id, c.itemid, unitname, category, label, charttime, abbreviation, valuenum
                         FROM chartevents c JOIN d_items i ON (c.itemid = i.itemid) JOIN icustays s ON (c.stay_id = s.stay_id)
                         WHERE c.subject_id = '$subjectId' and valuenum is not null
                         ORDER BY c.subject_id, c.itemid, c.charttime

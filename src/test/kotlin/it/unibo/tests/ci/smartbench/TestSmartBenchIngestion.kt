@@ -15,11 +15,10 @@ class TestSmartBenchIngestion {
 
     @Test
     fun testSmartBenchIngestion() {
-        val sizes = listOf("small") // , "medium", "large", System.getenv("DATASET_SIZE")
-
+        val sizes = listOf("small", "medium", "large")
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
         val path = "$projectRoot/datasets"
-        val iterations = System.getenv("INGESTION_ITERATIONS")?.toInt() ?: 1
+        val iterations = 1
         val dataset = "smartbench"
 
         sizes.forEach { size ->

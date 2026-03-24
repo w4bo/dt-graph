@@ -58,8 +58,7 @@ class MimicIVNeo4J(
                 unitname: '${row.getString("unitname")}',
                 category: '${row.getString("category")}',
                 label: '${row.getString("label")}',
-                itemid: '${row.getString("itemid")}',
-                param_type: '${row.getString("param_type")}'
+                itemid: '${row.getString("itemid")}'
             })
             CREATE (p)-[:HAS_PARAMETERS]->(ts)
             RETURN id(ts) AS id

@@ -19,8 +19,8 @@ class TestSmartBenchQuery {
     val temporalConstraintMap = loadYamlAsMap("time_constraints.yaml")
     val machines = 1
     val testIterations = 1
-    val sizes = listOf("small", "medium", "large") // , System.getenv("DATASET_SIZE")
-    val querySelectivity = System.getenv("QUERY_SELECTIVITY") ?: "increased" // increased, equal
+    val sizes = listOf("small", "medium", "large")
+    val querySelectivity = "increased"
 
     fun loadYamlAsMap(resourcePath: String): Map<String, Any> {
         val inputStream = this::class.java.classLoader.getResourceAsStream(resourcePath) ?: throw IllegalArgumentException("$resourcePath not found in classpath")
@@ -35,7 +35,7 @@ class TestSmartBenchQuery {
             graph.tsm = tsm
             repeat(testIterations) {
                 val ranges = loadTemporalRanges(temporalConstraintMap, querySelectivity, name, size)
-                listOf(1, 4, 8).forEach { threads ->
+                listOf(1, 4, 8, 16).forEach { threads ->
                     ranges.values.forEach { range ->
                         val query = if (withRange) {
                             queryBuilder(graph, range)

@@ -1071,3 +1071,6 @@ labels:
   - "Procan Napa"
   - "Waveform Peak (VAD)"
   - "Waveform Trough (VAD)"
+  - "Pressure Ulcer #10- Depth"
+  - "PO2_ApacheIV"
+  - "Applied Cognitive (AM-PAC)"
