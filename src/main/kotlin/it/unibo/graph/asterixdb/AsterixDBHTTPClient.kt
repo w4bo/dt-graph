@@ -134,7 +134,7 @@ class AsterixDBHTTPClient(
     }
 
     private fun queryAsterixDB(sql: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
-        println(sql)
+        // println(sql)
         val connection = query(sql, clusterControllerHost, dataverse)
         val responseCode = connection.responseCode
         val responseText = try {

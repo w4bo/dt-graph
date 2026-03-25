@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.logging.Logger
+import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
 
 class SmartBenchDataLoader(size: String, val threads: Int, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")): Loader {
@@ -133,7 +134,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                                 val newNode = graph.addNode(labelString, isTs = true)
                                 val newTs: TS
                                 val time = measureTimeMillis { newTs = tsm.addTS(newNode.id)  }
-                                println(time)
+                                println("Feed: $time")
                                 graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                 tsList[newTs] = sensorTsFilePath.toString()
                             }
@@ -188,7 +189,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                     if (line.isNotBlank()) {
                         val json: JsonNode = mapper.readTree(line)
                         val label = if (json.get(TYPE).textValue() == "Temperature") "temperature" else "presence"
-                        tsTime += measureTimeMillis {
+                        val time = measureTimeMillis { // measureNanoTime {
                             ts.add(
                                 label = json.get(TYPE).textValue(),
                                 timestamp = dateToTimestamp(json.get("timestamp").textValue()),
@@ -196,7 +197,9 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                                 value = json.get("payload").get(label).longValue(),
                                 isUpdate = false
                             )
-                        }
+                        } / 1000
+                        tsTime += time
+                        println("tsTime: $tsTime, time: $time")
                     }
                 }
             }
