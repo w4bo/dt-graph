@@ -9,6 +9,7 @@ interface Loader {
     fun getTSTime(): Long
     fun getIndexTime(): Long
     fun loadData()
+    fun close()
 }
 
 private const val resultPath = "results/dt_graph/ingestion_time"
@@ -45,10 +46,10 @@ fun loadDataset(loader: Loader, model: String, threads: Int, numMachines: Int, d
         "tsStorage" to tsStorage,
         "gsStorage" to gsStorage
     )
-
     val writeHeader = !statisticsFile.exists()
     statisticsFile.appendText(buildString {
         if (writeHeader) append(row.keys.joinToString(",") + "\n")
         append(row.values.joinToString(",") + "\n")
     })
+    loader.close()
 }

@@ -13,7 +13,6 @@ interface MimicIVLoader: Loader {
     fun addPerson(subjectId: Int): Long
     fun addTimeseries(row: ResultSet, person: Long)
     fun addMeasurement(row: ResultSet)
-    fun close()
 }
 
 abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {

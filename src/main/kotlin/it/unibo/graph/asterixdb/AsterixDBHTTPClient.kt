@@ -4,61 +4,101 @@ import it.unibo.graph.utils.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
+import java.io.OutputStream
+import java.io.PrintWriter
 import java.net.Socket
+import java.util.concurrent.atomic.AtomicInteger
+
 
 class AsterixDBHTTPClient(
     private val clusterControllerHost: String,
-    val dataFeedIp: String,
-    var dataFeedPort: Int,
+    private val dataFeedIp: String,
     private val dataverse: String,
-    val dataType: String,
-    private val tsId: Long = 0L,
-    val dataset: String = "$DATASET_PREFIX$tsId",
-    val feedName: String = "$DATAFEED_PREFIX$tsId"
+    private val dataset: String,
+    private var dataFeedPort: Int = incPort(),
 ) {
+    companion object {
+        val id: AtomicInteger = AtomicInteger(0)
+    }
+    private val id = Companion.id.incrementAndGet()
+    private val dataType: String = EVENT
+    private val feedName: String = "$DATAFEED_PREFIX${id}"
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
+    private lateinit var socket: Socket
+    private lateinit var outputStream: OutputStream
+    lateinit var writer: PrintWriter
+    private var isFeedConnectionOpen: Boolean = false
+    private var isFeedInitialized: Boolean = false
+
+    fun openDataFeedConnection() {
+        if (!isFeedConnectionOpen) {
+            try {
+                if (!isFeedInitialized) {
+                    initializeFeed()
+                    isFeedInitialized = true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // the datafeed could be already opened and started, if so do nothing
+            }
+            socket = Socket(dataFeedIp, dataFeedPort)
+            outputStream = socket.getOutputStream()
+            writer = PrintWriter(outputStream, true)
+            isFeedConnectionOpen = true
+        }
+    }
+
+    fun closeDataFeedConnection(closeRemote: Boolean = false) {
+        if (this::writer.isInitialized) {
+            writer.close()
+            outputStream.close()
+            socket.close()
+            if (closeRemote) {
+                stopFeed()
+                dropFeed()
+            }
+            isFeedConnectionOpen = false
+        }
+    }
 
     fun stopFeed() = queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
 
-    fun createDataset(dataType: String): Boolean {
+    fun createDataset(): Boolean {
         return queryAsterixDB("USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key $TSID, $ID;")
     }
 
     fun createSpatialIndex(): Boolean {
-        return queryAsterixDB("USE $dataverse; CREATE INDEX ${LOCATION}_$tsId on $dataset($LOCATION) type rtree;")
+        return queryAsterixDB("USE $dataverse; CREATE INDEX ${LOCATION}_$id on $dataset($LOCATION) type rtree;")
     }
 
-    fun initializeTS() : Boolean {
-        val datasetExists = createDataset(dataType)
+    fun initializeFeed() : Boolean {
         var failures = 0
-        if (datasetExists) { // If dataset already existed or I have successfully created it
-            do { // Until I have successfully created a DataFeed and I can actually connect to it
-                var datafeedSetup = false
-                var socketConnect = false
-                try {
-                    stopFeed()
-                    datafeedSetup = setupDataFeed(/*hostIP*/) // val hostIP = if (dataFeedIp != "asterixdb") dataFeedIp else "localhost"
-                    if (!datafeedSetup) {
-                        val msg = "Cannot setup feed: $dataFeedPort"
-                        logger.warn(msg)
-                        failures += 1
-                        throw IllegalArgumentException(msg)
-                    }
-                    socketConnect = tryDataFeedConnection(dataFeedIp, dataFeedPort) // Try to connect to it
-                    if (!socketConnect) {
-                        val msg = "Cannot connect to feed: $dataFeedPort"
-                        logger.warn(msg)
-                        failures += 1
-                        throw IllegalArgumentException(msg)
-                    }
-                    if (failures > 0) logger.warn("Failures: $failures")
-                    return true
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    dataFeedPort = incPort()
+        do { // Until I have successfully created a DataFeed and I can actually connect to it
+            var datafeedSetup = false
+            var socketConnect = false
+            try {
+                stopFeed()
+                datafeedSetup = setupDataFeed()
+                if (!datafeedSetup) {
+                    val msg = "Cannot setup feed: $dataFeedPort"
+                    logger.warn(msg)
+                    failures += 1
+                    throw IllegalArgumentException(msg)
                 }
-            } while (!datafeedSetup && !socketConnect)
-        }
+                socketConnect = tryDataFeedConnection(dataFeedIp, dataFeedPort) // Try to connect to it
+                if (!socketConnect) {
+                    val msg = "Cannot connect to feed: $dataFeedPort"
+                    logger.warn(msg)
+                    failures += 1
+                    throw IllegalArgumentException(msg)
+                }
+                if (failures > 0) logger.warn("Failures: $failures")
+                return true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                dataFeedPort = incPort()
+            }
+        } while (!datafeedSetup && !socketConnect)
         return false
     }
 
@@ -94,6 +134,7 @@ class AsterixDBHTTPClient(
     }
 
     private fun queryAsterixDB(sql: String, checkResults: Boolean = false, blockOnError: Boolean = true): Boolean {
+        println(sql)
         val connection = query(sql, clusterControllerHost, dataverse)
         val responseCode = connection.responseCode
         val responseText = try {
@@ -184,7 +225,7 @@ class AsterixDBHTTPClient(
                     $TO_N: bigint
                 };
 
-                CREATE TYPE Event AS OPEN {
+                CREATE TYPE $EVENT AS OPEN {
                     $TSID: bigint,
                     $ID: bigint,
                     $LABEL: int,

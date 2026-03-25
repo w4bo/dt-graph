@@ -8,10 +8,10 @@ import it.unibo.graph.utils.*
 import java.sql.ResultSet
 import kotlin.math.roundToLong
 
-class MimicIVSTGraph(limit: Long) : AbstractMimicIVLoader(limit)  {
+class MimicIVSTGraph(limit: Long, controllerIps: List<String> = listOf("localhost")) : AbstractMimicIVLoader(limit)  {
     val s = if (limit == Long.MAX_VALUE) "full" else "$limit"
     val g = MemoryGraphACID(path = "datasets/dump/mimic/$s")
-    val t = AsterixDBTSM.createDefault(g, "mimic_$s")
+    val t = AsterixDBTSM.createDefault(g, "mimic_$s", controllerIps = controllerIps)
     var ts: AsterixDBTS? = null
     var i = 0
 

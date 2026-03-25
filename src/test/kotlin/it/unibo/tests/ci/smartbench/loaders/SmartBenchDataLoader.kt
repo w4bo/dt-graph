@@ -8,6 +8,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.asterixdb.dateToTimestamp
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.utils.*
@@ -25,10 +26,40 @@ import java.util.concurrent.Executors
 import java.util.logging.Logger
 import kotlin.system.measureTimeMillis
 
-class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataPath: List<String>): Loader {
-    val logger = Logger.getLogger(this.javaClass.name)
+class SmartBenchDataLoader(size: String, val threads: Int, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")): Loader {
+    val projectRoot = Paths.get("").toAbsolutePath().normalize()
+    val path = "$projectRoot/datasets"
+    val dataset = "smartbench"
+    val dataPath: List<String> = listOf(
+        "$path/original/$dataset/$size/group.json",
+        "$path/original/$dataset/$size/user.json",
+        "$path/original/$dataset/$size/platformType.json",
+        "$path/original/$dataset/$size/sensorType.json",
+        "$path/original/$dataset/$size/platform.json",
+        "$path/original/$dataset/$size/infrastructureType.json",
+        "$path/original/$dataset/$size/infrastructure.json",
+        "$path/original/$dataset/$size/sensor.json",
+        "$path/original/$dataset/$size/virtualSensorType.json",
+        "$path/original/$dataset/$size/virtualSensor.json",
+        "$path/original/$dataset/$size/semanticObservationType.json",
+    )
+    val graphPath = "datasets/dump/$dataset/$size/"
+
+    val logger: Logger = Logger.getLogger(this.javaClass.name)
+    val graph = MemoryGraphACID(path = graphPath)
+    val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size", host = host, controllerIps = controllerIPs)
+
+    init {
+        val folder = Paths.get(graphPath)
+        if (!Files.exists(folder)) {
+            Files.createDirectories(folder)
+        }
+        graph.tsm = tsm
+        graph.clear()
+        tsm.clear()
+    }
+
     private val mapper: ObjectMapper = jacksonObjectMapper()
-    private val tsm = graph.getTSM() as AsterixDBTSM
     private var gsTime: Long = 0
     private var tsTime: Long = 0
     private var indexTime: Long = 0
@@ -47,8 +78,6 @@ class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataP
     override fun loadData() {
         val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
         val tsList: MutableMap<TS, String> = mutableMapOf()
-
-
         for (file in dataPath) {
             logger.info { "Loading $file..." }
             val path = Paths.get(file).toAbsolutePath().normalize()
@@ -102,7 +131,9 @@ class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataP
                                 ?.normalize()
                             if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
                                 val newNode = graph.addNode(labelString, isTs = true)
-                                val newTs = tsm.addTS(newNode.id)
+                                val newTs: TS
+                                val time = measureTimeMillis { newTs = tsm.addTS(newNode.id)  }
+                                println(time)
                                 graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                 tsList[newTs] = sensorTsFilePath.toString()
                             }
@@ -124,10 +155,13 @@ class SmartBenchDataLoader(private val graph: Graph, val threads: Int, val dataP
             jobs.joinAll()
         }
         indexTime = measureTimeMillis {
-            tsm.asterixHTTPClient.stopFeed()
-            tsm.asterixHTTPClient.dropFeed()
-            tsm.asterixHTTPClient.createSpatialIndex()
+            tsm.close()
+            tsm.connection.createSpatialIndex()
         }
+    }
+
+    override fun close() {
+        graph.close()
     }
 
     private fun processProperty(property: Any, key: String, nodeId: Long) {

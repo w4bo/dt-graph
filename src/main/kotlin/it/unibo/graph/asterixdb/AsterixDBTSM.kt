@@ -4,99 +4,70 @@ import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.interfaces.TsMode
-import it.unibo.graph.utils.incPort
+import it.unibo.graph.utils.DATASET_PREFIX
 import it.unibo.graph.utils.loadProps
-import java.io.OutputStream
-import java.io.PrintWriter
-import java.net.Socket
 
 val props = loadProps()
 
 class AsterixDBTSM private constructor(
     override val g: Graph,
-    host: String,
-    port: String,
+    val host: String,
+    val port: String,
     val dataverse: String,
-    nodeControllersIPs: List<String>,
-    datatype: String,
+    val nodeControllersIPs: List<String>
 ) : TSManager {
+    val isConcurrent = nodeControllersIPs.size > 1
+    val dataset = "${DATASET_PREFIX}0"
+    val connection = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset)
+    val connections = mutableListOf<AsterixDBHTTPClient>(connection)
 
-    val clusterControllerHost: String = "http://$host:$port/query/service"
-    val asterixHTTPClient: AsterixDBHTTPClient
-    val dataFeedIp : String = getDataFeedIP(0, nodeControllersIPs)
-    private lateinit var socket: Socket
-    private lateinit var outputStream: OutputStream
-    private lateinit var writer: PrintWriter
-    private var isFeedConnectionOpen: Boolean = false
-
-    private fun getDataFeedIP(id: Long, ipList: List<String>): String {
-        val hash = id.hashCode()
-        val index = (hash and 0x7FFFFFFF) % ipList.size
-        return ipList[index]
+    private fun getDataFeedIP(): String {
+        val hash = (Math.random() * 100).toInt()
+        val index = (hash and 0x7FFFFFFF) % nodeControllersIPs.size
+        return nodeControllersIPs[index]
     }
 
-    fun openDataFeedConnection(dataFeedPort: Int) {
-        try {
-            asterixHTTPClient.setupDataFeed()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // the datafeed could be already opened and started, if so do nothing
+    fun createAndOpenConnection(mode: TsMode): AsterixDBHTTPClient {
+        val connection = if (isConcurrent) {
+            val c = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset)
+            connections.add(c)
+            c
+        } else {
+            connection
         }
-        socket = Socket(dataFeedIp, dataFeedPort)
-        outputStream = socket.getOutputStream()
-        writer = PrintWriter(outputStream, true)
-        isFeedConnectionOpen = true
-    }
-
-    fun closeDataFeedConnection(closeRemote: Boolean = false) {
-        if (this::writer.isInitialized) {
-            writer.close()
-            outputStream.close()
-            socket.close()
-            isFeedConnectionOpen = false
-            if (closeRemote) {
-                asterixHTTPClient.stopFeed()
-                asterixHTTPClient.dropFeed()
-            }
+        if (mode === TsMode.WRITE) {
+            connection.openDataFeedConnection()
         }
-    }
-
-    init {
-        asterixHTTPClient = AsterixDBHTTPClient(clusterControllerHost, dataFeedIp, incPort(), dataverse, datatype)
+        return connection
     }
 
     override fun addTS(id: Long): TS {
-        if (!isFeedConnectionOpen)
-            openDataFeedConnection(asterixHTTPClient.dataFeedPort)
-        return AsterixDBTS(g, id + 1,  dataverse, asterixHTTPClient, writer)
+        return AsterixDBTS(g, id + 1,  dataverse, dataset, createAndOpenConnection(TsMode.WRITE))
     }
 
     override fun getTS(id: Long, mode: TsMode): TS {
-        if (mode === TsMode.WRITE && !isFeedConnectionOpen)
-            openDataFeedConnection(asterixHTTPClient.dataFeedPort)
-        return AsterixDBTS(g, id, dataverse, asterixHTTPClient, if (mode === TsMode.WRITE) writer else null)
+        return AsterixDBTS(g, id, dataverse, dataset, createAndOpenConnection(mode))
     }
 
     override fun clear() {
-        closeDataFeedConnection()
-        asterixHTTPClient.createTSMEnvironment()
-        asterixHTTPClient.initializeTS()
+        close()
+        connection.createTSMEnvironment()
+        connection.createDataset()
     }
 
     companion object {
-        fun createDefault(g: Graph, dataverse: String = props["default_dataverse"].toString()): AsterixDBTSM {
-            return AsterixDBTSM(
-                g,
-                System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
-                props["default_cc_port"].toString(),
-                dataverse,
-                System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
-                props["default_datatype"].toString(),
-            )
+        fun createDefault(
+            g: Graph,
+            dataverse: String = props["default_dataverse"].toString(),
+            host: String = System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
+            port: String = props["default_cc_port"].toString(),
+            controllerIps: List<String> = System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost")
+        ): AsterixDBTSM {
+            return AsterixDBTSM(g, host, port, dataverse, controllerIps)
         }
     }
 
     override fun close() {
-        closeDataFeedConnection(true)
+        connections.forEach { it.closeDataFeedConnection(true) }
     }
 }

@@ -1,5 +1,6 @@
 package it.unibo.graph.utils
 
+const val EVENT = "Event"
 const val PATH = "datasets/test/"
 const val FROM_TIMESTAMP = "fromTimestamp"
 const val TO_TIMESTAMP = "toTimestamp"
