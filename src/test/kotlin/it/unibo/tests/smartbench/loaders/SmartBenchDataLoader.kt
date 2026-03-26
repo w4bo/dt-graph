@@ -1,4 +1,4 @@
-package it.unibo.tests.ci.smartbench.loaders
+package it.unibo.tests.smartbench.loaders
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonToken
@@ -9,14 +9,10 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.asterixdb.dateToTimestamp
 import it.unibo.graph.inmemory.MemoryGraphACID
-import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.utils.*
 import it.unibo.stats.Loader
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -24,8 +20,11 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.logging.Logger
-import kotlin.system.measureNanoTime
+import kotlin.collections.get
+import kotlin.collections.iterator
+import kotlin.math.max
 import kotlin.system.measureTimeMillis
+import kotlin.time.measureTime
 
 class SmartBenchDataLoader(size: String, val threads: Int, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")): Loader {
     val projectRoot = Paths.get("").toAbsolutePath().normalize()
@@ -88,7 +87,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                 val entityId = obj[ID] as? String ?: error("Missing \"${ID}\" in JSON object")
                 val nodeLabel = typeVal.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
-                gsTime += measureTimeMillis {
+                gsTime += getTime {
                     if (!graphIdList.contains(entityId)) {
                         // Add static node
                         val node = graph.addNode(nodeLabel)
@@ -133,8 +132,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                             if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
                                 val newNode = graph.addNode(labelString, isTs = true)
                                 val newTs: TS
-                                val time = measureTimeMillis { newTs = tsm.addTS(newNode.id)  }
-                                println("Feed: $time")
+                                newTs = tsm.addTS(newNode.id)
                                 graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                 tsList[newTs] = sensorTsFilePath.toString()
                             }
@@ -143,19 +141,40 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                 }
             }
         }
-        gsTime += measureTimeMillis {
+        gsTime += getTime {
             for ((label, source, destId) in leftoverEdgesList) {
                 val target = graphIdList[destId] ?: continue
                 graph.addEdge(label, source, target)
             }
         }
-        runBlocking {
-            val jobs = tsList.map { row ->
-                launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
+        //runBlocking {
+        //    val jobs = tsList
+        //        .map { row ->
+        //        launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
+        //    }
+        //    jobs.joinAll()
+        //}
+        val list = tsList.toList()
+        val chunkSize = list.size / threads
+        val results = LongArray(threads)
+        val workers = mutableListOf<Thread>()
+        for (i in 0 until threads) {
+            val start = i * chunkSize
+            val end = if (i == threads - 1) list.size else (i + 1) * chunkSize
+            val subList = list.subList(start, end)
+            val t = Thread {
+                val time = subList
+                    .mapIndexed { index, pair ->
+                        loadTS(pair.first as AsterixDBTS, pair.second, index == subList.size - 1)
+                    }.sum()
+                results[i] = time
             }
-            jobs.joinAll()
+            workers += t
+            t.start()
         }
-        indexTime = measureTimeMillis {
+        workers.forEach { it.join() }
+        tsTime = results.maxOrNull() ?: -1L
+        indexTime = getTime {
             tsm.close()
             tsm.connection.createSpatialIndex()
         }
@@ -180,31 +199,61 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
         }
     }
 
-    fun loadTS(ts: AsterixDBTS, path: String) {
+    fun loadTS(ts: AsterixDBTS, path: String, isLast: Boolean): Long {
+        data class TSRecord(
+            val type: String,
+            val timestamp: Long,
+            val location: String,
+            val value: Long
+        )
+
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
         val filePath = projectRoot.resolve(path).normalize()
-        if (Files.exists(filePath)) {
-            Files.newBufferedReader(filePath).useLines { lines ->
-                for (line in lines) {
-                    if (line.isNotBlank()) {
-                        val json: JsonNode = mapper.readTree(line)
-                        val label = if (json.get(TYPE).textValue() == "Temperature") "temperature" else "presence"
-                        val time = measureTimeMillis { // measureNanoTime {
-                            ts.add(
-                                label = json.get(TYPE).textValue(),
-                                timestamp = dateToTimestamp(json.get("timestamp").textValue()),
-                                location = json.get(LOCATION).textValue(),
-                                value = json.get("payload").get(label).longValue(),
-                                isUpdate = false
-                            )
-                        } / 1000
-                        tsTime += time
-                        println("tsTime: $tsTime, time: $time")
-                    }
+        if (!Files.exists(filePath)) {
+            throw UnsupportedOperationException("File not found: $filePath")
+        }
+        val records = mutableListOf<TSRecord>()
+        Files.newBufferedReader(filePath).useLines { lines ->
+            for (line in lines) {
+                if (line.isBlank()) continue
+                val json: JsonNode = mapper.readTree(line)
+                val type = json.get(TYPE).textValue()
+                val label = if (type == "Temperature") "temperature" else "presence"
+                records += TSRecord(
+                    type,
+                    dateToTimestamp(json.get("timestamp").textValue()),
+                    json.get(LOCATION).textValue(),
+                    json.get("payload").get(label).longValue()
+                )
+            }
+
+            var last = -1L
+            val time = getTime {
+                records.forEach { event ->
+                    last = event.timestamp
+                    ts.add(label = event.type, timestamp = last, location = event.location, value = event.value, isUpdate = false, flush = false)
                 }
             }
-        } else {
-            throw UnsupportedOperationException("File not found: $filePath")
+            ts.connection.writer.flush()
+            if (isLast) {
+                val start = System.currentTimeMillis()
+                var fail = 0
+                while (true) {
+                    try {
+                        val startQuery = System.currentTimeMillis()
+                        ts.get(last)
+                        val end = System.currentTimeMillis()
+                        val deltaQuery = end - startQuery
+                        // logger.info { "Load time: $time. Waited for ${end - start - deltaQuery} ms after $fail failures" }
+                        return time + end - start - deltaQuery // do not count the time of the last query
+                    } catch (_: Exception) {
+                        fail++
+                        Thread.sleep(1)
+                    }
+                }
+            } else {
+                return time
+            }
         }
     }
 

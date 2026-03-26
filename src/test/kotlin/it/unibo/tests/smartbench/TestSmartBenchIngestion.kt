@@ -1,14 +1,14 @@
-package it.unibo.tests.ci.smartbench
+package it.unibo.tests.smartbench
 
 import it.unibo.graph.utils.resetPort
 import it.unibo.stats.loadDataset
-import it.unibo.tests.ci.smartbench.loaders.SmartBenchDataLoader
+import it.unibo.tests.smartbench.loaders.SmartBenchDataLoader
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 
 class TestSmartBenchIngestion {
     private val logger = LoggerFactory.getLogger(this::class.java)
-    val sizes = listOf("small") // , "medium", "large"
+    val sizes = listOf("small", "medium", "large") //
 
     @Test
     fun testSmartBenchIngestion() {
@@ -20,7 +20,7 @@ class TestSmartBenchIngestion {
                 loader = SmartBenchDataLoader(size, threads = threads),
                 "stgraph",
                 threads = threads,
-                numMachines = 1,
+                numMachines = -1,
                 "smartbench",
                 size
             )
@@ -36,17 +36,18 @@ class TestSmartBenchIngestion {
         )
         setup.forEach { (cc, ncs) ->
             sizes.forEach { size ->
-                val threads = 1
-                logger.info("\n--- $size")
-                resetPort()
-                loadDataset(
-                    loader = SmartBenchDataLoader(size, threads = threads, host = cc, controllerIPs = ncs),
-                    "stgraph",
-                    threads = threads,
-                    numMachines = ncs.size,
-                    "smartbench",
-                    size
-                )
+                listOf(1, 16).forEach { threads ->
+                    logger.info("Size: $size, threads: $threads, nmachines: ${ncs.toSet().size}")
+                    resetPort()
+                    loadDataset(
+                        loader = SmartBenchDataLoader(size, threads = threads, host = cc, controllerIPs = ncs),
+                        "stgraph",
+                        threads = threads,
+                        numMachines = ncs.toSet().size,
+                        "smartbench",
+                        size
+                    )
+                }
             }
         }
     }

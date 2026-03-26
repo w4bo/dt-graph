@@ -12,7 +12,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
 
     override fun getTSId(): Long = id
 
-    override fun add(n: N, isUpdate: Boolean): N {
+    override fun add(n: N, isUpdate: Boolean, flush: Boolean): N {
         values[n.fromTimestamp] = n
         return n
     }

@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.math.max
+import kotlin.system.measureTimeMillis
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -154,4 +156,8 @@ fun query(sql: String, host: String, dataverse: String): HttpURLConnection {
     }
     connection.outputStream.use { it.write(postData.toByteArray()) }
     return connection
+}
+
+fun getTime(f: ()->Unit): Long {
+    return max(1, measureTimeMillis { f() })
 }

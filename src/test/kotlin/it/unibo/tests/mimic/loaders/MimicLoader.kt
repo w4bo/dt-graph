@@ -1,11 +1,11 @@
 package it.unibo.tests.mimic.loaders
+import it.unibo.graph.utils.getTime
 import it.unibo.stats.Loader
 import java.io.File
 import java.sql.DriverManager
 import java.sql.ResultSet
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.system.measureTimeMillis
 
 fun s2ts(s: String): Long = LocalDateTime.parse(s.replace(" ", "T")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
@@ -68,16 +68,16 @@ abstract class AbstractMimicIVLoader(val limit: Long): MimicIVLoader {
                             val itemId: Int = rs.getString("itemid").toInt()
                             if (first) {
                                 first = false
-                                gsTime += measureTimeMillis {  person = addPerson(subjectId) }
+                                gsTime += getTime {  person = addPerson(subjectId) }
                                 addedGS++
                             }
                             if (itemId != lastItemId) {
                                 lastItemId = itemId
-                                gsTime += measureTimeMillis { addTimeseries(rs, person!!) }
+                                gsTime += getTime { addTimeseries(rs, person!!) }
                                 addedGS++
                                 addedTS++
                             }
-                            tsTime += measureTimeMillis { addMeasurement(rs) }
+                            tsTime += getTime { addMeasurement(rs) }
                             addedMeas++
                             if (++count > limit) {
                                 close()

@@ -16,15 +16,15 @@ interface TS : Serializable {
 
     fun createNode(label: String, timestamp: Long, value: Long): N = N(encodeBitwise(getTSId(), timestamp), label, value = value, fromTimestamp = timestamp, toTimestamp = timestamp, g = g)
 
-    fun add(label: String, timestamp: Long, value: Long, location: String, isUpdate: Boolean = false): N {
+    fun add(label: String, timestamp: Long, value: Long, location: String, isUpdate: Boolean = false, flush: Boolean = true): N {
         val n = createNode(label, timestamp, value)
         n.properties.add(P(DUMMY_ID, n.id, NODE, LOCATION, WKTReader().read(location), PropType.GEOMETRY, fromTimestamp = timestamp, toTimestamp = timestamp, g = g))
-        return add(n, isUpdate)
+        return add(n, isUpdate, flush)
     }
 
-    fun add(label: String, timestamp: Long, value: Long, isUpdate: Boolean = false) = add(createNode(label, timestamp, value), isUpdate)
+    fun add(label: String, timestamp: Long, value: Long, isUpdate: Boolean = false, flush: Boolean = true) = add(createNode(label, timestamp, value), isUpdate, flush)
 
-    fun add(n: N, isUpdate: Boolean): N
+    fun add(n: N, isUpdate: Boolean, flush: Boolean = true): N
     fun getValues(by: List<Aggregate>, filters: List<Filter>, isGroupBy: Boolean = false): List<N>
     fun get(id: Long): N
 }

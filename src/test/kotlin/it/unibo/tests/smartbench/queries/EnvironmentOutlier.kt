@@ -1,4 +1,4 @@
-package it.unibo.tests.ci.smartbench.queries
+package it.unibo.tests.smartbench.queries
 
 import it.unibo.graph.interfaces.Direction
 import it.unibo.graph.interfaces.Graph

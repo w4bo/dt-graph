@@ -9,11 +9,12 @@ import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.platform.commons.logging.LoggerFactory
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class TestKotlin {
-
+    private val logger = org.slf4j.LoggerFactory.getLogger(this::class.java)
     /**
      * Runs a test matrix on different combinations of Graph and TSM implementations.
      *
@@ -32,7 +33,7 @@ class TestKotlin {
                 ).forEach { tsmFactory ->
                     val g1: Graph = graphClass.java.getDeclaredConstructor().newInstance()
                     val tsm = tsmFactory(g1)
-                    print("Graph: ${g1.javaClass}, TSM: ${tsm.javaClass}...")
+                    logger.info("Graph: ${g1.javaClass}, TSM: ${tsm.javaClass}...")
                     var g: Graph = setup(g1, tsm)
                     if (g1 is MemoryGraphACID) {
                         g1.flushToDisk()
@@ -42,7 +43,7 @@ class TestKotlin {
                     }
                     f(g)
                     g.close()
-                    println(" Done.")
+                    logger.info("Done.")
                 }
         }
     }

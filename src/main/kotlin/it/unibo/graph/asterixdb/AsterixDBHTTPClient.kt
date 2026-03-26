@@ -4,15 +4,18 @@ import it.unibo.graph.utils.*
 import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
+import java.io.BufferedWriter
 import java.io.OutputStream
+import java.io.OutputStreamWriter
 import java.io.PrintWriter
+import java.io.Writer
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 
 
 class AsterixDBHTTPClient(
     private val clusterControllerHost: String,
-    private val dataFeedIp: String,
+    val dataFeedIp: String,
     private val dataverse: String,
     private val dataset: String,
     private var dataFeedPort: Int = incPort(),
@@ -26,7 +29,7 @@ class AsterixDBHTTPClient(
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
     private lateinit var socket: Socket
     private lateinit var outputStream: OutputStream
-    lateinit var writer: PrintWriter
+    lateinit var writer: Writer
     private var isFeedConnectionOpen: Boolean = false
     private var isFeedInitialized: Boolean = false
 
@@ -42,8 +45,10 @@ class AsterixDBHTTPClient(
                 // the datafeed could be already opened and started, if so do nothing
             }
             socket = Socket(dataFeedIp, dataFeedPort)
+            socket.sendBufferSize = 1_000_000
             outputStream = socket.getOutputStream()
-            writer = PrintWriter(outputStream, true)
+            // writer = PrintWriter(outputStream, false) // , true
+            writer = BufferedWriter(OutputStreamWriter(outputStream), 64 * 1024 * 1024)
             isFeedConnectionOpen = true
         }
     }
@@ -56,6 +61,7 @@ class AsterixDBHTTPClient(
             if (closeRemote) {
                 stopFeed()
                 dropFeed()
+                isFeedInitialized = false
             }
             isFeedConnectionOpen = false
         }

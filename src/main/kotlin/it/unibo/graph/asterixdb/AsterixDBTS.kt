@@ -23,15 +23,14 @@ class AsterixDBTS(
 
     override fun getTSId(): Long = id
 
-    override fun add(n: N, isUpdate: Boolean): N {
+    override fun add(n: N, isUpdate: Boolean, flush: Boolean): N {
         if (isUpdate) {
             updateTs(n)
         } else {
             val event = nodeToJson(n, isUpdate = false, tsId = id)
-            connection.writer.println(event)
-            if (connection.writer.checkError()) {
-                throw Exception("Couldn't insert data into AsterixDB")
-            }
+            val writer = connection.writer
+            writer.write(event + "\n")
+            if (flush) writer.flush()
         }
         return n
     }

@@ -1,4 +1,4 @@
-package it.unibo.tests.ci.smartbench
+package it.unibo.tests.smartbench
 
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
@@ -8,6 +8,12 @@ import it.unibo.graph.utils.loadTemporalRanges
 import it.unibo.stats.Querying
 import it.unibo.stats.runQuery
 import it.unibo.tests.ci.smartbench.queries.*
+import it.unibo.tests.smartbench.queries.AgentHistory
+import it.unibo.tests.smartbench.queries.AgentOutlier
+import it.unibo.tests.smartbench.queries.EnvironmentAggregate
+import it.unibo.tests.smartbench.queries.EnvironmentCoverage
+import it.unibo.tests.smartbench.queries.EnvironmentOutlier
+import it.unibo.tests.smartbench.queries.MaintenanceOwners
 import org.junit.jupiter.api.TestInstance
 import org.yaml.snakeyaml.Yaml
 import java.util.logging.Logger
