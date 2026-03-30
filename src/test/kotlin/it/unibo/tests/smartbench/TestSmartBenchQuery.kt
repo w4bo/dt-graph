@@ -7,7 +7,6 @@ import it.unibo.graph.utils.TimeRange
 import it.unibo.graph.utils.loadTemporalRanges
 import it.unibo.stats.Querying
 import it.unibo.stats.runQuery
-import it.unibo.tests.ci.smartbench.queries.*
 import it.unibo.tests.smartbench.queries.AgentHistory
 import it.unibo.tests.smartbench.queries.AgentOutlier
 import it.unibo.tests.smartbench.queries.EnvironmentAggregate

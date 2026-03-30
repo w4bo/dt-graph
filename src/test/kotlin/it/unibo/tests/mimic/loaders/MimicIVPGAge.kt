@@ -1,17 +1,16 @@
 package it.unibo.tests.mimic.loaders
 
+import it.unibo.tests.smartbench.loaders.TSRecord
 import java.sql.*
-import kotlin.math.roundToLong
 
 class MimicIVPGAge(
     limit: Long,
     url: String = "jdbc:postgresql://localhost:5435/mimic-iv",
     user: String = "postgres",
     password: String = "password"
-) : AbstractMimicIVLoader(limit)  {
+) : AbstractMimicIVLoader(limit, threads = 1)  {
     private val graphName = "mimic_${if (limit == Long.MAX_VALUE) "full" else limit}"
     private val conn: Connection = DriverManager.getConnection(url, user, password)
-    private var currentTSId: Long? = null
     private var insertMeasurement: PreparedStatement
     init {
         conn.createStatement().use { st ->
@@ -49,7 +48,8 @@ class MimicIVPGAge(
                 CREATE TABLE IF NOT EXISTS measurements (
                     ts_id BIGINT,
                     timestamp BIGINT,
-                    value BIGINT
+                    value BIGINT,
+                    label VARCHAR(255)
                 )""".trimIndent())
 
             safeExec("TRUNCATE TABLE Measurements")
@@ -85,13 +85,7 @@ class MimicIVPGAge(
         }
     }
 
-    override fun addTimeseries(row: ResultSet, person: Long) {
-        val abbreviation = row.getString("abbreviation")
-        val unitname = row.getString("unitname")
-        val category = row.getString("category")
-        val label = row.getString("label")
-        val itemid = row.getString("itemid")
-
+    override fun addTimeseries(abbreviation: String, unitname: String?, category: String, label: String, itemid: Int, person: Long): Long {
         conn.createStatement().use { st ->
             st.execute("LOAD 'age';")
             st.execute("SET search_path = ag_catalog, public;")
@@ -110,17 +104,15 @@ class MimicIVPGAge(
                     RETURN id(ts)
                 $$) as (id agtype)""".trimIndent())
             rs.next()
-            currentTSId = rs.getString(1).replace("\"","").toLong()
+            return rs.getString(1).replace("\"", "").toLong()
         }
     }
 
-    override fun addMeasurement(row: ResultSet) {
-        val tsId = currentTSId ?: return
-        val timestamp = s2ts(row.getString("charttime"))
-        val value = row.getString("valuenum").toDouble().roundToLong()
+    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
         insertMeasurement.setLong(1, tsId)
-        insertMeasurement.setLong(2, timestamp)
-        insertMeasurement.setLong(3, value)
+        insertMeasurement.setLong(2, row.timestamp)
+        insertMeasurement.setLong(3, row.value as Long)
+        insertMeasurement.setString(4, row.type)
         insertMeasurement.executeUpdate()
     }
 

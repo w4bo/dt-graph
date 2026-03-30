@@ -1,6 +1,8 @@
 package it.unibo.graph.asterixdb
 
 import it.unibo.graph.utils.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -11,6 +13,7 @@ import java.io.PrintWriter
 import java.io.Writer
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 
 
 class AsterixDBHTTPClient(
@@ -19,6 +22,7 @@ class AsterixDBHTTPClient(
     private val dataverse: String,
     private val dataset: String,
     private var dataFeedPort: Int = incPort(),
+    private val isConcurrent: Boolean
 ) {
     companion object {
         val id: AtomicInteger = AtomicInteger(0)
@@ -32,6 +36,27 @@ class AsterixDBHTTPClient(
     lateinit var writer: Writer
     private var isFeedConnectionOpen: Boolean = false
     private var isFeedInitialized: Boolean = false
+    private val mutex = ReentrantLock()
+
+    fun flush() {
+        writer.flush()
+    }
+
+    private fun write(data: String, flush: Boolean) {
+        openDataFeedConnection()
+        writer.write(data + "\n")
+        if (flush) flush()
+    }
+
+    fun writeToFeed(data: String, flush: Boolean) {
+        if (isConcurrent) {
+            mutex.lock()
+            write(data, flush)
+            mutex.unlock()
+        } else {
+            write(data, flush)
+        }
+    }
 
     fun openDataFeedConnection() {
         if (!isFeedConnectionOpen) {
@@ -47,8 +72,8 @@ class AsterixDBHTTPClient(
             socket = Socket(dataFeedIp, dataFeedPort)
             socket.sendBufferSize = 1_000_000
             outputStream = socket.getOutputStream()
-            // writer = PrintWriter(outputStream, false) // , true
-            writer = BufferedWriter(OutputStreamWriter(outputStream), 64 * 1024 * 1024)
+            // writer = PrintWriter(outputStream, true)
+            writer = BufferedWriter(OutputStreamWriter(outputStream), 1024 * 1024)
             isFeedConnectionOpen = true
         }
     }

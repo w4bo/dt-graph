@@ -6,6 +6,7 @@ import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.interfaces.TsMode
 import it.unibo.graph.utils.DATASET_PREFIX
 import it.unibo.graph.utils.loadProps
+import kotlin.random.Random
 
 val props = loadProps()
 
@@ -14,12 +15,14 @@ class AsterixDBTSM private constructor(
     val host: String,
     val port: String,
     val dataverse: String,
-    val nodeControllersIPs: List<String>
+    val nodeControllersIPs: List<String>,
+    val maxConnections: Int?
 ) : TSManager {
     val isConcurrent = nodeControllersIPs.size > 1
     val dataset = "${DATASET_PREFIX}0"
-    val connection = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset)
-    val connections = mutableListOf<AsterixDBHTTPClient>(connection)
+    val connection = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset, isConcurrent = isConcurrent)
+    val connections = mutableListOf(connection)
+    val r = Random(0)
 
     private fun getDataFeedIP(): String {
         val hash = (Math.random() * 100).toInt()
@@ -28,16 +31,26 @@ class AsterixDBTSM private constructor(
     }
 
     fun createAndOpenConnection(mode: TsMode): AsterixDBHTTPClient {
+        // Determine which connection to use
         val connection = if (isConcurrent) {
-            val c = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset)
-            connections.add(c)
-            c
+            // If we've reached the max number of connections, reuse a random existing connection
+            if (connections.size == maxConnections) {
+                connections[r.nextInt(0, maxConnections)]
+            } else {
+                // Otherwise, create a new connection and store it
+                val c = AsterixDBHTTPClient("http://$host:$port/query/service", getDataFeedIP(), dataverse, dataset, isConcurrent = isConcurrent)
+                connections.add(c)
+                c
+            }
         } else {
+            // In non-concurrent mode, reuse the single existing connection
             connection
         }
+        // If the mode is WRITE, ensure the data feed connection is opened
         if (mode === TsMode.WRITE) {
             connection.openDataFeedConnection()
         }
+        // Return the selected or newly created connection
         return connection
     }
 
@@ -61,9 +74,10 @@ class AsterixDBTSM private constructor(
             dataverse: String = props["default_dataverse"].toString(),
             host: String = System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
             port: String = props["default_cc_port"].toString(),
-            controllerIps: List<String> = System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost")
+            controllerIps: List<String> = System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
+            maxConnections: Int? = null
         ): AsterixDBTSM {
-            return AsterixDBTSM(g, host, port, dataverse, controllerIps)
+            return AsterixDBTSM(g, host, port, dataverse, controllerIps, maxConnections)
         }
     }
 

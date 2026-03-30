@@ -8,6 +8,8 @@ interface Loader {
     fun getGSTime(): Long
     fun getTSTime(): Long
     fun getIndexTime(): Long
+    fun getGSCardinality(): Long
+    fun getTSCardinality(): Long
     fun loadData()
     fun close()
 }
@@ -44,7 +46,9 @@ fun loadDataset(loader: Loader, model: String, threads: Int, numMachines: Int, d
         "numMachines" to numMachines,
         "storage" to gsStorage + tsStorage,
         "tsStorage" to tsStorage,
-        "gsStorage" to gsStorage
+        "gsStorage" to gsStorage,
+        "tsCard" to loader.getTSCardinality(),
+        "gsCard" to loader.getGSCardinality()
     )
     val writeHeader = !statisticsFile.exists()
     statisticsFile.appendText(buildString {

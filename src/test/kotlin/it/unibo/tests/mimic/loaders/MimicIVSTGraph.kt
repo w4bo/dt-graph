@@ -4,16 +4,18 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.PropType
+import it.unibo.graph.interfaces.TsMode
 import it.unibo.graph.utils.*
-import java.sql.ResultSet
-import kotlin.math.roundToLong
+import it.unibo.tests.smartbench.loaders.TSRecord
+import kotlin.collections.set
 
-class MimicIVSTGraph(limit: Long, controllerIps: List<String> = listOf("localhost")) : AbstractMimicIVLoader(limit)  {
+class MimicIVSTGraph(limit: Long, threads: Int = 1, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")) : AbstractMimicIVLoader(limit, threads = threads)  {
     val s = if (limit == Long.MAX_VALUE) "full" else "$limit"
     val g = MemoryGraphACID(path = "datasets/dump/mimic/$s")
-    val t = AsterixDBTSM.createDefault(g, "mimic_$s", controllerIps = controllerIps)
-    var ts: AsterixDBTS? = null
+    val t = AsterixDBTSM.createDefault(g, "mimic_$s", host = host, controllerIps = controllerIPs, maxConnections = if (threads == 1) 1 else { threads * 10 })
     var i = 0
+    val tsMap = mutableMapOf<Long, AsterixDBTS>()
+    val set = mutableSetOf<TSRecord>()
 
     init {
         g.tsm = t
@@ -27,29 +29,29 @@ class MimicIVSTGraph(limit: Long, controllerIps: List<String> = listOf("localhos
         return person.id
     }
 
-    override fun addTimeseries(row: ResultSet, person: Long) {
-        val n = g.addNode(row.getString("abbreviation"), isTs = true)
-        val unitname: String? = row.getString("unitname")
+    override fun addTimeseries(abbreviation: String, unitname: String?, category: String, label: String, itemid: Int, person: Long): Long {
+        val n = g.addNode(abbreviation, isTs = true)
         if (unitname != null) g.addProperty(n.id, key = "unitname", value = unitname, PropType.STRING)
-        g.addProperty(n.id, key = "category", value = row.getString("category"), PropType.STRING)
-        g.addProperty(n.id, key = "label", value = row.getString("label"), PropType.STRING)
-        g.addProperty(n.id, key = "itemid", value = row.getString("itemid").toInt(), PropType.INT)
-        // g.addProperty(n.id, key = "param_type", value = row.getString("param_type"), PropType.STRING)
-        val portRange = LASTFEEDPORT - FIRSTFEEDPORT
-        if (i++ > portRange - portRange * 0.2) {
-            resetPort()
-            i = 0
-        }
-        ts = g.getTSM().addTS(n.id) as AsterixDBTS
+        g.addProperty(n.id, key = "category", value = category, PropType.STRING)
+        g.addProperty(n.id, key = "label", value = label, PropType.STRING)
+        g.addProperty(n.id, key = "itemid", value = itemid, PropType.INT)
+        val ts = (g.getTSM() as AsterixDBTSM).addTS(n.id) as AsterixDBTS
+        tsMap[n.id] = ts
         g.addEdge("hasParameters", fromNode = person, toNode = n.id)
+        return n.id
     }
 
-    override fun addMeasurement(row: ResultSet) {
-        ts!!.add(
-            Measurement,
-            timestamp = s2ts(row.getString("charttime")),
-            value = row.getString("valuenum").toDouble().roundToLong()
+    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
+        val ts = tsMap[tsId]!!
+        ts.add(
+            row.type,
+            timestamp = row.timestamp,
+            value = row.value as Long,
+            flush = true
         )
+        if (isLast) {
+            ts.connection.writer.flush()
+        }
     }
 
     override fun close() {

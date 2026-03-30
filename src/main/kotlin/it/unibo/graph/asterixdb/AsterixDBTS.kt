@@ -11,6 +11,8 @@ import it.unibo.graph.query.Operators
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.DelicateCoroutinesApi
 import org.json.JSONObject
+import java.io.BufferedWriter
+import java.io.PrintWriter
 
 @OptIn(DelicateCoroutinesApi::class)
 class AsterixDBTS(
@@ -28,9 +30,7 @@ class AsterixDBTS(
             updateTs(n)
         } else {
             val event = nodeToJson(n, isUpdate = false, tsId = id)
-            val writer = connection.writer
-            writer.write(event + "\n")
-            if (flush) writer.flush()
+            connection.writeToFeed(event + "\n", flush)
         }
         return n
     }

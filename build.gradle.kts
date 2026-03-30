@@ -34,7 +34,7 @@ tasks.withType<Test>().configureEach {
         events("passed", "skipped", "failed")
     }
     useJUnitPlatform()
-    maxHeapSize = "16g"
+    maxHeapSize = "64g"
 }
 
 dependencies {

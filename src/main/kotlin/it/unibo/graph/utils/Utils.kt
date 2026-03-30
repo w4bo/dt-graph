@@ -129,7 +129,9 @@ val atomicPort = AtomicInt(FIRSTFEEDPORT)
 @OptIn(ExperimentalAtomicApi::class)
 fun incPort(): Int {
     val port = atomicPort.fetchAndAdd(1)
-    if (port > LASTFEEDPORT) throw UnsupportedOperationException("Ports are exhausted")
+    if (port > LASTFEEDPORT) {
+        throw UnsupportedOperationException("Ports are exhausted")
+    }
     return port
 }
 

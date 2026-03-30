@@ -1,11 +1,10 @@
 package it.unibo.tests.mimic.loaders
 
+import it.unibo.tests.smartbench.loaders.TSRecord
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import java.sql.ResultSet
-import kotlin.math.roundToLong
 
 fun limitToPort(limit: Long): Int {
     return if (limit < 5_000_000) {
@@ -22,7 +21,7 @@ class MimicIVNeo4J(
     uri: String = "bolt://localhost:${limitToPort(limit)}",
     user: String = "neo4j",
     password: String = "password"
-) : AbstractMimicIVLoader(limit) {
+) : AbstractMimicIVLoader(limit, threads = 1) {
 
     private val driver: Driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
     private val session: Session
@@ -45,39 +44,34 @@ class MimicIVNeo4J(
             RETURN id(p) AS id
             """.trimIndent()
         )
-
         return result.single()["id"].asLong()
     }
 
-    override fun addTimeseries(row: ResultSet, person: Long) {
+    override fun addTimeseries(abbreviation: String, unitname: String?, category: String, label: String, itemid: Int, person: Long): Long {
         val result = session.run(
             """
             MATCH (p) WHERE id(p) = $person
             CREATE (ts:TimeSeries {
-                abbreviation: '${row.getString("abbreviation")}',
-                unitname: '${row.getString("unitname")}',
-                category: '${row.getString("category")}',
-                label: '${row.getString("label")}',
-                itemid: '${row.getString("itemid")}'
+                abbreviation: '${abbreviation}',
+                unitname: '${unitname}',
+                category: '${category}',
+                label: '${label}',
+                itemid: '${itemid}'
             })
             CREATE (p)-[:HAS_PARAMETERS]->(ts)
             RETURN id(ts) AS id
             """.trimIndent()
         )
-        currentTSNode = result.single()["id"].asLong()
+        return result.single()["id"].asLong()
     }
 
-    override fun addMeasurement(row: ResultSet) {
-        val tsNode = currentTSNode ?: return
-        val timestamp = s2ts(row.getString("charttime"))
-        val value = row.getString("valuenum").toDouble().roundToLong()
-
+    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
         session.run(
             """
-            MATCH (ts) WHERE id(ts) = $tsNode
-            CREATE (m:Measurement {
-                timestamp: $timestamp,
-                value: $value
+            MATCH (ts) WHERE id(ts) = $tsId
+            CREATE (m:${row.type} {
+                timestamp: ${row.timestamp},
+                value: ${row.value}
             })
             CREATE (ts)-[:HAS_MEASUREMENT]->(m)
             """.trimIndent()

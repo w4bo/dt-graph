@@ -20,11 +20,13 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.logging.Logger
-import kotlin.collections.get
-import kotlin.collections.iterator
-import kotlin.math.max
-import kotlin.system.measureTimeMillis
-import kotlin.time.measureTime
+
+data class TSRecord(
+    val type: String,
+    val timestamp: Long,
+    val location: String,
+    val value: Any
+)
 
 class SmartBenchDataLoader(size: String, val threads: Int, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")): Loader {
     val projectRoot = Paths.get("").toAbsolutePath().normalize()
@@ -47,7 +49,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
 
     val logger: Logger = Logger.getLogger(this.javaClass.name)
     val graph = MemoryGraphACID(path = graphPath)
-    val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size", host = host, controllerIps = controllerIPs)
+    val tsm = AsterixDBTSM.createDefault(graph, dataverse = "${dataset}_$size", host = host, controllerIps = controllerIPs, maxConnections = if (threads == 1) 1 else { threads * 10 })
 
     init {
         val folder = Paths.get(graphPath)
@@ -62,6 +64,8 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
     private val mapper: ObjectMapper = jacksonObjectMapper()
     private var gsTime: Long = 0
     private var tsTime: Long = 0
+    private var gsCard: Long = 0
+    private var tsCard: Long = 0
     private var indexTime: Long = 0
 
     // JSON-id -> graph node-id
@@ -76,9 +80,8 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
     }
 
     override fun loadData() {
-        val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
         val tsList: MutableMap<TS, String> = mutableMapOf()
-        for (file in dataPath) {
+        dataPath.forEach { file ->
             logger.info { "Loading $file..." }
             val path = Paths.get(file).toAbsolutePath().normalize()
             require(Files.exists(path)) { "File not found: $file" }
@@ -93,7 +96,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                         val node = graph.addNode(nodeLabel)
                         val nodeId = node.id
                         graphIdList[entityId] = nodeId
-
+                        gsCard++
                         // Parse its properties
                         for ((key, value) in obj) {
                             when (value) {
@@ -131,8 +134,9 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                                 ?.normalize()
                             if (sensorTsFilePath != null && Files.exists(sensorTsFilePath)) {
                                 val newNode = graph.addNode(labelString, isTs = true)
-                                val newTs: TS
-                                newTs = tsm.addTS(newNode.id)
+                                val newTs: TS = tsm.addTS(newNode.id)
+                                gsCard++
+
                                 graph.addEdge(hasLabel(labelString), nodeId, newNode.id)
                                 tsList[newTs] = sensorTsFilePath.toString()
                             }
@@ -200,13 +204,6 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
     }
 
     fun loadTS(ts: AsterixDBTS, path: String, isLast: Boolean): Long {
-        data class TSRecord(
-            val type: String,
-            val timestamp: Long,
-            val location: String,
-            val value: Long
-        )
-
         val projectRoot = Paths.get("").toAbsolutePath().normalize()
         val filePath = projectRoot.resolve(path).normalize()
         if (!Files.exists(filePath)) {
@@ -214,8 +211,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
         }
         val records = mutableListOf<TSRecord>()
         Files.newBufferedReader(filePath).useLines { lines ->
-            for (line in lines) {
-                if (line.isBlank()) continue
+            lines.forEach { line ->
                 val json: JsonNode = mapper.readTree(line)
                 val type = json.get(TYPE).textValue()
                 val label = if (type == "Temperature") "temperature" else "presence"
@@ -226,34 +222,35 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                     json.get("payload").get(label).longValue()
                 )
             }
+        }
 
-            var last = -1L
-            val time = getTime {
-                records.forEach { event ->
-                    last = event.timestamp
-                    ts.add(label = event.type, timestamp = last, location = event.location, value = event.value, isUpdate = false, flush = false)
+        var last = -1L
+        val time = getTime {
+            records.forEach { event ->
+                last = event.timestamp
+                ts.add(label = event.type, timestamp = last, location = event.location, value = event.value as Long, isUpdate = false, flush = false)
+            }
+        }
+        tsCard += records.size
+        ts.connection.writer.flush()
+        if (isLast) {
+            val start = System.currentTimeMillis()
+            var fail = 0
+            while (true) {
+                try {
+                    val startQuery = System.currentTimeMillis()
+                    ts.get(last)
+                    val end = System.currentTimeMillis()
+                    val deltaQuery = end - startQuery
+                    // logger.info { "Load time: $time. Waited for ${end - start - deltaQuery} ms after $fail failures" }
+                    return time + end - start - deltaQuery // do not count the time of the last query
+                } catch (_: Exception) {
+                    fail++
+                    Thread.sleep(1)
                 }
             }
-            ts.connection.writer.flush()
-            if (isLast) {
-                val start = System.currentTimeMillis()
-                var fail = 0
-                while (true) {
-                    try {
-                        val startQuery = System.currentTimeMillis()
-                        ts.get(last)
-                        val end = System.currentTimeMillis()
-                        val deltaQuery = end - startQuery
-                        // logger.info { "Load time: $time. Waited for ${end - start - deltaQuery} ms after $fail failures" }
-                        return time + end - start - deltaQuery // do not count the time of the last query
-                    } catch (_: Exception) {
-                        fail++
-                        Thread.sleep(1)
-                    }
-                }
-            } else {
-                return time
-            }
+        } else {
+            return time
         }
     }
 
@@ -276,8 +273,8 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
     }
 
     override fun getGSTime(): Long = gsTime
-
     override fun getTSTime(): Long = tsTime
-
     override fun getIndexTime(): Long = indexTime
+    override fun getGSCardinality(): Long = gsCard
+    override fun getTSCardinality(): Long = tsCard
 }

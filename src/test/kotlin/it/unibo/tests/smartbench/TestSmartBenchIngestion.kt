@@ -10,22 +10,22 @@ class TestSmartBenchIngestion {
     private val logger = LoggerFactory.getLogger(this::class.java)
     val sizes = listOf("small", "medium", "large") //
 
-    @Test
-    fun testSmartBenchIngestion() {
-        sizes.forEach { size ->
-            val threads = 1
-            logger.info("\n--- $size")
-            resetPort()
-            loadDataset(
-                loader = SmartBenchDataLoader(size, threads = threads),
-                "stgraph",
-                threads = threads,
-                numMachines = -1,
-                "smartbench",
-                size
-            )
-        }
-    }
+     @Test
+     fun testSmartBenchIngestion() {
+         sizes.forEach { size ->
+             val threads = 1
+             logger.info("\n--- $size")
+             resetPort()
+             loadDataset(
+                 loader = SmartBenchDataLoader(size, threads = threads),
+                 "stgraph",
+                 threads = threads,
+                 numMachines = -1,
+                 "smartbench",
+                 size
+             )
+         }
+     }
 
     @Test
     fun testSmartBenchConcurrent() {
