@@ -6,7 +6,6 @@ import it.unibo.stats.Loader
 import it.unibo.tests.smartbench.loaders.TSRecord
 import java.io.File
 import java.sql.DriverManager
-import java.sql.ResultSet
 import java.util.logging.Logger
 import kotlin.math.roundToLong
 
@@ -93,32 +92,39 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
 
     fun loadTS(pairs: List<Pair<Int, Int>>): Long {
         val events = mutableListOf<Pair<Long, TSRecord>>()
-        // val origin  = mutableListOf<Triple<Any, Any, Any>>()
-        val subjectids = pairs.joinToString { (subjectid, _) -> "'$subjectid'" }
-        val itemids = pairs.map { (_, itemId) -> itemId }.toSet().joinToString { itemId -> "'$itemId'" }
-        DriverManager.getConnection(url, user, password).use { conn ->
-            conn.autoCommit = false
-            val sql = """
-                SELECT subject_id, itemid, charttime, avg(cast(valuenum as float)) as valuenum
-                FROM chartevents c 
-                WHERE c.subject_id in ($subjectids) and c.itemid in ($itemids) and valuenum is not null
-                GROUP BY subject_id, itemid, charttime
-                ORDER BY subject_id, itemid, charttime
-                ${if (limit != Long.MAX_VALUE) "LIMIT $limit" else ""}
-            """.trimIndent()
-            logger.info(sql)
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.fetchSize = 100_000
-                val rs: ResultSet = stmt.executeQuery()
-                while (rs.next()) {
-                    // origin.add(Triple(rs.getString("subject_id"), rs.getString("itemid"), rs.getString("charttime")))
-                    val subjectId = rs.getLong("subject_id")
-                    val itemId = rs.getLong("itemid")
-                    if (pairs.contains(Pair(subjectId.toInt(), itemId.toInt()))) {
-                        val tsId = item2nodeid[Pair(subjectId, itemId)]
+        val chunkSize = 100_000
+        pairs.chunked(chunkSize).forEach { chunk ->
+            val chunk = chunk.toSet()
+            val subjectIds = chunk.map { (subjectId, _) -> subjectId }.toSet().joinToString { "'$it'" }
+            val itemIds = chunk.map { (_, itemId) -> itemId }.toSet().joinToString { "'$it'" }
+            DriverManager.getConnection(url, user, password).use { conn ->
+                conn.autoCommit = false
+                val sql = """
+                    SELECT subject_id, itemid, charttime, valuenum
+                    FROM chartevents_unique c 
+                    WHERE c.subject_id IN ($subjectIds) AND c.itemid IN ($itemIds)
+                    ORDER BY subject_id, itemid, charttime
+                """.trimIndent()
+                logger.info(sql)
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.fetchSize = 10_000   // smaller is safer
+                    val rs = stmt.executeQuery()
+                    var prevItemId = -1L
+                    var prevSubjectId = -1L
+                    var skip = false
+                    while (rs.next()) {
+                        val subjectId = rs.getLong("subject_id")
+                        val itemId = rs.getLong("itemid")
+                        if (subjectId != prevSubjectId || itemId != prevItemId) {
+                            skip = !chunk.contains(subjectId.toInt() to itemId.toInt())
+                            prevItemId = itemId
+                            prevSubjectId = subjectId
+                        }
+                        if (skip) continue
+                        val tsId = item2nodeid[subjectId to itemId]
                         val chartTime = rs.getString("charttime")
                         val valueNum = rs.getString("valuenum")
-                        events.add(Pair(tsId!!, TSRecord(Measurement, timestamp = dateToTimestamp(chartTime), location = "", value = valueNum.toDouble().roundToLong())))
+                        events.add(tsId!! to TSRecord(Measurement, timestamp = dateToTimestamp(chartTime), location = "", value = valueNum.toDouble().roundToLong()))
                     }
                 }
             }

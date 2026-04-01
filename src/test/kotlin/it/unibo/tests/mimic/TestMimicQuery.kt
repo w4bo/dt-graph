@@ -7,6 +7,7 @@ import it.unibo.graph.query.*
 import it.unibo.graph.utils.Measurement
 import it.unibo.graph.utils.Person
 import it.unibo.graph.utils.VALUE
+import it.unibo.graph.utils.getTime
 import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
 import it.unibo.stats.runQuery
@@ -16,39 +17,43 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.GraphDatabase
 import java.sql.DriverManager
 import java.util.logging.Logger
-import kotlin.system.measureTimeMillis
 import kotlin.test.Test
 
-private val machines = 1
-private val testIterations = 1
 private val sizes = listOf(1_692_200L, 16_922_000L, Long.MAX_VALUE)
+private val setup: Map<String, List<String>> = mapOf(
+    "localhost" to listOf("localhost"),
+    "192.168.30.110" to listOf("192.168.30.110", "192.168.30.110"),
+    "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
+    "192.168.30.104" to listOf("192.168.30.105", "192.168.30.106", "192.168.30.107", "192.168.30.109")
+)
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestMimicQuery {
 
     val logger = Logger.getLogger(TestMimicQuery::class.java.toString())
     private fun runTest(approach: String, queryBuilder: (graph: Graph) -> Querying) {
-        sizes.forEach { size ->
-            val size = if (size == Long.MAX_VALUE) "full" else "$size"
-            val graph: MemoryGraphACID = MemoryGraphACID.readFromDisk("datasets/dump/mimic/$size/") // Reload from disk
-            val tsm = AsterixDBTSM.createDefault(graph, dataverse = "mimic_$size")
-            graph.tsm = tsm
-            repeat(testIterations) {
+        setup.forEach { (host, controllerIPs) ->
+            sizes.forEach { size ->
+                val size = if (size == Long.MAX_VALUE) "full" else "$size"
+                val graph: MemoryGraphACID = MemoryGraphACID.readFromDisk("datasets/dump/mimic/$size/") // Reload from disk
+                val tsm = AsterixDBTSM.createDefault(graph, host = host, controllerIps = controllerIPs, dataverse = "mimic_$size")
+                graph.tsm = tsm
                 listOf(1, 4, 8, 16).forEach { threads ->
                     val query = queryBuilder(graph)
-                    logger.info("${query.queryId} size: $size threads: $threads")
-                    runQuery(query, approach, threads, machines, "mimic", size)
+                    val numMachines = if (host == "localhost") { -1 } else { controllerIPs.toSet().size }
+                    logger.info("${query.queryId} size: $size, threads: $threads, numMachines: $numMachines")
+                    runQuery(query, approach, threads, numMachines = numMachines, "mimic-iv", size)
                 }
+                graph.close()
             }
-            graph.close()
         }
     }
 
     abstract class Q : Querying {
         override val queryId = this::class.simpleName.toString()
         override fun runQuery(threads: Int): QueryResultData {
-            val res: List<Any>
-            val time = measureTimeMillis {
+            var res: List<Any> = listOf()
+            val time = getTime {
                 res = query(threads)
             }
             return QueryResultData(time, res.size)
@@ -64,7 +69,7 @@ class TestMimicQuery {
             val time: Long
             GraphDatabase.driver(uri, AuthTokens.basic(user, pwd)).use { driver ->
                 driver.session().use { session ->
-                     time = measureTimeMillis {
+                     time = getTime {
                         val result = session.run(query())
                         // Iterate over rows
                         while (result.hasNext()) {
@@ -102,7 +107,7 @@ class TestMimicQuery {
             val time: Long
             DriverManager.getConnection(url, user, pwd).use { conn ->
                 conn.createStatement().use { stmt ->
-                    time = measureTimeMillis {
+                    time = getTime {
                         val sql = query()
                         stmt.execute("LOAD 'age'")
                         stmt.execute("SET search_path = ag_catalog, public")
@@ -274,25 +279,23 @@ class TestMimicQuery {
 }
 
 fun main() {
-    repeat(testIterations) {
-        sizes.forEach { size ->
-            listOf(
-                TestMimicQuery.Q1Neo4J("bolt://localhost:${limitToPort(size)}"),
-                TestMimicQuery.Q2Neo4J("bolt://localhost:${limitToPort(size)}"),
-                TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size)}"),
-                TestMimicQuery.Q4Neo4J("bolt://localhost:${limitToPort(size)}")
-            ).forEach { query ->
-                runQuery(query, "neo4j", 1, machines, "mimic", size.toString())
-            }
+    sizes.forEach { size ->
+        listOf(
+            TestMimicQuery.Q1Neo4J("bolt://localhost:${limitToPort(size)}"),
+            TestMimicQuery.Q2Neo4J("bolt://localhost:${limitToPort(size)}"),
+            TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size)}"),
+            TestMimicQuery.Q4Neo4J("bolt://localhost:${limitToPort(size)}")
+        ).forEach { query ->
+            runQuery(query, "neo4j", threads = 1, numMachines = -1, "mimic-iv", size.toString())
+        }
 
-            listOf(
-                TestMimicQuery.Q1PGAge("mimic_$size"),
-                TestMimicQuery.Q2PGAge("mimic_$size"),
-                TestMimicQuery.Q3PGAge("mimic_$size"),
-                TestMimicQuery.Q4PGAge("mimic_$size")
-            ).forEach { query ->
-                runQuery(query, "pgage", 1, machines, "mimic", size.toString())
-            }
+        listOf(
+            TestMimicQuery.Q1PGAge("mimic_$size"),
+            TestMimicQuery.Q2PGAge("mimic_$size"),
+            TestMimicQuery.Q3PGAge("mimic_$size"),
+            TestMimicQuery.Q4PGAge("mimic_$size")
+        ).forEach { query ->
+            runQuery(query, "pgage", threads = 1, numMachines = -1, "mimic-iv", size.toString())
         }
     }
 }

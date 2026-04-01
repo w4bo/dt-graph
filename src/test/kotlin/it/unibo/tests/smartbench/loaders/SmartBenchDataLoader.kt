@@ -232,7 +232,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
             }
         }
         tsCard += records.size
-        ts.connection.writer.flush()
+        ts.connection.flush()
         if (isLast) {
             val start = System.currentTimeMillis()
             var fail = 0

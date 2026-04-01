@@ -47,10 +47,10 @@ class MimicIVSTGraph(limit: Long, threads: Int = 1, host: String = "localhost", 
             row.type,
             timestamp = row.timestamp,
             value = row.value as Long,
-            flush = true
+            flush = false
         )
         if (isLast) {
-            ts.connection.writer.flush()
+            ts.connection.flush()
         }
     }
 

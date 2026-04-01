@@ -22,10 +22,13 @@ import kotlin.test.Test
 class TestSmartBenchQuery {
     val logger = Logger.getLogger(TestSmartBenchQuery::class.java.toString())
     val temporalConstraintMap = loadYamlAsMap("time_constraints.yaml")
-    val machines = 1
-    val testIterations = 1
     val sizes = listOf("small", "medium", "large")
-    val querySelectivity = "increased"
+    val setup: Map<String, List<String>> = mapOf(
+        "localhost" to listOf("localhost"),
+        "192.168.30.110" to listOf("192.168.30.110", "192.168.30.110"),
+        "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
+        "192.168.30.104" to listOf("192.168.30.105", "192.168.30.106", "192.168.30.107", "192.168.30.109")
+    )
 
     fun loadYamlAsMap(resourcePath: String): Map<String, Any> {
         val inputStream = this::class.java.classLoader.getResourceAsStream(resourcePath) ?: throw IllegalArgumentException("$resourcePath not found in classpath")
@@ -34,11 +37,12 @@ class TestSmartBenchQuery {
     }
 
     private fun runTest(name: String, withRange: Boolean, queryBuilder: (graph: Graph, range: TimeRange?) -> Querying) {
-        sizes.forEach { size ->
-            val graph: MemoryGraphACID = MemoryGraphACID.readFromDisk("datasets/dump/smartbench/$size/") // Reload from disk
-            val tsm = AsterixDBTSM.createDefault(graph, dataverse = "smartbench_$size")
-            graph.tsm = tsm
-            repeat(testIterations) {
+        setup.forEach { (host, controllerIPs) ->
+            sizes.forEach { size ->
+                val graph: MemoryGraphACID = MemoryGraphACID.readFromDisk("datasets/dump/smartbench/$size/") // Reload from disk
+                val tsm = AsterixDBTSM.createDefault(graph, host = host, controllerIps = controllerIPs, dataverse = "smartbench_$size")
+                graph.tsm = tsm
+                val querySelectivity = "increased"
                 val ranges = loadTemporalRanges(temporalConstraintMap, querySelectivity, name, size)
                 listOf(1, 4, 8, 16).forEach { threads ->
                     ranges.values.forEach { range ->
@@ -47,12 +51,13 @@ class TestSmartBenchQuery {
                         } else {
                             queryBuilder(graph, null)
                         }
-                        logger.info("$name size: $size threads: $threads")
-                        runQuery(query, "stgraph", threads, machines, "smartbench", size)
+                        val numMachines = if (host == "localhost") { -1 } else { controllerIPs.toSet().size }
+                        logger.info("$name size: $size, threads: $threads, numMachines: $numMachines")
+                        runQuery(query, "stgraph", threads, numMachines = numMachines, "smartbench", size)
                     }
                 }
+                graph.close()
             }
-            graph.close()
         }
     }
 

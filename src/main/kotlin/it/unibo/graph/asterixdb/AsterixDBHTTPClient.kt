@@ -33,7 +33,7 @@ class AsterixDBHTTPClient(
     private val logger = LoggerFactory.getLogger(AsterixDBHTTPClient::class.java)
     private lateinit var socket: Socket
     private lateinit var outputStream: OutputStream
-    lateinit var writer: Writer
+    private lateinit var writer: Writer
     private var isFeedConnectionOpen: Boolean = false
     private var isFeedInitialized: Boolean = false
     private val mutex = ReentrantLock()
