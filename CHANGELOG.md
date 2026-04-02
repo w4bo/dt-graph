@@ -1,3 +1,18 @@
+## [1.2.31](https://github.com/w4bo/dt-graph/compare/1.2.30...1.2.31) (2026-04-02)
+
+### Dependency updates
+
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.3.20 ([#168](https://github.com/w4bo/dt-graph/issues/168)) ([1d059e8](https://github.com/w4bo/dt-graph/commit/1d059e81cce31d41a452a70668da175278f3999c))
+* **deps:** update plugin org.jetbrains.kotlin.plugin.serialization to v2.3.20 ([#169](https://github.com/w4bo/dt-graph/issues/169)) ([ae88fc5](https://github.com/w4bo/dt-graph/commit/ae88fc5261c2e38195235ca274e11d14b626c66b))
+
+### Bug Fixes
+
+* **deps:** update dependency io.lettuce:lettuce-core to v7.5.1.release ([#172](https://github.com/w4bo/dt-graph/issues/172)) ([de8e7f7](https://github.com/w4bo/dt-graph/commit/de8e7f78b8cddc8ed812a7310502f7115bae3ace))
+
+### Build and continuous integration
+
+* **deps:** update actions/setup-node action to v6.3.0 ([#167](https://github.com/w4bo/dt-graph/issues/167)) ([7919c3a](https://github.com/w4bo/dt-graph/commit/7919c3af2b69a0f971f26f0bda9cc93eb2c9a5c8))
+
 ## [1.2.30](https://github.com/w4bo/dt-graph/compare/1.2.29...1.2.30) (2026-03-21)
 
 ### Bug Fixes
