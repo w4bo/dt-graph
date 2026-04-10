@@ -1,3 +1,9 @@
+## [1.2.32](https://github.com/w4bo/dt-graph/compare/1.2.31...1.2.32) (2026-04-10)
+
+### Bug Fixes
+
+* **deps:** update dependency org.jetbrains.kotlinx:kotlinx-serialization-json to v1.11.0 ([#173](https://github.com/w4bo/dt-graph/issues/173)) ([122b896](https://github.com/w4bo/dt-graph/commit/122b8960be3c8a1e10f807f222843d67eeb74ceb))
+
 ## [1.2.31](https://github.com/w4bo/dt-graph/compare/1.2.30...1.2.31) (2026-04-02)
 
 ### Dependency updates
