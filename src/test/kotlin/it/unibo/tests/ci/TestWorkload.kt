@@ -118,9 +118,9 @@ class TestWorkload {
     fun testParcelInFarm() {
         val g = setup()
         // Parcels in farm
-        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("farm", "parcel", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
+        assertEquals(2, search(g, staticDevicePattern, listOf(Compare("farm", "parcel", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
         // Devices in Farm
-        kotlin.test.assertEquals(2, search(g, staticDevicePattern, listOf(Compare("parcel", "device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
+        assertEquals(2, search(g, staticDevicePattern, listOf(Compare("parcel", "device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
         g.close()
     }
 
@@ -133,7 +133,7 @@ class TestWorkload {
             )
 
         // Devices in farm throuh spatial join
-        kotlin.test.assertEquals(3, query(g, pattern, listOf(Compare("farm","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
+        assertEquals(3, query(g, pattern, listOf(Compare("farm","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false).size)
         g.close()
     }
 
@@ -180,12 +180,12 @@ class TestWorkload {
         )
 
         // v.1
-        //kotlin.test.assertEquals(2, search(g, pattern, timeaware = false).size)
+        //assertEquals(2, search(g, pattern, timeaware = false).size)
 
         val query = query(g, spatialPattern, listOf(Compare("targetLocation","device", LOCATION, Operators.ST_CONTAINS)), timeaware = false)
 
         // v.2
-        kotlin.test.assertEquals(3, query.size)
+        assertEquals(3, query.size)
         g.close()
     }
 
@@ -208,7 +208,7 @@ class TestWorkload {
         )
 
         val result = search(g, pattern, timeaware = true)
-        kotlin.test.assertEquals(2, result.size)
+        assertEquals(2, result.size)
         g.close()
     }
 
@@ -266,8 +266,8 @@ class TestWorkload {
             //val queryResult = query.map { it as List<*> }.findLast{ it[0] == elem.second && it[1] == elem.third }
             val spatialQueryResult = spatialQuery.map { it as List<*> }.findLast{ it[0] == elem.second && it[1] == elem.third }
 
-            //kotlin.test.assertEquals(queryResult?.get(2)!!, elem.first)
-            kotlin.test.assertEquals(spatialQueryResult?.get(2)!!, elem.first)
+            //assertEquals(queryResult?.get(2)!!, elem.first)
+            assertEquals(spatialQueryResult?.get(2)!!, elem.first)
         }
         g.close()
     }
@@ -326,8 +326,8 @@ class TestWorkload {
             val spatialResult = query(g, pattern, where = listOf(Compare("Environment", "Measurement", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")))
             val traversalResult = query(g, traversalPattern, by = listOf(Aggregate("device", "name"), Aggregate("Environment","name")), timeaware = true)
 
-            kotlin.test.assertEquals(it.first, spatialResult.size)
-            kotlin.test.assertEquals(it.first, traversalResult.size)
+            assertEquals(it.first, spatialResult.size)
+            assertEquals(it.first, traversalResult.size)
         }
         g.close()
     }
@@ -388,7 +388,7 @@ class TestWorkload {
 
         val devicesInTime = query(g, historicalPattern, by = listOf(Aggregate("oldDevice", "name")), from = 0, to = 2, timeaware = true)
 
-         kotlin.test.assertEquals(resultMap.size, devicesInTime.size)
+         assertEquals(resultMap.size, devicesInTime.size)
 
          if (devicesInTime.isEmpty()) {
              throw Exception()
@@ -405,10 +405,10 @@ class TestWorkload {
              )
 
              val actualLocation = query(g, pattern, where=listOf(Compare("device", "nowDevice","name",Operators.EQ)), by = listOf(Aggregate("device", "name"), Aggregate("env","name")), from = 4, to = Long.MAX_VALUE)
-             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+             assertEquals(resultMap[it].toString(),  (actualLocation as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
 
              val actualLocationBySpatial = query(g, nowSpatialPattern, where = listOf(Compare("parcel", "nowDevice", LOCATION, Operators.ST_CONTAINS)), by = listOf(Aggregate("nowDevice", "name"), Aggregate("parcel","name")), from = 4, to = Long.MAX_VALUE)
-             kotlin.test.assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
+             assertEquals(resultMap[it].toString(),  (actualLocationBySpatial as List<List<Any>>).firstOrNull()?.getOrNull(1)?.toString() ?: "")
         }
          g.close()
     }

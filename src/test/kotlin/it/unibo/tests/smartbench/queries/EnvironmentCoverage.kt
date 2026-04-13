@@ -10,7 +10,7 @@ import kotlin.system.measureTimeMillis
 
 class EnvironmentCoverage(val graph: Graph) : Querying {
     override val queryId = "EnvironmentCoverage"
-    override fun runQuery(threads: Int): QueryResultData {
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         val infrastructureId = "3042"
         val edgesDirectionPattern = listOf(
             Step(Infrastructure, listOf(Filter("id", Operators.EQ, infrastructureId)), alias = "Environment"),
@@ -26,7 +26,8 @@ class EnvironmentCoverage(val graph: Graph) : Querying {
                 edgesDirectionPattern,
                 by = listOf(Aggregate("Environment", "id"), Aggregate("device", "id")),
                 timeaware = false,
-                threads = threads
+                threads = threads,
+                mode = queryMode
             )
         }
         return QueryResultData(edgesDirectionTime, edgesDirectionResult.size)

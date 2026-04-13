@@ -14,14 +14,17 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 import kotlin.math.min
 
+enum class QueryMode {
+    NAIVE, OPTIMIZED
+}
 
 @JvmName("query")
-fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1): List<Any> {
-    return query(g, listOf(match), where, by, from, to, timeaware, threads)
+fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Any> {
+    return query(g, listOf(match), where, by, from, to, timeaware, threads, mode)
 }
 
 @JvmName("queryJoin")
-fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1): List<Any> {
+fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Any> {
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -32,12 +35,12 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
             }
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
-    val pattern1 = search(g, match[0], (where - joinFilters.toSet()).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by, threads) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by, threads, mode) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
     var result =
         if (match.size == 1) {
             pattern1
         } else {
-            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by, threads)
+            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by, threads, mode)
         }
 
     result = result.flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
@@ -62,14 +65,15 @@ private fun join(
     to: Long,
     timeaware: Boolean,
     by: List<Aggregate>,
-    threads: Int
+    threads: Int,
+    mode: QueryMode
 ): List<Path> {
     val result = ConcurrentLinkedQueue<Path>()
     // Funzione ricorsiva locale
     fun rec(curMatch: MutableList<Step?>, index: Int, fromLimit: Long, toLimit: Long, row: Path, acc: MutableList<Path>) {
         if (index >= match[1].size) {
             val paths =
-                search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, fromLimit, toLimit, timeaware, by = by,threads)
+                search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, fromLimit, toLimit, timeaware, by = by, threads, mode)
                     .map { Path(row.result + it.result, it.from, it.to) }
             acc.addAll(paths)
             return
@@ -112,7 +116,7 @@ private fun join(
     }
 
     val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
-    runBlocking {
+     runBlocking {
         val jobs = pattern1.map { row ->
             launch(executor) {
                 val acc = mutableListOf<Path>()
@@ -436,8 +440,8 @@ fun buildWhereMap(where: List<Compare>, mapAlias: Map<String, Int>): Map<String,
         }
 
 fun initializeQueue(g: Graph, from: Long, to: Long): Queue<ExploredPath> {
-    val acc = ConcurrentLinkedQueue<ExploredPath>()
-    // val acc = ArrayDeque<ExploredPath>()
+    // val acc = ConcurrentLinkedQueue<ExploredPath>()
+    val acc = ArrayDeque<ExploredPath>()
     acc.addAll(g.getNodes().map { ExploredPath(it, 0, emptyList(), from, to) })
     return acc
 }
@@ -482,7 +486,7 @@ fun expandNode(cur: ExploredPath, path: List<ElemP>, from: Long, to: Long, match
         .map { ExploredPath(it, cur.index + 1, path, from, to) }
 }
 
-fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = listOf(), threads: Int = 1): List<Path> {
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = emptyList(), threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Path> {
     val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
     val wait = Semaphore(0) // Mutex(locked = true)
     val completed = AtomicInteger(0)
@@ -515,13 +519,30 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                         if (curElem.e.label.name == HasTS) { // ... to time series
                             launched++
                             launch(executor) {
-                                val res = g.getTSM()
-                                    .getTS(r.toN, mode = TsMode.READ)
-                                    .getValues(pushDownBy(curElem.index, by, match), pushDownFilters(curElem.index, curPath, newFrom, newTo, match, mapAlias, mapWhere), by.isNotEmpty()) // push down the filters from the next step
-                                    .map { ExploredPath(it, curElem.index + 1, curPath, newFrom, newTo) }
-                                queue.addAll(res)
-                                completed.incrementAndGet()
-                                wait.release()
+                                val pushDownBy: List<Aggregate>
+                                val pushDownFilter: List<Filter>
+                                val isGroupBy: Boolean
+                                if (mode == QueryMode.NAIVE) {
+                                    pushDownBy = emptyList()
+                                    pushDownFilter = emptyList()
+                                    isGroupBy = false
+                                } else {
+                                    pushDownBy = pushDownBy(curElem.index, by, match)
+                                    pushDownFilter = pushDownFilters(curElem.index, curPath, newFrom, newTo, match, mapAlias, mapWhere)
+                                    isGroupBy = by.isNotEmpty()
+                                }
+                                try {
+                                    val res = g.getTSM()
+                                        .getTS(r.toN, mode = TsMode.READ)
+                                        .getValues(pushDownBy, pushDownFilter, isGroupBy) // push down the filters from the next step
+                                        .map { ExploredPath(it, curElem.index + 1, curPath, newFrom, newTo) }
+                                    queue.addAll(res)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                } finally {
+                                    val c = completed.incrementAndGet()
+                                    wait.release()
+                                }
                             }
                         } else { // ... or to graph node
                             val step = match[curElem.index]
@@ -533,5 +554,6 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
             }
         }
     }
+
     return acc
 }

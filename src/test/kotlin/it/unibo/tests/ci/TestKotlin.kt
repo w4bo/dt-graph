@@ -237,7 +237,9 @@ class TestKotlin {
     @Test
     fun testSearch0() {
         matrix { g ->
-            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity))).size)
+            QueryMode.entries.forEach {
+                mode -> assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity)), mode = mode).size)
+            }
         }
     }
 
@@ -300,32 +302,52 @@ class TestKotlin {
     @Test
     fun testSearch1() {
         matrix {
-            assertEquals(1, search(it, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS))).size)
+            QueryMode.entries.forEach { mode ->
+                assertEquals(1, search(it, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS)), mode = mode).size)
+            }
         }
     }
 
     @Test
     fun testSearch2() {
         matrix { g ->
-            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device, alias = "d"))
-            assertEquals(2, search(g, pattern).size)
-            assertEquals(1, search(g, pattern, listOf(Compare("p", "d", LOCATION, Operators.ST_CONTAINS))).size)
+            QueryMode.entries.forEach { mode ->
+                val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device, alias = "d"))
+                assertEquals(2, search(g, pattern, mode = mode).size)
+                assertEquals(1, search(g, pattern, listOf(Compare("p", "d", LOCATION, Operators.ST_CONTAINS)), mode = mode).size)
+            }
         }
     }
 
     @Test
     fun testSearchTS() {
         matrix { g ->
-            val pattern = listOf(Step(AgriFarm), Step(HasParcel), Step(AgriParcel, alias = "p"), Step(HasDevice), Step(Device), Step(HasSolarRadiation), Step(SolarRadiation), Step(HasTS), Step(Measurement, alias = "m"))
-            assertEquals(3, search(g, pattern, listOf(Compare("p", "m", LOCATION, Operators.ST_CONTAINS))).size)
+            QueryMode.entries.forEach { mode ->
+                val pattern = listOf(
+                    Step(AgriFarm),
+                    Step(HasParcel),
+                    Step(AgriParcel, alias = "p"),
+                    Step(HasDevice),
+                    Step(Device),
+                    Step(HasSolarRadiation),
+                    Step(SolarRadiation),
+                    Step(HasTS),
+                    Step(Measurement, alias = "m")
+                )
+                assertEquals(
+                    3,
+                    search(g, pattern, listOf(Compare("p", "m", LOCATION, Operators.ST_CONTAINS)), mode = mode).size)
+            }
         }
     }
 
     @Test
     fun testSearch1bis() {
         matrix { g ->
-            assertEquals(6, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement))).size)
-            assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Filter("unit", Operators.EQ, "Celsius"))))).size)
+            QueryMode.entries.forEach { mode ->
+                assertEquals(6, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement)), mode = mode).size)
+                assertEquals(1, search(g, listOf(Step(Device), Step(HasHumidity), Step(Humidity), Step(HasTS), Step(Measurement, listOf(Filter("unit", Operators.EQ, "Celsius")))), mode = mode).size)
+            }
         }
     }
 
@@ -368,7 +390,9 @@ class TestKotlin {
     @Test
     fun testSearch5() {
         matrix { g ->
-            assertEquals(12, search(g, listOf(null, Step(HasTS), Step(Measurement))).size)
+            QueryMode.entries.forEach { mode ->
+                assertEquals(12, search(g, listOf(null, Step(HasTS), Step(Measurement)), mode = mode).size)
+            }
         }
     }
 
@@ -441,121 +465,155 @@ class TestKotlin {
     @Test
     fun `compare order`() {
         matrix { g ->
-            g.clear()
-            g.getTSM().clear()
+            QueryMode.entries.forEach { mode ->
+                g.clear()
+                g.getTSM().clear()
+                val n10 = g.addNode(A)
+                val n11 = g.addNode(B)
+                g.addProperty(n10.id, LOCATION, POINT_IN_T0, PropType.GEOMETRY)
+                g.addProperty(n11.id, LOCATION, T0_LOCATION, PropType.GEOMETRY)
+                g.addEdge(Foo, n10.id, n11.id)
 
-            val n10 = g.addNode(A)
-            val n11 = g.addNode(B)
-            g.addProperty(n10.id, LOCATION, POINT_IN_T0, PropType.GEOMETRY)
-            g.addProperty(n11.id, LOCATION, T0_LOCATION, PropType.GEOMETRY)
-            g.addEdge(Foo, n10.id, n11.id)
+                val w1 = listOf(Compare("b", "a", LOCATION, Operators.ST_CONTAINS))
+                val w2 = listOf(Compare("a", "b", LOCATION, Operators.ST_CONTAINS))
+                assertEquals(1, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w1, mode = mode).size)
+                assertEquals(0, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w2, mode = mode).size)
+                assertEquals(0, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w1, mode = mode).size)
+                assertEquals(1, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w2, mode = mode).size)
 
-            val w1 = listOf(Compare("b", "a", LOCATION, Operators.ST_CONTAINS))
-            val w2 = listOf(Compare("a", "b", LOCATION, Operators.ST_CONTAINS))
-            assertEquals(1, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w1).size)
-            assertEquals(0, search(g, listOf(Step(alias = "a", label = A), null, Step(alias = "b", label = B)), where = w2).size)
-            assertEquals(0, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w1).size)
-            assertEquals(1, search(g, listOf(Step(alias = "b", label = A), null, Step(alias = "a", label = B)), where = w2).size)
+                val n12 = g.addNode(C, isTs = true)
+                val ts = g.getTSM().addTS(n12.id)
+                ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
+                g.addEdge(Foo, n11.id, n12.id)
 
-            val n12 = g.addNode(C, isTs = true)
-            val ts = g.getTSM().addTS(n12.id)
-            ts.add(Measurement, timestamp = 0, value = 23, location = POINT_IN_T0)
-            g.addEdge(Foo, n11.id, n12.id)
+                assertEquals(1, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w1, mode = mode).size)
+                assertEquals(0, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w2, mode = mode).size)
+                assertEquals(0, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w1, mode = mode).size)
+                assertEquals(1, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w2, mode = mode).size)
 
-            assertEquals(1, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w1).size)
-            assertEquals(0, search(g, listOf(Step(alias = "b", label = B), null, Step(label = C), null, Step(alias="a", label = Measurement)), where = w2).size)
-            assertEquals(0, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w1).size)
-            assertEquals(1, search(g, listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(alias="b", label = Measurement)), where = w2).size)
-
-            assertEquals(1, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22L, attrFirst = true))))).size)
-            assertEquals(0, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25L, attrFirst = true))))).size)
+                assertEquals(1, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 22L, attrFirst = true)))), mode = mode).size)
+                assertEquals(0, search(g,listOf(Step(alias = "a", label = B), null, Step(label = C), null, Step(Measurement, properties = listOf(Filter(VALUE, Operators.GTE, 25L, attrFirst = true)))), mode = mode).size)
+            }
         }
     }
 
     @Test
     fun `push down external group by`() {
         matrix { g ->
-            g.clear()
-            g.getTSM().clear()
+            QueryMode.entries.forEach { mode ->
+                g.clear()
+                g.getTSM().clear()
+                val b1 = g.addNode(B, isTs = true)
+                val ts1 = g.getTSM().addTS(b1.id)
+                var timestamp = 0L
+                ts1.add(C, timestamp = timestamp++, value = 1, location = POINT_IN_T0)
+                ts1.add(C, timestamp = timestamp++, value = 2, location = POINT_IN_T0)
+                ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0)
 
-            val b1 = g.addNode(B, isTs = true)
-            val ts1 = g.getTSM().addTS(b1.id)
-            var timestamp = 0L
-            ts1.add(C, timestamp = timestamp++, value = 1, location = POINT_IN_T0)
-            ts1.add(C, timestamp = timestamp++, value = 2, location = POINT_IN_T0)
-            ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0)
+                val b2 = g.addNode(B, isTs = true)
+                val ts2 = g.getTSM().addTS(b2.id)
+                timestamp = 0L
+                ts2.add(C, timestamp = timestamp++, value = 10, location = POINT_IN_T0)
+                ts2.add(C, timestamp = timestamp++, value = 20, location = POINT_IN_T0)
+                ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0)
 
-            val b2 = g.addNode(B, isTs = true)
-            val ts2 = g.getTSM().addTS(b2.id)
-            timestamp = 0L
-            ts2.add(C, timestamp = timestamp++, value = 10, location = POINT_IN_T0)
-            ts2.add(C, timestamp = timestamp++, value = 20, location = POINT_IN_T0)
-            ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0)
+                val a1 = g.addNode(A)
+                g.addProperty(a1.id, "name", "a", PropType.STRING)
+                g.addProperty(b1.id, "name", "foo", PropType.STRING)
+                g.addProperty(b1.id, "lastname", "b", PropType.STRING)
+                g.addProperty(b2.id, "name", "foo", PropType.STRING)
+                g.addProperty(b2.id, "lastname", "c", PropType.STRING)
+                g.addEdge(Foo, a1.id, b1.id)
+                g.addEdge(Foo, a1.id, b2.id)
 
-            val a1 = g.addNode(A)
-            g.addProperty(a1.id, "name", "a", PropType.STRING)
-            g.addProperty(b1.id, "name", "foo", PropType.STRING)
-            g.addProperty(b1.id, "lastname", "b", PropType.STRING)
-            g.addProperty(b2.id, "name", "foo", PropType.STRING)
-            g.addProperty(b2.id, "lastname", "c", PropType.STRING)
-            g.addEdge(Foo, a1.id, b1.id)
-            g.addEdge(Foo, a1.id, b2.id)
+                val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
 
-            val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
+                val gb1 = listOf(Aggregate("c", property = VALUE, operator = AggOperator.SUM))
+                assertEquals(listOf(66.0), query(g, pattern1, by = gb1, mode = mode))
+                val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
+                assertEquals(listOf(listOf("foo", 66.0)), query(g, pattern1, by = gb2, mode = mode))
+                val gb3 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
+                assertEquals(setOf(listOf("b", 6.0), listOf("c", 60.0)), query(g, pattern1, by = gb3, mode = mode).toSet())
+                val gb4 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
+                assertEquals(listOf(listOf("a", 66.0)), query(g, pattern1, by = gb4, mode = mode))
 
-            val gb1 = listOf(Aggregate("c", property = VALUE, operator = AggOperator.SUM))
-            assertEquals(listOf(66.0), query(g, pattern1, by=gb1))
-            val gb2 = listOf(Aggregate("b", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
-            assertEquals(listOf(listOf("foo", 66.0)), query(g, pattern1, by=gb2))
-            val gb3 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
-            assertEquals(setOf(listOf("b", 6.0), listOf("c", 60.0)), query(g, pattern1, by=gb3).toSet())
-            val gb4 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.SUM))
-            assertEquals(listOf(listOf("a", 66.0)), query(g, pattern1, by=gb4))
-
-            val gb5 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
-            assertEquals(listOf(listOf("a", 11.0)), query(g, pattern1, by=gb5))
-            val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
-            assertEquals(setOf(listOf("b", 2.0), listOf("c", 20.0)), query(g, pattern1, by=gb6).toSet())
+                val gb5 = listOf(Aggregate("a", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
+                assertEquals(listOf(listOf("a", 11.0)), query(g, pattern1, by=gb5, mode = mode))
+                val gb6 = listOf(Aggregate("b", property = "lastname"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
+                assertEquals(setOf(listOf("b", 2.0), listOf("c", 20.0)), query(g, pattern1, by = gb6, mode = mode).toSet())
+            }
         }
     }
 
     @Test
     fun `push down internal group by`() {
         matrix { g ->
-            g.clear()
-            g.getTSM().clear()
+            QueryMode.entries.forEach { mode ->
+                g.clear()
+                g.getTSM().clear()
+                val b1 = g.addNode(B, isTs = true)
+                val ts1 = g.getTSM().addTS(b1.id)
+                var timestamp = 0L
+                val m1 = ts1.add(C, timestamp = timestamp, value = 1, location = POINT_IN_T0)
+                g.addProperty(m1.id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
 
-            val b1 = g.addNode(B, isTs = true)
-            val ts1 = g.getTSM().addTS(b1.id)
-            var timestamp = 0L
-            val m1 = ts1.add(C, timestamp = timestamp, value = 1, location = POINT_IN_T0)
-            g.addProperty(m1.id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
+                timestamp++
 
-            timestamp++
+                val m2 = ts1.add(C, timestamp = timestamp, value = 2, location = POINT_IN_T0)
+                g.addProperty(m2.id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
 
-            val m2 = ts1.add(C, timestamp = timestamp, value = 2, location = POINT_IN_T0)
-            g.addProperty(m2.id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
+                timestamp++
+                g.addProperty(
+                    ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0).id,
+                    "name",
+                    "a",
+                    PropType.STRING,
+                    from = timestamp,
+                    to = timestamp
+                )
 
-            timestamp++
-            g.addProperty(ts1.add(C, timestamp = timestamp, value = 3, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
+                val b2 = g.addNode(B, isTs = true)
+                val ts2 = g.getTSM().addTS(b2.id)
+                timestamp = 0L
+                g.addProperty(
+                    ts2.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id,
+                    "name",
+                    "b",
+                    PropType.STRING,
+                    from = timestamp,
+                    to = timestamp
+                )
+                timestamp++
+                g.addProperty(
+                    ts2.add(C, timestamp = timestamp, value = 20, location = POINT_IN_T0).id,
+                    "name",
+                    "a",
+                    PropType.STRING,
+                    from = timestamp,
+                    to = timestamp
+                )
+                timestamp++
+                g.addProperty(
+                    ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id,
+                    "name",
+                    "b",
+                    PropType.STRING,
+                    from = timestamp,
+                    to = timestamp
+                )
 
-            val b2 = g.addNode(B, isTs = true)
-            val ts2 = g.getTSM().addTS(b2.id)
-            timestamp = 0L
-            g.addProperty(ts2.add(C, timestamp = timestamp, value = 10, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
-            timestamp++
-            g.addProperty(ts2.add(C, timestamp = timestamp, value = 20, location = POINT_IN_T0).id, "name", "a", PropType.STRING, from = timestamp, to = timestamp)
-            timestamp++
-            g.addProperty(ts2.add(C, timestamp = timestamp, value = 30, location = POINT_IN_T0).id, "name", "b", PropType.STRING, from = timestamp, to = timestamp)
+                val a1 = g.addNode(A)
+                g.addEdge(Foo, a1.id, b1.id)
+                g.addEdge(Foo, a1.id, b2.id)
 
-            val a1 = g.addNode(A)
-            g.addEdge(Foo, a1.id, b1.id)
-            g.addEdge(Foo, a1.id, b2.id)
+                val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
 
-            val pattern1 = listOf(Step(A, alias = "a"), null, Step(B, alias = "b"), null, Step(C, alias = "c"))
-
-            val gb1 = listOf(Aggregate("c", property = "name"), Aggregate("c", property = VALUE, operator = AggOperator.AVG))
-            assertEquals(setOf(listOf("a", 8.0), listOf("b", 14.0)), query(g, pattern1, by=gb1).toSet())
+                val gb1 = listOf(
+                    Aggregate("c", property = "name"),
+                    Aggregate("c", property = VALUE, operator = AggOperator.AVG)
+                )
+                assertEquals(setOf(listOf("a", 8.0), listOf("b", 14.0)), query(g, pattern1, by = gb1, mode = mode).toSet())
+            }
         }
     }
 

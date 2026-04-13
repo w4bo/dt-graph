@@ -16,7 +16,7 @@ class AsterixDBTSM private constructor(
     val port: String,
     val dataverse: String,
     val nodeControllersIPs: List<String>,
-    val maxConnections: Int?
+    val maxConnections: Int? = 100
 ) : TSManager {
     val isConcurrent = nodeControllersIPs.size > 1
     val dataset = "${DATASET_PREFIX}0"

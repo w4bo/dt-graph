@@ -14,7 +14,7 @@ import kotlin.system.measureTimeMillis
  */
 class EnvironmentAggregate(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
     override val queryId = "EnvironmentAggregate"
-    override fun runQuery(threads: Int): QueryResultData {
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
         val tau = Temperature
@@ -54,7 +54,8 @@ class EnvironmentAggregate(val graph: Graph, val temporalConstraints: TimeRange)
                     Aggregate("Measurement", VALUE, AggOperator.AVG)
                 ),
                 from = tA, to = tB, timeaware = true,
-                threads = threads
+                threads = threads,
+                mode = queryMode
             )
         }
         return QueryResultData(edgesQueryTime, edgesDirectionResult.size)

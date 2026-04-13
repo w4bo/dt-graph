@@ -10,7 +10,7 @@ import kotlin.system.measureTimeMillis
 
 class AgentHistory(val graph: Graph) : Querying {
     override val queryId = "AgentHistory"
-    override fun runQuery(threads: Int): QueryResultData {
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         val devices = listOf("thermometer3")
         var edgesDirectionEntitites = 0
         var edgesDirectionResult: List<Any>
@@ -32,7 +32,8 @@ class AgentHistory(val graph: Graph) : Querying {
                     graph, edgesDirectionPattern,
                     by = listOf(Aggregate("Device", "id"), Aggregate("Environment", "id")),
                     timeaware = true,
-                    threads = threads
+                    threads = threads,
+                    mode = queryMode
                 )
             }
             edgesDirectionEntitites += edgesDirectionResult.size

@@ -10,7 +10,7 @@ import kotlin.system.measureTimeMillis
 
 class EnvironmentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
     override val queryId = "EnvironmentOutlier"
-    override fun runQuery(threads: Int): QueryResultData {/*
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {/*
            * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during the period [𝑡𝑎, 𝑡𝑏 [.
            */
         val tA = temporalConstraints.from
@@ -35,7 +35,8 @@ class EnvironmentOutlier(val graph: Graph, val temporalConstraints: TimeRange) :
                 from = tA,
                 to = tB,
                 timeaware = true,
-                threads = threads
+                threads = threads,
+                mode = queryMode
             )
         }
         edgesDirectionResult = edgesDirectionResult.filter { ((it as ArrayList<*>)[1]!! as Double) > minTemp }

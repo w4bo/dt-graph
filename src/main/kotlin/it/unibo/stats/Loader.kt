@@ -1,5 +1,6 @@
 package it.unibo.stats
 
+import it.unibo.graph.query.QueryMode
 import java.io.File
 import java.util.*
 import kotlin.math.round

@@ -97,16 +97,14 @@ class AsterixDBTS(
             }
         }
         selectQuery = selectQuery.replace(VALUE, "`$VALUE`")
-        val outNodes : List<N>
-        when (val result = connection.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
+        return when (val result = connection.selectFromAsterixDB(selectQuery, isGroupBy = by.isNotEmpty())) {
             is AsterixDBResult.SelectResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                outNodes = result.entities.map { jsonToNode(tsId = id, g = g, node = (it as JSONObject).getJSONObject(dataset)) }
-                return outNodes
+                result.entities.map { jsonToNode(tsId = id, g = g, node = (it as JSONObject).getJSONObject(dataset)) }
             }
             is AsterixDBResult.GroupByResult -> {
                 if (result.entities.isEmpty) return emptyList()
-                outNodes =  result.entities
+                result.entities
                     .map { it as JSONObject }
                     .map { json ->
                         val aggOperator = by.first { it.operator != null }.property!!
@@ -117,7 +115,6 @@ class AsterixDBTS(
                         json.remove(COUNT)
                         jsonToNode(tsId = id, g = g, node = json)
                     }
-                return outNodes
             }
             else -> throw UnsupportedOperationException(selectQuery)
         }

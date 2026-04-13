@@ -8,16 +8,15 @@ import org.slf4j.LoggerFactory
 
 class TestSmartBenchIngestion {
     private val logger = LoggerFactory.getLogger(this::class.java)
-    val sizes = listOf("small", "medium", "large") //
     val setup: Map<String, List<String>> = mapOf(
         "192.168.30.110" to listOf("192.168.30.110", "192.168.30.110"),
-        "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
-        "192.168.30.104" to listOf("192.168.30.105", "192.168.30.106", "192.168.30.107", "192.168.30.109")
+        // "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
+        // "192.168.30.104" to listOf("192.168.30.105", "192.168.30.106", "192.168.30.107", "192.168.30.109")
     )
 
      @Test
      fun testSmartBenchIngestion() {
-         sizes.forEach { size ->
+         smartbench_sizes.forEach { size ->
              val threads = 1
              logger.info("\n--- $size")
              resetPort()
@@ -35,7 +34,7 @@ class TestSmartBenchIngestion {
     @Test
     fun testSmartBenchConcurrent() {
         setup.forEach { (cc, ncs) ->
-            sizes.forEach { size ->
+            smartbench_sizes.forEach { size ->
                 listOf(1, 16).forEach { threads ->
                     logger.info("Size: $size, threads: $threads, nmachines: ${ncs.toSet().size}")
                     resetPort()

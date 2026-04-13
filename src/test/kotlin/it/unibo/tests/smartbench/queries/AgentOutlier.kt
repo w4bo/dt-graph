@@ -10,13 +10,12 @@ import kotlin.system.measureTimeMillis
 
 class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
     override val queryId = "AgentOutlier"
-    override fun runQuery(threads: Int): QueryResultData {
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         /*
          * AgentOutlier: List the max value measured for each agent in each environment
          */
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
-        val tau = Temperature
 
         val edgesDirectionPattern = listOf(
             Step(Infrastructure, alias = "Environment"),
@@ -25,13 +24,14 @@ class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Query
             null,
             null,
             Step(HasTS),
-            Step(tau, alias = "Measurement")
+            Step(Temperature, alias = "Measurement")
         )
 
         val edgesDirectionResult: List<Any>
         val edgesDirectionTime = measureTimeMillis {
             edgesDirectionResult = query(
-                graph, edgesDirectionPattern,
+                graph,
+                edgesDirectionPattern,
                 by = listOf(
                     Aggregate("Device", "id"),
                     Aggregate("Environment", "id"),
@@ -40,7 +40,8 @@ class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Query
                 from = tA,
                 to = tB,
                 timeaware = true,
-                threads = threads
+                threads = threads,
+                mode = queryMode
             )
         }
         return QueryResultData(edgesDirectionTime, edgesDirectionResult.size)

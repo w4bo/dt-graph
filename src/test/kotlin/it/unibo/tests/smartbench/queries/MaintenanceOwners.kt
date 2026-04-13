@@ -10,7 +10,7 @@ import kotlin.system.measureTimeMillis
 
 class MaintenanceOwners(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
     override val queryId = "MaintenanceOwners"
-    override fun runQuery(threads: Int): QueryResultData {
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
         val minTemp = 65L
@@ -43,7 +43,8 @@ class MaintenanceOwners(val graph: Graph, val temporalConstraints: TimeRange) : 
                 from = tA,
                 to = tB,
                 timeaware = true,
-                threads = threads
+                threads = threads,
+                mode = queryMode
             )
         }
 

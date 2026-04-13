@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.LoggerFactory
 
-private val sizes = listOf(Long.MAX_VALUE, 1_692_200L, 16_922_000L) // listOf()
 private val setup: Map<String, List<String>> = mapOf(
     "192.168.30.110" to listOf("192.168.30.110", "192.168.30.110"),
     "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
@@ -27,7 +26,7 @@ class TestMimicIngestion {
 
     @Test
     fun `ingest STGraph`() {
-        sizes.forEach { size ->
+        mimic_sizes.forEach { size ->
             load(MimicIVSTGraph(size), "stgraph", "mimic-iv", size, threads = 1)
         }
     }
@@ -35,7 +34,7 @@ class TestMimicIngestion {
     @Test
     fun testMimicConcurrent() {
         setup.forEach { (cc, ncs) ->
-            sizes.forEach { size ->
+            mimic_sizes.forEach { size ->
                 listOf(1, 16).forEach { threads ->
                     logger.info("Size: $size, threads: $threads, nmachines: ${ncs.toSet().size}")
                     resetPort()
@@ -54,6 +53,6 @@ class TestMimicIngestion {
 }
 
 fun main() {
-    sizes.forEach { limit -> load(MimicIVPGAge(limit), "pgage", "mimic-iv", limit) }
-    sizes.forEach { limit -> load(MimicIVNeo4J(limit), "neo4j", "mimic-iv", limit) }
+    mimic_sizes.forEach { limit -> load(MimicIVPGAge(limit), "pgage", "mimic-iv", limit) }
+    mimic_sizes.forEach { limit -> load(MimicIVNeo4J(limit), "neo4j", "mimic-iv", limit) }
 }

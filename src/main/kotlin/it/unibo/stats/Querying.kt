@@ -1,5 +1,6 @@
 package it.unibo.stats
 
+import it.unibo.graph.query.QueryMode
 import java.io.File
 import java.util.*
 import kotlin.system.measureTimeMillis
@@ -11,15 +12,15 @@ private val statisticsFile = File(resultFolder, "query_statistics.csv")
 class QueryResultData(val timeMs: Long, val card: Int)
 interface Querying {
     val queryId: String
-    fun runQuery(threads: Int): QueryResultData
+    fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData
 }
 
-fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, dataset: String, size: String) {
+fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, dataset: String, size: String, mode: QueryMode) {
     if (!resultFolder.exists()) resultFolder.mkdirs()
 
     val data: QueryResultData
     val elapsedTime = measureTimeMillis {
-        data = querying.runQuery(threads)
+        data = querying.runQuery(threads, mode)
     }
 
     val row = linkedMapOf(
@@ -31,7 +32,8 @@ fun runQuery(querying: Querying, model: String, threads: Int, numMachines: Int, 
         "threads" to threads,
         "elapsedTime" to elapsedTime,
         "numMachines" to numMachines,
-        "cardinality" to data.card
+        "cardinality" to data.card,
+        "queryMode" to mode
     )
 
     val writeHeader = !statisticsFile.exists()
