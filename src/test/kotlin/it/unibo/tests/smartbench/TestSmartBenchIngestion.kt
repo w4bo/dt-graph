@@ -1,53 +1,16 @@
 package it.unibo.tests.smartbench
 
-import it.unibo.graph.utils.resetPort
-import it.unibo.stats.loadDataset
+import it.unibo.stats.TestConfig
 import it.unibo.tests.smartbench.loaders.SmartBenchDataLoader
-import org.junit.jupiter.api.Test
-import org.slf4j.LoggerFactory
+import org.junit.jupiter.api.TestInstance
+import kotlin.test.Test
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestSmartBenchIngestion {
-    private val logger = LoggerFactory.getLogger(this::class.java)
-    val setup: Map<String, List<String>> = mapOf(
-        "192.168.30.110" to listOf("192.168.30.110", "192.168.30.110"),
-        // "192.168.30.101" to listOf("192.168.30.102", "192.168.30.103"),
-        // "192.168.30.104" to listOf("192.168.30.105", "192.168.30.106", "192.168.30.107", "192.168.30.109")
-    )
-
-     @Test
-     fun testSmartBenchIngestion() {
-         smartbench_sizes.forEach { size ->
-             val threads = 1
-             logger.info("\n--- $size")
-             resetPort()
-             loadDataset(
-                 loader = SmartBenchDataLoader(size, threads = threads),
-                 "stgraph",
-                 threads = threads,
-                 numMachines = -1,
-                 "smartbench",
-                 size
-             )
-         }
-     }
-
     @Test
-    fun testSmartBenchConcurrent() {
-        setup.forEach { (cc, ncs) ->
-            smartbench_sizes.forEach { size ->
-                listOf(1, 16).forEach { threads ->
-                    logger.info("Size: $size, threads: $threads, nmachines: ${ncs.toSet().size}")
-                    resetPort()
-                    loadDataset(
-                        loader = SmartBenchDataLoader(size, threads = threads, host = cc, controllerIPs = ncs),
-                        "stgraph",
-                        threads = threads,
-                        numMachines = ncs.toSet().size,
-                        "smartbench",
-                        size
-                    )
-                }
-            }
+    fun `ingest SmartBench`() {
+        TestConfig.runIngestion("smartbench") { size, threads, host, controllerIPs ->
+            SmartBenchDataLoader(size, threads = threads, host = host, controllerIPs = controllerIPs)
         }
     }
 }

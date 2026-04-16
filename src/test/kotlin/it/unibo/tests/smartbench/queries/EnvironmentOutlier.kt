@@ -6,13 +6,13 @@ import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
+import it.unibo.stats.TestConfig
 import kotlin.system.measureTimeMillis
 
-class EnvironmentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
+class EnvironmentOutlier(val graph: Graph, val size: String) : Querying {
     override val queryId = "EnvironmentOutlier"
-    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {/*
-           * EnvironmentAlert: List the environments that have had a an average temperature > 20 degrees during the period [𝑡𝑎, 𝑡𝑏 [.
-           */
+    val temporalConstraints = TestConfig.loadTemporalRanges("increased", queryId, size)[0]!!
+    override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
         val minTemp = 50.5

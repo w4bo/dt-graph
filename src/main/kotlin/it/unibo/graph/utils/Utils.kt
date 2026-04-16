@@ -95,34 +95,6 @@ data class TimeRange(
     val to: Long
 )
 
-
-// Funzione loadTemporalRanges che prende già la mappa YAML
-fun loadTemporalRanges(
-    yamlMap: Map<String, Any>,
-    constraintType: String,
-    queryName: String,
-    datasetSize: String
-): TemporalRanges {
-
-    val temporalConstraints = yamlMap["temporalConstraints"] as? Map<*, *>
-        ?: throw IllegalArgumentException("'temporalConstraints' not found in YAML")
-    val constraintMap = temporalConstraints[constraintType] as? Map<*, *>
-        ?: throw IllegalArgumentException("Constraint type '$constraintType' not found in YAML")
-    val queryMap = constraintMap[queryName] as? Map<*, *>
-        ?: throw IllegalArgumentException("Query '$queryName' not found under '$constraintType'")
-    val datasetMap = queryMap[datasetSize] as? Map<*, *>
-        ?: throw IllegalArgumentException("Dataset size '$datasetSize' not found under '$queryName'")
-
-    return datasetMap.entries.associate { (k, v) ->
-        val index = k.toString().toInt()
-        val raw = v as List<*>
-        index to TimeRange(
-            from = raw[0].toString().toLong(),
-            to = raw[1].toString().toLong()
-        )
-    }
-}
-
 @OptIn(ExperimentalAtomicApi::class)
 val atomicPort = AtomicInt(FIRSTFEEDPORT)
 

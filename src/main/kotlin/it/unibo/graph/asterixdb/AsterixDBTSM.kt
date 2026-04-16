@@ -5,6 +5,8 @@ import it.unibo.graph.interfaces.TS
 import it.unibo.graph.interfaces.TSManager
 import it.unibo.graph.interfaces.TsMode
 import it.unibo.graph.utils.DATASET_PREFIX
+import it.unibo.graph.utils.FIRSTFEEDPORT
+import it.unibo.graph.utils.LASTFEEDPORT
 import it.unibo.graph.utils.loadProps
 import kotlin.random.Random
 
@@ -75,7 +77,7 @@ class AsterixDBTSM private constructor(
             host: String = System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
             port: String = props["default_cc_port"].toString(),
             controllerIps: List<String> = System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
-            maxConnections: Int? = null
+            maxConnections: Int? = (LASTFEEDPORT - FIRSTFEEDPORT) / 2
         ): AsterixDBTSM {
             return AsterixDBTSM(g, host, port, dataverse, controllerIps, maxConnections)
         }

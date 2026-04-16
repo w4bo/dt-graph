@@ -77,7 +77,7 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                 for ((subjectId, items) in grouped) {
                     if (acc > limit) break
                     acc += items.sumOf { it.second }
-                    users.addAll(items.map{ Pair(subjectId, it.first.itemid) })
+                    users.addAll(items.map { Pair(subjectId, it.first.itemid) })
                     val person = addPerson(subjectId)
                     gsCard++
                     for ((itemId, _) in items) {

@@ -4,13 +4,12 @@ import it.unibo.graph.asterixdb.AsterixDBTS
 import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.PropType
-import it.unibo.graph.interfaces.TsMode
 import it.unibo.graph.utils.*
 import it.unibo.tests.smartbench.loaders.TSRecord
 import kotlin.collections.set
 
-class MimicIVSTGraph(limit: Long, threads: Int = 1, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")) : AbstractMimicIVLoader(limit, threads = threads)  {
-    val s = if (limit == Long.MAX_VALUE) "full" else "$limit"
+class MimicIVSTGraph(size: String, threads: Int = 1, host: String = "localhost", controllerIPs: List<String> = listOf("localhost")) : AbstractMimicIVLoader(size.toLong(), threads = threads)  {
+    val s = if (size.toLong() == Long.MAX_VALUE) "full" else size
     val g = MemoryGraphACID(path = "datasets/dump/mimic/$s")
     val t = AsterixDBTSM.createDefault(g, "mimic_$s", host = host, controllerIps = controllerIPs, maxConnections = if (threads == 1) 1 else { threads * 10 })
     var i = 0

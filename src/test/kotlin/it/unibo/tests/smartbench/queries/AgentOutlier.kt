@@ -6,14 +6,15 @@ import it.unibo.graph.query.*
 import it.unibo.graph.utils.*
 import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
+import it.unibo.stats.TestConfig
+import org.yaml.snakeyaml.Yaml
+import kotlin.jvm.java
 import kotlin.system.measureTimeMillis
 
-class AgentOutlier(val graph: Graph, val temporalConstraints: TimeRange) : Querying {
+class AgentOutlier(val graph: Graph, val size: String) : Querying {
     override val queryId = "AgentOutlier"
+    val temporalConstraints = TestConfig.loadTemporalRanges("increased", queryId, size)[0]!!
     override fun runQuery(threads: Int, queryMode: QueryMode): QueryResultData {
-        /*
-         * AgentOutlier: List the max value measured for each agent in each environment
-         */
         val tA = temporalConstraints.from
         val tB = temporalConstraints.to
 

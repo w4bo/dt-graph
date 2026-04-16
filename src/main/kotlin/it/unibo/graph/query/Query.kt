@@ -440,8 +440,8 @@ fun buildWhereMap(where: List<Compare>, mapAlias: Map<String, Int>): Map<String,
         }
 
 fun initializeQueue(g: Graph, from: Long, to: Long): Queue<ExploredPath> {
-    // val acc = ConcurrentLinkedQueue<ExploredPath>()
-    val acc = ArrayDeque<ExploredPath>()
+    val acc = ConcurrentLinkedQueue<ExploredPath>()
+    // val acc = ArrayDeque<ExploredPath>()
     acc.addAll(g.getNodes().map { ExploredPath(it, 0, emptyList(), from, to) })
     return acc
 }
@@ -540,7 +540,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 } finally {
-                                    val c = completed.incrementAndGet()
+                                    completed.incrementAndGet()
                                     wait.release()
                                 }
                             }
