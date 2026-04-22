@@ -39,13 +39,18 @@ class AsterixDBHTTPClient(
     private val mutex = ReentrantLock()
 
     fun flush() {
-        writer.flush()
+        if (isConcurrent) {
+            mutex.lock()
+            writer.flush()
+            mutex.unlock()
+        } else {
+            writer.flush()
+        }
     }
 
     private fun write(data: String, flush: Boolean) {
         openDataFeedConnection()
         writer.write(data + "\n")
-        if (flush) flush()
     }
 
     fun writeToFeed(data: String, flush: Boolean) {
@@ -56,6 +61,7 @@ class AsterixDBHTTPClient(
         } else {
             write(data, flush)
         }
+        if (flush) flush()
     }
 
     fun openDataFeedConnection() {

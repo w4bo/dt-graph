@@ -53,7 +53,7 @@ class TestConfig {
             }
         }
 
-        fun loadConfig(path: String): Config {
+        fun loadConfig(path: String = "src/main/resources/test_config.yml"): Config {
             val yaml = Yaml()
             val raw = yaml.load<Map<String, Any>>(File(path).inputStream())
 
@@ -165,9 +165,9 @@ class TestConfig {
             queryBuilder: (graph: Graph, size: String, mode: QueryMode) -> Querying?
         ) {
             approaches.forEach { approach ->
-                modes.forEach { mode ->
-                    setups.forEach { setup ->
-                        sizes.forEach { rawSize ->
+                setups.forEach { setup ->
+                    sizes.forEach { rawSize ->
+                        modes.forEach { mode ->
                             val size = normalizeSize(rawSize)
                             val path = "datasets/dump/$dataset/$size/"
                             val graph = MemoryGraphACID.readFromDisk(path)

@@ -234,9 +234,7 @@ private fun parseFilter(filter: Filter): String {
     val property = filter.property
     val parsedValue = valueToJson(filter.value, isUpdate = false)
     val left = if (filter.attrFirst) property else parsedValue
-    var right = if (filter.attrFirst) parsedValue else property
-    right = if (left == ID && right.toLong() < 0) "0" else right
-
+    val right = if (filter.attrFirst) parsedValue else property
     return when (filter.operator) {
         Operators.ST_CONTAINS, Operators.ST_INTERSECTS -> {
             val arg1Raw = remove3DfromWkt(if (filter.attrFirst) right else left)

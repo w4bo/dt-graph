@@ -51,7 +51,7 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
     return result5
 }
 
-/**
+/*
  * Join two patterns
  */
 private fun join(
@@ -395,8 +395,8 @@ fun pushDownBy(index: Int, by: List<Aggregate>, match: List<Step?>): List<Aggreg
 
 fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long, match: List<Step?>, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>): List<Filter> {
     val filters = mutableListOf<Filter>()
-    filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
-    filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
+    if (from != Long.MIN_VALUE) filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
+    if (to != Long.MAX_VALUE) filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
     if (index + 1 < match.size) { // If there is another step
         val nextMatch = match[index + 1] ?: return filters // select it
         val nextAlias = nextMatch.alias // and its alias (if any)

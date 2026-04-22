@@ -113,22 +113,23 @@ fun resetPort() {
 }
 
 fun query(sql: String, host: String, dataverse: String): HttpURLConnection {
-    val uri = URI(host)
-    val connection = uri.toURL().openConnection() as HttpURLConnection
+    val connection = URI(host).toURL().openConnection() as HttpURLConnection
     connection.requestMethod = "POST"
     connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
     connection.doOutput = true
-    // println(sql)
-    val params = mapOf(
-        "statement" to sql,
-        "pretty" to "true",
-        "mode" to "immediate",
-        "dataverse" to dataverse
-    )
-    val postData = params.entries.joinToString("&") {
-        "${URLEncoder.encode(it.key, StandardCharsets.UTF_8.name())}=${URLEncoder.encode(it.value, StandardCharsets.UTF_8.name())}"
+    val charset = Charsets.UTF_8
+    connection.outputStream.bufferedWriter(charset).use { writer ->
+        fun appendParam(key: String, value: String, first: Boolean = false) {
+            if (!first) writer.append('&')
+            writer.append(URLEncoder.encode(key, charset.name()))
+            writer.append('=')
+            writer.append(URLEncoder.encode(value, charset.name()))
+        }
+        appendParam("statement", sql, first = true)
+        appendParam("pretty", "true")
+        appendParam("mode", "immediate")
+        appendParam("dataverse", dataverse)
     }
-    connection.outputStream.use { it.write(postData.toByteArray()) }
     return connection
 }
 

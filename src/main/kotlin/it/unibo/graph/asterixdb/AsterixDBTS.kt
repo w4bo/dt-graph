@@ -30,7 +30,7 @@ class AsterixDBTS(
             updateTs(n)
         } else {
             val event = nodeToJson(n, isUpdate = false, tsId = id)
-            connection.writeToFeed(event + "\n", flush)
+            connection.writeToFeed(event, flush)
         }
         return n
     }
@@ -70,28 +70,19 @@ class AsterixDBTS(
         groupby += filters
             .filter { f -> !by.map { it.property }.contains(f.second.property) } // cannot select an attribute that I should also aggregate (e.g., SELECT value, SUM(value) ... GROUP BY value)
             .filter { it.first != ID }.map { (orig, _) -> orig }
-        groupby += listOf(LABEL)
+        // groupby += listOf(LABEL)
 
         val aggregators: MutableSet<String> =
             by
                 .filter { it.operator != null }
                 .map { f -> "${(if (f.operator == AggOperator.AVG) AggOperator.SUM else f.operator)?.name}(${ replacePropertyName(f.property!!, alias = false) }) as ${f.property}" }.toMutableSet()
-        aggregators += listOf("COUNT(*) as $COUNT", "MIN($ID) as $FROM_TIMESTAMP", "MAX($ID) as $TO_TIMESTAMP")
+        aggregators += listOf("MIN($LABEL) as $LABEL, COUNT(*) as $COUNT", "MIN($ID) as $FROM_TIMESTAMP", "MAX($ID) as $TO_TIMESTAMP")
 
         selectQuery =  "USE $dataverse;"
         if (by.isNotEmpty()) {
-            selectQuery +=  """
-                    SELECT ${(groupby + aggregators).joinToString(",")}
-                    FROM $dataset
-                    ${applyFilters(filters.map { it.second })}
-                    GROUP BY ${groupby.joinToString(","){ removeAlias(it).replace(".$VALUE", "") }}
-                """.trimIndent()
+            selectQuery +=  "SELECT ${(groupby + aggregators).joinToString(",")} FROM $dataset ${applyFilters(filters.map { it.second })} GROUP BY ${groupby.joinToString(","){ removeAlias(it).replace(".$VALUE", "") }}"
         } else {
-            selectQuery += """
-                    SELECT *
-                    FROM $dataset
-                    ${applyFilters(filters.map { it.second })}
-                """.trimIndent()
+            selectQuery += "SELECT * FROM $dataset ${applyFilters(filters.map { it.second })}"
             if (isGroupBy) {
                 selectQuery += " LIMIT 1"
             }

@@ -8,6 +8,7 @@ import java.io.File
 import java.sql.DriverManager
 import java.util.logging.Logger
 import kotlin.math.roundToLong
+import kotlin.random.Random
 
 interface MimicIVLoader: Loader {
     fun addPerson(subjectId: Int): Long
@@ -52,6 +53,7 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                             Triple(subjectId.toInt(), itemId.toInt(), c.toInt())
                         }
                         .toList()
+                        .shuffled(Random(42))
                 }
             val tsCache = mutableMapOf<Int, MIMICTS>()
             val sql = """SELECT itemid, unitname, category, label, abbreviation FROM d_items""".trimIndent()
@@ -68,13 +70,13 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                     tsCache[ts.itemid] = ts
                 }
             }
-            val grouped = rows.groupBy({ it.first }) { row ->
+            val grouped: Map<Int, List<Pair<MIMICTS, Int>>> = rows.groupBy({ it.first }) { row ->
                 val ts = tsCache[row.second] ?: error("Missing TS for itemId ${row.second}")
                 Pair(ts, row.third)
             }
             var acc = 0
             gsTime += getTime {
-                for ((subjectId, items) in grouped) {
+                for ((subjectId: Int, items: List<Pair<MIMICTS, Int>>) in grouped.entries.shuffled(Random(42))) {
                     if (acc > limit) break
                     acc += items.sumOf { it.second }
                     users.addAll(items.map { Pair(subjectId, it.first.itemid) })

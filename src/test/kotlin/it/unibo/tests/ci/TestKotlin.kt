@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.platform.commons.logging.LoggerFactory
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class TestKotlin {
     private val logger = org.slf4j.LoggerFactory.getLogger(this::class.java)
@@ -41,7 +42,13 @@ class TestKotlin {
                         g = MemoryGraphACID.readFromDisk(g1.path)
                         g.tsm = tsm
                     }
-                    f(g)
+                    try {
+                        f(g)
+                    } catch (e: Exception) {
+                        g.close()
+                        e.printStackTrace()
+                        fail(e.message)
+                    }
                     g.close()
                     logger.info("Done.")
                 }

@@ -1,5 +1,7 @@
 package it.unibo.tests.mimic
 
+import it.unibo.graph.asterixdb.AsterixDBTSM
+import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.query.*
 import it.unibo.graph.utils.Measurement
@@ -9,9 +11,13 @@ import it.unibo.graph.utils.getTime
 import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
 import it.unibo.stats.TestConfig
+import it.unibo.stats.runQuery
+import it.unibo.tests.mimic.queries.MimicBy
+import it.unibo.tests.mimic.queries.MimicFilter
 import org.junit.jupiter.api.TestInstance
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.GraphDatabase
+import java.io.File
 import java.sql.DriverManager
 import kotlin.test.Test
 
@@ -133,7 +139,7 @@ class TestMimicQuery {
                     null,
                     Step("HR"),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 60L)))
+                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 140L)))
                 ),
                 threads = threads,
                 mode = queryMode
@@ -142,7 +148,7 @@ class TestMimicQuery {
     }
 
     class Q2Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 60 RETURN p, t, m"
+        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 140 RETURN p, t, m"
     }
 
     class Q2PGAge(graph: String) : QPgAge(graph) {
@@ -156,7 +162,7 @@ class TestMimicQuery {
                 $$) AS (p agtype, t agtype, tsid bigint)
             ) t
             JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE m.value > 60;
+            WHERE m.value > 140;
         """.trimIndent()
     }
 
@@ -216,7 +222,7 @@ class TestMimicQuery {
                     null,
                     Step(alias = "ts", label = "HR"),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 60L)))
+                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 140L)))
                 ),
                 by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG)),
                 threads = threads,
@@ -226,7 +232,7 @@ class TestMimicQuery {
     }
 
     class Q4Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 60 RETURN t.category, avg(m.value)"
+        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 140 RETURN t.category, avg(m.value)"
     }
 
     class Q4PGAge(graph: String) : QPgAge(graph) {
@@ -240,7 +246,7 @@ class TestMimicQuery {
                 $$) AS (tsid bigint, category text)
             ) t
             JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE m.value > 60
+            WHERE m.value > 140
             GROUP BY t.category;
         """.trimIndent()
     }
@@ -248,6 +254,39 @@ class TestMimicQuery {
     @Test
     fun `filter and group by measurements`() = TestConfig.runTest(dataset = "mimic") { graph, size, mode ->
         Q4(graph)
+    }
+
+    @Test
+    fun testMode() {
+        val dataset = "mimic"
+        val size = "full" // "1692200"
+        val path = "datasets/dump/$dataset/$size/"
+        val graph = MemoryGraphACID.readFromDisk(path)
+        val tsm = AsterixDBTSM.createDefault(
+            graph,
+            host = "192.168.30.110",
+            controllerIps = listOf("192.168.30.110"),
+            dataverse = "${dataset}_$size"
+        )
+        graph.tsm = tsm
+        File("src/main/resources/mimic-iv_subjectids_tsids.csv").useLines { lines ->
+            lines
+                .toList()
+                .map { it.trim().split(",") }
+                .map { Triple(it[0].toLong(), it[1].toLong(), it[2].toLong()) }
+                .filter { (subject_id, itemid, c) -> itemid == 220277L } // HR
+                .filterIndexed { index, _ -> index % 10 == 0 }
+                .take(100)
+                .forEach { (subject_id, itemid, c) ->
+                    listOf(1, 2).forEach {
+                        QueryMode.entries.forEach { mode ->
+                            runQuery(MimicBy(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
+                            runQuery(MimicFilter(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
+                        }
+                    }
+                }
+        }
+        graph.close()
     }
 }
 
