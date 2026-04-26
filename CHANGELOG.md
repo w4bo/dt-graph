@@ -1,3 +1,18 @@
+## [1.2.33](https://github.com/w4bo/dt-graph/compare/1.2.32...1.2.33) (2026-04-26)
+
+### Dependency updates
+
+* **deps:** update node.js to 24.15 ([#174](https://github.com/w4bo/dt-graph/issues/174)) ([cbe6c8c](https://github.com/w4bo/dt-graph/commit/cbe6c8cd90bf400abb8db05baed9e3c42b83ca2e))
+* **deps:** update plugin org.jetbrains.kotlin.jvm to v2.3.21 ([#176](https://github.com/w4bo/dt-graph/issues/176)) ([be31ecc](https://github.com/w4bo/dt-graph/commit/be31eccee659c083233f0d8bba01052a682d2758))
+
+### Bug Fixes
+
+* **deps:** update junit-framework monorepo to v5.14.4 ([#178](https://github.com/w4bo/dt-graph/issues/178)) ([57cd0a5](https://github.com/w4bo/dt-graph/commit/57cd0a52fc521270517c760a0afaaa2c5ff4407d))
+
+### Build and continuous integration
+
+* **deps:** update actions/setup-node action to v6.4.0 ([#175](https://github.com/w4bo/dt-graph/issues/175)) ([8a566ae](https://github.com/w4bo/dt-graph/commit/8a566aed01e695f2421aa4866d75f3994fadb423))
+
 ## [1.2.32](https://github.com/w4bo/dt-graph/compare/1.2.31...1.2.32) (2026-04-10)
 
 ### Bug Fixes
