@@ -12,6 +12,7 @@ import it.unibo.stats.QueryResultData
 import it.unibo.stats.Querying
 import it.unibo.stats.TestConfig
 import it.unibo.stats.runQuery
+import it.unibo.tests.mimic.loaders.limitToPort
 import it.unibo.tests.mimic.queries.MimicBy
 import it.unibo.tests.mimic.queries.MimicFilter
 import org.junit.jupiter.api.TestInstance
@@ -21,6 +22,7 @@ import java.io.File
 import java.sql.DriverManager
 import kotlin.test.Test
 
+const val mimicFilter = 100L
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TestMimicQuery {
@@ -32,6 +34,7 @@ class TestMimicQuery {
             val time = getTime {
                 res = query(threads, queryMode)
             }
+            if (res.isEmpty()) throw IllegalArgumentException("$queryId: Empty result")
             return QueryResultData(time, res.size)
         }
 
@@ -108,12 +111,17 @@ class TestMimicQuery {
 
     class Q1(val graph: Graph) : Q() {
         override fun query(threads: Int, queryMode: QueryMode): List<Any> {
-            return query(graph, listOf(Step(Person), null, Step(label = "HR")), threads = threads, mode = queryMode)
+            return query(graph, listOf(
+                Step(Person),
+                null,
+                null
+            ), // Step(label = "HR")),
+            threads = threads, mode = queryMode)
         }
     }
 
     class Q1Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'}) RETURN p, t"
+        override fun query(): String = "MATCH (p: Person)-->(t) RETURN p, t"
     }
 
     class Q1PGAge(graph: String) : QPgAge(graph) {
@@ -137,9 +145,9 @@ class TestMimicQuery {
                 listOf(
                     Step(Person),
                     null,
-                    Step("HR"),
+                    null, // Step("HR"),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 140L)))
+                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
                 ),
                 threads = threads,
                 mode = queryMode
@@ -148,7 +156,7 @@ class TestMimicQuery {
     }
 
     class Q2Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 140 RETURN p, t, m"
+        override fun query(): String = "MATCH (p: Person)-->(t)-->(m) WHERE toFloat(m.value) > $mimicFilter RETURN p, t, m"
     }
 
     class Q2PGAge(graph: String) : QPgAge(graph) {
@@ -162,7 +170,7 @@ class TestMimicQuery {
                 $$) AS (p agtype, t agtype, tsid bigint)
             ) t
             JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE m.value > 140;
+            WHERE toFloat(m.value) > $mimicFilter;
         """.trimIndent()
     }
 
@@ -178,7 +186,7 @@ class TestMimicQuery {
                 listOf(
                     Step(Person),
                     null,
-                    Step(alias = "ts", label = "HR"),
+                    Step(alias = "ts"/*, label = "HR"*/),
                     null,
                     Step(alias = "m", label = Measurement)
                 ),
@@ -190,12 +198,12 @@ class TestMimicQuery {
     }
 
     class Q3Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) RETURN t.category, avg(m.value)"
+        override fun query(): String = "MATCH (p: Person)-->(t)-->(m) RETURN t.category, avg(toFloat(m.value))"
     }
 
     class Q3PGAge(graph: String) : QPgAge(graph) {
         override fun query(): String = """
-            SELECT t.category, avg(m.value)
+            SELECT t.category, avg(toFloat(m.value))
             FROM (
                 SELECT *
                 FROM cypher('$graph'::name, $$
@@ -220,9 +228,9 @@ class TestMimicQuery {
                 listOf(
                     Step(Person),
                     null,
-                    Step(alias = "ts", label = "HR"),
+                    Step(alias = "ts"/*, label = "HR"*/),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, 140L)))
+                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
                 ),
                 by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG)),
                 threads = threads,
@@ -232,12 +240,13 @@ class TestMimicQuery {
     }
 
     class Q4Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})-->(m:Measurement) WHERE m.value > 140 RETURN t.category, avg(m.value)"
+        override fun query(): String = "MATCH (p: Person)--(t)--(m) WHERE toFloat(toFloat(m.value)) > $mimicFilter RETURN t.category, avg(toFloat(m.value))"
+//        override fun query(): String = "MATCH (p: Person)--(t {abbreviation: 'HR'})--(m) WHERE toFloat(toFloat(m.value)) > $mimicFilter RETURN t.category, avg(toFloat(m.value))"
     }
 
     class Q4PGAge(graph: String) : QPgAge(graph) {
         override fun query(): String = """
-            SELECT t.category, avg(m.value)
+            SELECT t.category, avg(toFloat(m.value))
             FROM (
                 SELECT *
                 FROM cypher('$graph'::name, $$
@@ -246,7 +255,7 @@ class TestMimicQuery {
                 $$) AS (tsid bigint, category text)
             ) t
             JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE m.value > 140
+            WHERE toFloat(m.value) > $mimicFilter
             GROUP BY t.category;
         """.trimIndent()
     }
@@ -274,7 +283,8 @@ class TestMimicQuery {
                 .toList()
                 .map { it.trim().split(",") }
                 .map { Triple(it[0].toLong(), it[1].toLong(), it[2].toLong()) }
-                .filter { (subject_id, itemid, c) -> itemid == 220277L } // HR
+                .sortedBy { -it.third }
+                .filter { (subject_id, itemid, c) -> itemid == 220045L } // HR
                 .filterIndexed { index, _ -> index % 10 == 0 }
                 .take(100)
                 .forEach { (subject_id, itemid, c) ->
@@ -291,23 +301,24 @@ class TestMimicQuery {
 }
 
 fun main() {
-//    mimic_sizes.forEach { size ->
-//        listOf(
-//            TestMimicQuery.Q1Neo4J("bolt://localhost:${limitToPort(size)}"),
-//            TestMimicQuery.Q2Neo4J("bolt://localhost:${limitToPort(size)}"),
-//            TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size)}"),
-//            TestMimicQuery.Q4Neo4J("bolt://localhost:${limitToPort(size)}")
-//        ).forEach { query ->
-//            runQuery(query, "neo4j", threads = 1, numMachines = -1, "mimic", size.toString(), mode = QueryMode.NAIVE)
-//        }
-//
-//        listOf(
-//            TestMimicQuery.Q1PGAge("mimic_$size"),
-//            TestMimicQuery.Q2PGAge("mimic_$size"),
-//            TestMimicQuery.Q3PGAge("mimic_$size"),
-//            TestMimicQuery.Q4PGAge("mimic_$size")
-//        ).forEach { query ->
-//            runQuery(query, "pgage", threads = 1, numMachines = -1, "mimic", size.toString(), mode = QueryMode.NAIVE)
-//        }
-//    }
+    TestConfig.loadConfig().datasets["mimic"]!!.sizes.forEach { size ->
+        listOf(
+            TestMimicQuery.Q1Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
+            TestMimicQuery.Q2Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
+            TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
+            TestMimicQuery.Q4Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}")
+        ).forEach { query ->
+            println(query.javaClass.toString())
+            runQuery(query, "neo4j", threads = 1, numMachines = 1, "mimic", size.toString(), mode = QueryMode.OPTIMIZED)
+        }
+
+        // listOf(
+        //     TestMimicQuery.Q1PGAge("mimic_$size"),
+        //     TestMimicQuery.Q2PGAge("mimic_$size"),
+        //     TestMimicQuery.Q3PGAge("mimic_$size"),
+        //     TestMimicQuery.Q4PGAge("mimic_$size")
+        // ).forEach { query ->
+        //     runQuery(query, "pgage", threads = 1, numMachines = -1, "mimic", size.toString(), mode = QueryMode.NAIVE)
+        // }
+    }
 }

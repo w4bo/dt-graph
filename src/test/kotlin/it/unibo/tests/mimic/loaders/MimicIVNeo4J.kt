@@ -121,7 +121,8 @@ class MimicIVNeo4J(
                     "\"" + clean(abbreviation) + "\"",
                     "\"" + clean(unitname) + "\"",
                     "\"" + clean(category) + "\"",
-                    "\"" + clean(label) + "\""
+                    "\"" + clean(label) + "\"",
+                    "TimeSeries"
                 ).joinToString(",")
             )
             return tsId

@@ -53,7 +53,6 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                             Triple(subjectId.toInt(), itemId.toInt(), c.toInt())
                         }
                         .toList()
-                        .shuffled(Random(42))
                 }
             val tsCache = mutableMapOf<Int, MIMICTS>()
             val sql = """SELECT itemid, unitname, category, label, abbreviation FROM d_items""".trimIndent()

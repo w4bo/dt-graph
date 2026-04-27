@@ -15,7 +15,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 enum class QueryMode {
-    NAIVE, OPTIMIZED
+    NAIVE, OPTIMIZED, AGGREGATEDBY
 }
 
 @JvmName("query")
@@ -513,7 +513,8 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                     acc.add(Path(curPath, newFrom, newTo))
                 } else {
                     if (curElem.index % 2 == 0) { // is node
-                        queue.addAll(expandNode(curElem, curPath, newFrom, newTo, match))
+                        val toAdd = expandNode(curElem, curPath, newFrom, newTo, match)
+                        queue.addAll(toAdd)
                     } else { // is edge...
                         val r = (curElem.e as R)
                         if (curElem.e.label.name == HasTS) { // ... to time series

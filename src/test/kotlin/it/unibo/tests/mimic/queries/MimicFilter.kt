@@ -8,6 +8,7 @@ import it.unibo.graph.query.Step
 import it.unibo.graph.utils.Person
 import it.unibo.graph.utils.VALUE
 import it.unibo.tests.mimic.TestMimicQuery.Q
+import it.unibo.tests.mimic.mimicFilter
 
 class MimicFilter(val graph: Graph, val pId: Long, c: Long) : Q() {
     override val queryId: String = "MimicFilter_${pId}_$c"
@@ -19,7 +20,7 @@ class MimicFilter(val graph: Graph, val pId: Long, c: Long) : Q() {
                 null,
                 Step(label = "HR"),
                 null,
-                Step(properties = listOf(Filter(VALUE, Operators.GT, 140L)))
+                Step(properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
             ),
             threads = threads,
             mode = queryMode
