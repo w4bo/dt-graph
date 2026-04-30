@@ -9,7 +9,6 @@ import it.unibo.graph.query.*
 import it.unibo.graph.rocksdb.RocksDBGraph
 import it.unibo.graph.utils.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.platform.commons.logging.LoggerFactory
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -467,6 +466,45 @@ class TestKotlin {
             i, p -> assertEquals(p, g.getPropertyFromDisk(p.id), "p${i + 1}")
         }
         g.close()
+    }
+
+    @Test
+    fun `filter on label`() {
+        matrix { g ->
+            QueryMode.entries.forEach { mode ->
+                g.clear()
+                g.getTSM().clear()
+                val n10 = g.addNode(A)
+                g.addProperty(n10.id, "name", A, PropType.STRING)
+                val n11 = g.addNode(B, isTs = true)
+                g.addEdge(Foo, n10.id, n11.id)
+                val ts = g.getTSM().addTS(n11.id)
+
+                ts.add(C, timestamp = 0, value = 1)
+                ts.add(D, timestamp = 1, value = 10)
+                ts.add(C, timestamp = 2, value = 2)
+                ts.add(D, timestamp = 3, value = 20)
+
+                val noFilter: () -> List<Step?> = { listOf(Step(alias = "a", label = A), null, Step(label = B), null, Step(alias = "c")) }
+                val filterOnValue: (f: Filter) -> List<Step?> = { f -> listOf(Step(alias = "a", label = A), null, Step(label = B), null, Step(alias = "c", properties = listOf(f))) }
+                val filterOnLabel: (l: String) -> List<Step?> = { l -> listOf(Step(alias = "a", label = A), null, Step(label = B), null, Step(alias = "c", label = l)) }
+                val filterOnLabelAndValue: (l: String, f: Filter) -> List<Step?> = { l, f -> listOf(Step(alias = "a", label = A), null, Step(label = B), null, Step(alias = "c", label = l, properties = listOf(f))) }
+
+                assertEquals(4, search(g, noFilter(), mode = mode).size)
+                assertEquals(2, search(g, filterOnLabel(C), mode = mode).size)
+                assertEquals(2, search(g, filterOnLabel(D), mode = mode).size)
+                assertEquals(3, search(g, filterOnValue(Filter(VALUE, Operators.GTE, 2L)), mode = mode).size)
+                assertEquals(1, search(g, filterOnLabelAndValue(C, Filter(VALUE, Operators.GTE, 2L)), mode = mode).size)
+                assertEquals(2, search(g, filterOnLabelAndValue(D, Filter(VALUE, Operators.GTE, 2L)), mode = mode).size)
+
+                val sumByLabel = listOf(Aggregate(n = "c", property = LABEL), Aggregate(n = "c", property = VALUE, AggOperator.SUM))
+                val sumByName = listOf(Aggregate(n = "a", property = "name"), Aggregate(n = "c", property = VALUE, AggOperator.SUM))
+                assertEquals(setOf(listOf(labelFromString(C), 3.0), listOf(labelFromString(D), 30.0)), query(g, match = noFilter(), by = sumByLabel, mode = mode).toSet())
+                assertEquals(setOf(listOf(labelFromString(C), 2.0), listOf(labelFromString(D), 30.0)), query(g, match = filterOnValue(Filter(VALUE, Operators.GTE, 2L)), by = sumByLabel, mode = mode).toSet())
+                assertEquals(setOf(listOf(labelFromString(D), 20.0)), query(g, match = filterOnLabelAndValue(D, Filter(VALUE, Operators.GTE, 15L)), by = sumByLabel, mode = mode).toSet())
+                assertEquals(setOf(listOf(A, 32.0)), query(g, match = filterOnValue(Filter(VALUE, Operators.GTE, 2L)), by = sumByName, mode = mode).toSet())
+            }
+        }
     }
 
     @Test

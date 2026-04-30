@@ -63,7 +63,7 @@ class MemoryTS(override val g: Graph, val id: Long) : TS {
                     val fromTimestamp = filteredValues.minOfOrNull { it.fromTimestamp }!!
                     val toTimestamp = filteredValues.maxOfOrNull { it.toTimestamp }!!
                     N.createVirtualN( // Create a virtual node to represent the result of the aggregation
-                        filteredValues.first().label,
+                        it.value.first().result.first().label,
                         value,
                         fromTimestamp = fromTimestamp,
                         toTimestamp = toTimestamp,

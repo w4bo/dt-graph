@@ -5,7 +5,6 @@ import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
-import java.io.BufferedWriter
 import java.io.File
 
 fun limitToPort(limit: Long): Int {
@@ -28,6 +27,7 @@ class MimicIVNeo4J(
 
     private val driver: Driver = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
     private val session: Session = driver.session()
+    val tsMap = mutableMapOf<Long, Long>()
 
     private val baseDir = File("datasets/dump/neo4j/mimic/$limit").apply {
         mkdirs()
@@ -48,11 +48,16 @@ class MimicIVNeo4J(
         baseDir.mkdirs()
 
         // WRITE HEADERS THROUGH WRITERS ONLY
-        tsWriter.println("ts_id:ID(TimeSeries),itemid,abbreviation,unitname,category,label,:LABEL")
+//        tsWriter.println("ts_id:ID(TimeSeries),itemid,abbreviation,unitname,category,label,:LABEL")
+//        hasParamsWriter.println(":START_ID(Person),:END_ID(TimeSeries),:TYPE")
+//        measurementWriter.println("measurement_id:ID(Measurement),ts_id,type,timestamp,value,:LABEL")
+//        hasMeasurementWriter.println(":START_ID(TimeSeries),:END_ID(Measurement),:TYPE")
+//        personWriter.println("person_id:ID(Person),subject_id,:LABEL")
+        tsWriter.println("ts_id:ID(TimeSeries),:LABEL")
         hasParamsWriter.println(":START_ID(Person),:END_ID(TimeSeries),:TYPE")
-        measurementWriter.println("measurement_id:ID(Measurement),ts_id,type,timestamp,value,:LABEL")
+        measurementWriter.println("measurement_id:ID(Measurement),ts_id,category,abbreviation,itemid,timestamp,value,:LABEL")
         hasMeasurementWriter.println(":START_ID(TimeSeries),:END_ID(Measurement),:TYPE")
-        personWriter.println("person_id:ID(Person),subject_id,:LABEL")
+        personWriter.println("person_id:ID(Person),subject_id,rnd,pId,c,:LABEL")
 
         // flush immediately to lock headers
         tsWriter.flush()
@@ -67,7 +72,7 @@ class MimicIVNeo4J(
         if (!csv) session.run("MATCH (n) DETACH DELETE n")
     }
 
-    override fun addPerson(subjectId: Int): Long {
+    override fun addPerson(subjectId: Int, c: Int): Long {
         if (!csv) {
             val result = session.run(
                 "CREATE (p:Person {subject_id: ${subjectId}}) RETURN id(p) AS id"
@@ -75,7 +80,7 @@ class MimicIVNeo4J(
             return result.single()["id"].asLong()
         } else {
             val personId = ++personCounter
-            personWriter.write("$personId,$subjectId,Person\n")
+            personWriter.write("$personId,$subjectId,${subjectId % 10},${personId-1},$c,Person\n")
             return personId
         }
     }
@@ -112,20 +117,32 @@ class MimicIVNeo4J(
             )
             return result.single()["id"].asLong()
         } else {
-            val tsId = ++tsCounter
-            hasParamsWriter.write("$person,$tsId,HAS_PARAMETERS\n")
-            tsWriter.println(
-                listOf(
-                    clean(tsId),
-                    clean(itemid),
-                    "\"" + clean(abbreviation) + "\"",
-                    "\"" + clean(unitname) + "\"",
-                    "\"" + clean(category) + "\"",
-                    "\"" + clean(label) + "\"",
-                    "TimeSeries"
-                ).joinToString(",")
-            )
-            return tsId
+
+            // val tsId = ++tsCounter
+            // hasParamsWriter.write("$person,$tsId,HAS_PARAMETERS\n")
+            // tsWriter.println(
+            //     listOf(
+            //         clean(tsId),
+            //         clean(itemid),
+            //         "\"" + clean(abbreviation) + "\"",
+            //         "\"" + clean(unitname) + "\"",
+            //         "\"" + clean(category) + "\"",
+            //         "\"" + clean(label) + "\"",
+            //         "TimeSeries"
+            //     ).joinToString(",")
+            // )
+            if (!tsMap.contains(person)) {
+                val tsId = ++tsCounter
+                hasParamsWriter.write("$person,$tsId,HAS_PARAMETERS\n")
+                tsWriter.println(
+                    listOf(
+                        clean(tsId),
+                        "TimeSeries"
+                    ).joinToString(",")
+                )
+                tsMap[person] = tsId
+            }
+            return person
         }
     }
 
@@ -134,7 +151,7 @@ class MimicIVNeo4J(
             session.run(
                 """
             MATCH (ts) WHERE id(ts) = $tsId
-            CREATE (m:${row.type} {
+            CREATE (m:${row.label} {
                 timestamp: ${row.timestamp},
                 value: ${row.value}
             })
@@ -142,14 +159,16 @@ class MimicIVNeo4J(
             """.trimIndent()
             )
         } else {
+            val ts = tsMap[tsId]!!
+            val tmp = tsCache[row.label.toInt()]!!
             val measurementId = ++measurementCounter
             // write node
             measurementWriter.write(
-                "$measurementId,$tsId,${row.type},${row.timestamp},${row.value},Measurement\n"
+                "$measurementId,$ts,${tmp.category},${tmp.abbreviation},${tmp.itemid},${row.timestamp},${row.value},${tmp.abbreviation}\n"
             )
             // write relationship
             hasMeasurementWriter.write(
-                "$tsId,$measurementId,HAS_EVENT\n"
+                "$ts,$measurementId,HAS_EVENT\n"
             )
             // optional: flush occasionally (or based on isLast)
             if (isLast) {

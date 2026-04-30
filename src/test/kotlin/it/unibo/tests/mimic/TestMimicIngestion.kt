@@ -3,7 +3,6 @@ package it.unibo.tests.mimic
 import it.unibo.stats.TestConfig
 import it.unibo.stats.loadDataset
 import it.unibo.tests.mimic.loaders.MimicIVNeo4J
-import it.unibo.tests.mimic.loaders.MimicIVPGAge
 import it.unibo.tests.mimic.loaders.MimicIVSTGraph
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -20,6 +19,7 @@ class TestMimicIngestion {
 
 fun main() {
     TestConfig.loadConfig().datasets["mimic"]!!.sizes.forEach { limit ->
+        println(limit)
         // loadDataset(MimicIVPGAge(limit.toString().toLong()), "pgage", 1, 1,"mimic", limit.toString())
         loadDataset(MimicIVNeo4J(limit.toString().toLong(), csv = true), "neo4j", 1, 1,"mimic", limit.toString())
     }

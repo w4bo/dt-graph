@@ -59,16 +59,21 @@ open class N(
         buffer.putLong(nextProp?: Long.MIN_VALUE)         // 8 bytes
         buffer.putLong(nextEdge?: Long.MIN_VALUE)         // 8 bytes
         buffer.put(if (isTs) 1 else 0)                       // 5 byte
-        return buffer.array()                                    // Total: 45 bytes
+        return buffer.array()                                     // Total: 45 bytes
     }
 
     override fun getProps(next: Long?, filter: PropType?, name: String?, fromTimestamp: Long, toTimestamp: Long, timeaware: Boolean): List<P> {
-        return when (name) {
-            FROM_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, FROM_TIMESTAMP, this.fromTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
-            TO_TIMESTAMP -> listOf(P(DUMMY_ID, id, NODE, TO_TIMESTAMP, this.toTimestamp, PropType.LONG, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))
-            VALUE -> value?.let { listOf(P(DUMMY_ID, id, NODE, VALUE, it, PropType.DOUBLE, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp)) } ?: super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
-            else -> super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
+        val result = when (name) {
+            ID -> this.id to PropType.LONG
+            LABEL -> this.label to PropType.STRING
+            FROM_TIMESTAMP -> this.fromTimestamp to PropType.LONG
+            TO_TIMESTAMP -> this.toTimestamp to PropType.LONG
+            VALUE -> value?.let { it to PropType.DOUBLE }
+            else -> null
         }
+        return result
+            ?.let { (v, t) -> listOf(P(DUMMY_ID, id, NODE, name!!, v, t, g = g, fromTimestamp = this.fromTimestamp, toTimestamp = this.toTimestamp))}
+            ?: super.getProps(next, filter, name, fromTimestamp, toTimestamp, timeaware)
     }
 
     fun getTS(): List<N> {
@@ -110,7 +115,7 @@ open class N(
     }
 
     override fun toString(): String {
-        return "(id: $id, type: $label, from: $fromTimestamp, to: $toTimestamp)"
+        return "(id: $id, label: $label, from: $fromTimestamp, to: $toTimestamp)"
     }
 
     override fun equals(other: Any?): Boolean {

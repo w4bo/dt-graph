@@ -11,11 +11,12 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicInteger
+import javax.management.Query
 import kotlin.math.max
 import kotlin.math.min
 
 enum class QueryMode {
-    NAIVE, OPTIMIZED, AGGREGATEDBY
+    NAIVE, OPTIMIZED
 }
 
 @JvmName("query")
@@ -401,6 +402,7 @@ fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long, matc
         val nextMatch = match[index + 1] ?: return filters // select it
         val nextAlias = nextMatch.alias // and its alias (if any)
         filters += nextMatch.properties
+        if (nextMatch.label != null) filters += Filter(LABEL, Operators.EQ, labelFromString(nextMatch.label!!))
         if (nextAlias != null) { // If the alias is available
             val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
             if (c != null) { // if so...
@@ -446,7 +448,7 @@ fun initializeQueue(g: Graph, from: Long, to: Long): Queue<ExploredPath> {
     return acc
 }
 
-fun matchesStep(cur: ExploredPath, match: List<Step?>, by: List<Aggregate>, timeaware: Boolean, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>): Boolean {
+fun matchesStep(cur: ExploredPath, match: List<Step?>, by: List<Aggregate>, timeaware: Boolean, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>, mode: QueryMode): Boolean {
     val step = match[cur.index]
     val alias = step?.alias
     val compare = alias?.let { mapWhere[it] }
@@ -455,7 +457,7 @@ fun matchesStep(cur: ExploredPath, match: List<Step?>, by: List<Aggregate>, time
                             (step.label == null || step.label == cur.e.label.name)  // filter on label
                                 && step
                                     .properties
-                                    .filter { f -> !by.filter { it.operator != null }.map { it.property }.contains(f.property) } // do not apply filter on the result of group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
+                                    .filter { f ->  !(mode == QueryMode.OPTIMIZED && by.filter { it.operator != null }.map { it.property }.contains(f.property)) } // do not apply filter on the result of pushed-down group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
                                     .all { f -> // for all filters...
                                         cur.e
                                             .getProps(name = f.property, fromTimestamp = cur.from, toTimestamp = cur.to, timeaware = timeaware) // ... a certain time-aware property must match
@@ -507,7 +509,7 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                 }
             } else {
                 val curElem = queue.poll()// .removeAt(0)
-                if (!matchesStep(curElem, match, by, timeaware, mapAlias, mapWhere)) continue
+                if (!matchesStep(curElem, match, by, timeaware, mapAlias, mapWhere, mode)) continue
                 val (newFrom, newTo, curPath) = updatePath(curElem)
                 if (isCompletePath(curPath, match)) {
                     acc.add(Path(curPath, newFrom, newTo))

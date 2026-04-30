@@ -1,6 +1,7 @@
 package it.unibo.graph.asterixdb
 
 import it.unibo.graph.interfaces.Graph
+import it.unibo.graph.interfaces.Label
 import it.unibo.graph.interfaces.N
 import it.unibo.graph.interfaces.PropType
 import it.unibo.graph.interfaces.TS
@@ -54,13 +55,14 @@ class AsterixDBTS(
 
         val filters: List<Pair<String, Filter>> = (filters + Filter(TSID, Operators.EQ, id))
                 .map { if (it.property == FROM_TIMESTAMP || it.property == TO_TIMESTAMP) Filter(ID, it.operator, it.value, it.attrFirst) else it } // rename id into TO/FROM TIMESTAMP
+                .map { if (it.property == LABEL) Filter(LABEL, it.operator, (it.value as Label).ordinal, it.attrFirst) else it } // rename id into TO/FROM TIMESTAMP
                 .map { f ->
-                    if (!firstCitizens.contains(f.property)) {
-                        Pair(f.property ,  Filter(f.property + ".$VALUE", f.operator, f.value, f.attrFirst))
-                    } else {
-                        Pair(f.property, f)
+                        if (!firstCitizens.contains(f.property)) {
+                            Pair(f.property,  Filter(f.property + ".$VALUE", f.operator, f.value, f.attrFirst))
+                        } else {
+                            Pair(f.property, f)
+                        }
                     }
-                }
 
         val groupby: MutableSet<String> =
             by
@@ -76,7 +78,9 @@ class AsterixDBTS(
             by
                 .filter { it.operator != null }
                 .map { f -> "${(if (f.operator == AggOperator.AVG) AggOperator.SUM else f.operator)?.name}(${ replacePropertyName(f.property!!, alias = false) }) as ${f.property}" }.toMutableSet()
-        aggregators += listOf("MIN($LABEL) as $LABEL, COUNT(*) as $COUNT", "MIN($ID) as $FROM_TIMESTAMP", "MAX($ID) as $TO_TIMESTAMP")
+        if (!groupby.any { it == LABEL })
+            aggregators += listOf("MIN($LABEL) as $LABEL")
+        aggregators += listOf("COUNT(*) as $COUNT", "MIN($ID) as $FROM_TIMESTAMP", "MAX($ID) as $TO_TIMESTAMP")
 
         selectQuery =  "USE $dataverse;"
         if (by.isNotEmpty()) {

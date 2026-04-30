@@ -4,7 +4,7 @@ import it.unibo.graph.asterixdb.AsterixDBTSM
 import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.query.*
-import it.unibo.graph.utils.Measurement
+import it.unibo.graph.utils.LABEL
 import it.unibo.graph.utils.Person
 import it.unibo.graph.utils.VALUE
 import it.unibo.graph.utils.getTime
@@ -13,8 +13,6 @@ import it.unibo.stats.Querying
 import it.unibo.stats.TestConfig
 import it.unibo.stats.runQuery
 import it.unibo.tests.mimic.loaders.limitToPort
-import it.unibo.tests.mimic.queries.MimicBy
-import it.unibo.tests.mimic.queries.MimicFilter
 import org.junit.jupiter.api.TestInstance
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.GraphDatabase
@@ -109,45 +107,17 @@ class TestMimicQuery {
         abstract fun query(): String
     }
 
-    class Q1(val graph: Graph) : Q() {
-        override fun query(threads: Int, queryMode: QueryMode): List<Any> {
-            return query(graph, listOf(
-                Step(Person),
-                null,
-                null
-            ), // Step(label = "HR")),
-            threads = threads, mode = queryMode)
-        }
-    }
-
-    class Q1Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p: Person)-->(t) RETURN p, t"
-    }
-
-    class Q1PGAge(graph: String) : QPgAge(graph) {
-        override fun query(): String = """
-            SELECT * FROM cypher('$graph'::name, $$
-                MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})
-                RETURN DISTINCT p, t
-            $$) AS (p agtype, t agtype);
-        """.trimIndent()
-    }
-
-    @Test
-    fun `get person with ts`() = TestConfig.runTest(dataset = "mimic") { graph, size, mode ->
-        Q1(graph)
-    }
-
-    class Q2(val graph: Graph) : Q() {
+    class Q1(val graph: Graph, pId: Long = Long.MIN_VALUE, c: Long = Long.MIN_VALUE) : Q() {
+        override val queryId: String = super.queryId + (if (pId != Long.MIN_VALUE) "_${pId}_$c" else "")
         override fun query(threads: Int, queryMode: QueryMode): List<Any> {
             return query(
                 graph,
                 listOf(
-                    Step(Person),
+                    Step(Person, properties = listOf(Filter("c", Operators.GT, 25000))),
                     null,
-                    null, // Step("HR"),
+                    Step("TimeSeries"),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
+                    Step(alias = "m", properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
                 ),
                 threads = threads,
                 mode = queryMode
@@ -155,8 +125,8 @@ class TestMimicQuery {
         }
     }
 
-    class Q2Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p: Person)-->(t)-->(m) WHERE toFloat(m.value) > $mimicFilter RETURN p, t, m"
+    class Q1Neo4J(uri: String) : QNeo4J(uri) {
+        override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 AND toFloat(m.value) > $mimicFilter RETURN p, t, m"
     }
 
     class Q2PGAge(graph: String) : QPgAge(graph) {
@@ -176,29 +146,31 @@ class TestMimicQuery {
 
     @Test
     fun `get measurements`() = TestConfig.runTest(dataset = "mimic") { graph, size, mode ->
-        Q2(graph)
+        if (mode == QueryMode.NAIVE && size == "full") null else Q1(graph)
     }
 
-    class Q3(val graph: Graph) : Q() {
+    class Q2(val graph: Graph, pId: Long = Long.MIN_VALUE, c: Long = Long.MIN_VALUE) : Q() {
+        override val queryId: String = super.queryId + (if (pId != Long.MIN_VALUE) "_${pId}_$c" else "")
         override fun query(threads: Int, queryMode: QueryMode): List<Any> {
             return query(
                 graph,
                 listOf(
-                    Step(Person),
+                    Step(Person, properties = listOf(Filter("c", Operators.GT, 25000))),
                     null,
-                    Step(alias = "ts"/*, label = "HR"*/),
+                    Step("TimeSeries"),
                     null,
-                    Step(alias = "m", label = Measurement)
+                    Step(alias = "m")
                 ),
-                by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG)),
+                by = listOf(Aggregate("m", LABEL), Aggregate("m", VALUE, operator = AggOperator.AVG)),
                 threads = threads,
                 mode = queryMode
             )
         }
     }
 
-    class Q3Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p: Person)-->(t)-->(m) RETURN t.category, avg(toFloat(m.value))"
+    class Q2Neo4J(uri: String) : QNeo4J(uri) {
+        override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 RETURN m.label, avg(toFloat(m.value))"
+        // override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 UNWIND labels(m) AS label RETURN label, avg(toFloat(m.value))" same timing
     }
 
     class Q3PGAge(graph: String) : QPgAge(graph) {
@@ -218,30 +190,29 @@ class TestMimicQuery {
 
     @Test
     fun `get average measurements`() = TestConfig.runTest(dataset = "mimic") { graph, size, mode ->
-        Q3(graph)
+        if (mode == QueryMode.NAIVE && size == "full") null else Q2(graph)
     }
 
-    class Q4(val graph: Graph) : Q() {
+    class Q3(val graph: Graph) : Q() {
         override fun query(threads: Int, queryMode: QueryMode): List<Any> {
             return query(
                 graph,
                 listOf(
-                    Step(Person),
+                    Step(Person, properties = listOf(Filter("c", Operators.GT, 25000))),
                     null,
-                    Step(alias = "ts"/*, label = "HR"*/),
+                    Step("TimeSeries"),
                     null,
-                    Step(alias = "m", label = Measurement, properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
+                    Step(alias = "m", properties = listOf(Filter(VALUE, Operators.GT, mimicFilter)))
                 ),
-                by = listOf(Aggregate("ts", "category"), Aggregate("m", VALUE, operator = AggOperator.AVG)),
+                by = listOf(Aggregate("m", LABEL), Aggregate("m", VALUE, operator = AggOperator.AVG)),
                 threads = threads,
                 mode = queryMode
             )
         }
     }
 
-    class Q4Neo4J(uri: String) : QNeo4J(uri) {
-        override fun query(): String = "MATCH (p: Person)--(t)--(m) WHERE toFloat(toFloat(m.value)) > $mimicFilter RETURN t.category, avg(toFloat(m.value))"
-//        override fun query(): String = "MATCH (p: Person)--(t {abbreviation: 'HR'})--(m) WHERE toFloat(toFloat(m.value)) > $mimicFilter RETURN t.category, avg(toFloat(m.value))"
+    class Q3Neo4J(uri: String) : QNeo4J(uri) {
+        override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 AND toFloat(m.value) > $mimicFilter RETURN m.abbreviation, avg(toFloat(m.value))"
     }
 
     class Q4PGAge(graph: String) : QPgAge(graph) {
@@ -262,20 +233,21 @@ class TestMimicQuery {
 
     @Test
     fun `filter and group by measurements`() = TestConfig.runTest(dataset = "mimic") { graph, size, mode ->
-        Q4(graph)
+        if (mode == QueryMode.NAIVE && size == "full") null else Q3(graph)
     }
 
     @Test
     fun testMode() {
         val dataset = "mimic"
-        val size = "full" // "1692200"
+        val size = "full" // "full" // "1692200"
         val path = "datasets/dump/$dataset/$size/"
         val graph = MemoryGraphACID.readFromDisk(path)
         val tsm = AsterixDBTSM.createDefault(
             graph,
             host = "192.168.30.110",
             controllerIps = listOf("192.168.30.110"),
-            dataverse = "${dataset}_$size"
+            dataverse = "${dataset}_$size",
+            multiTs = false // I only need to read the data
         )
         graph.tsm = tsm
         File("src/main/resources/mimic-iv_subjectids_tsids.csv").useLines { lines ->
@@ -283,15 +255,15 @@ class TestMimicQuery {
                 .toList()
                 .map { it.trim().split(",") }
                 .map { Triple(it[0].toLong(), it[1].toLong(), it[2].toLong()) }
-                .sortedBy { -it.third }
-                .filter { (subject_id, itemid, c) -> itemid == 220045L } // HR
+                .groupBy { it.first }
+                .map { Pair(it.key, it.value.sumOf { it.third }) }
                 .filterIndexed { index, _ -> index % 10 == 0 }
                 .take(100)
-                .forEach { (subject_id, itemid, c) ->
+                .forEach { (subject_id, c) ->
                     listOf(1, 2).forEach {
                         QueryMode.entries.forEach { mode ->
-                            runQuery(MimicBy(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
-                            runQuery(MimicFilter(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
+                            runQuery(Q1(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
+                            runQuery(Q2(graph, subject_id, c), "stgraph", threads = 1, numMachines = 1, dataset, size = size, mode = mode)
                         }
                     }
                 }
@@ -305,8 +277,7 @@ fun main() {
         listOf(
             TestMimicQuery.Q1Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
             TestMimicQuery.Q2Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
-            TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}"),
-            TestMimicQuery.Q4Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}")
+            TestMimicQuery.Q3Neo4J("bolt://localhost:${limitToPort(size.toString().toLong())}")
         ).forEach { query ->
             println(query.javaClass.toString())
             runQuery(query, "neo4j", threads = 1, numMachines = 1, "mimic", size.toString(), mode = QueryMode.OPTIMIZED)

@@ -1,6 +1,5 @@
 package it.unibo.tests.mimic.loaders
 import it.unibo.graph.asterixdb.dateToTimestamp
-import it.unibo.graph.utils.Measurement
 import it.unibo.graph.utils.getTime
 import it.unibo.stats.Loader
 import it.unibo.tests.smartbench.loaders.TSRecord
@@ -11,7 +10,7 @@ import kotlin.math.roundToLong
 import kotlin.random.Random
 
 interface MimicIVLoader: Loader {
-    fun addPerson(subjectId: Int): Long
+    fun addPerson(subjectId: Int, c: Int): Long
     fun addTimeseries(abbreviation: String, unitname: String?, category: String, label: String, itemid: Int, person: Long): Long
     fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean)
 }
@@ -34,14 +33,16 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
     override fun getTSTime(): Long = tsTime
     override fun getIndexTime(): Long = 0L
 
+    data class MIMICTS(
+        val abbreviation: String,
+        val unitname: String?,
+        val category: String,
+        val label: String,
+        val itemid: Int
+    )
+    val tsCache = mutableMapOf<Int, MIMICTS>()
+
     fun addGs() {
-        data class MIMICTS(
-            val abbreviation: String,
-            val unitname: String?,
-            val category: String,
-            val label: String,
-            val itemid: Int
-        )
         DriverManager.getConnection(url, user, password).use { conn ->
             conn.autoCommit = false
             val rows = File("src/main/resources/mimic-iv_subjectids_tsids.csv")
@@ -54,7 +55,6 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                         }
                         .toList()
                 }
-            val tsCache = mutableMapOf<Int, MIMICTS>()
             val sql = """SELECT itemid, unitname, category, label, abbreviation FROM d_items""".trimIndent()
             conn.prepareStatement(sql).use { stmt ->
                 val rs = stmt.executeQuery()
@@ -77,9 +77,10 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
             gsTime += getTime {
                 for ((subjectId: Int, items: List<Pair<MIMICTS, Int>>) in grouped.entries.shuffled(Random(42))) {
                     if (acc > limit) break
-                    acc += items.sumOf { it.second }
+                    val c = items.sumOf { it.second }
+                    acc += c
                     users.addAll(items.map { Pair(subjectId, it.first.itemid) })
-                    val person = addPerson(subjectId)
+                    val person = addPerson(subjectId, c)
                     gsCard++
                     for ((itemId, _) in items) {
                         val tsId = addTimeseries(itemId.abbreviation, itemId.unitname, itemId.category, itemId.label, itemId.itemid, person)
@@ -125,7 +126,8 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
                         val tsId = item2nodeid[subjectId to itemId]
                         val chartTime = rs.getString("charttime")
                         val valueNum = rs.getString("valuenum")
-                        events.add(tsId!! to TSRecord(Measurement, timestamp = dateToTimestamp(chartTime), location = "", value = valueNum.toDouble().roundToLong()))
+                        val itemid = rs.getString("itemid")
+                        events.add(tsId!! to TSRecord(itemid, timestamp = dateToTimestamp(chartTime), location = "", value = valueNum.toDouble().roundToLong()))
                     }
                 }
             }

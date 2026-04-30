@@ -68,7 +68,7 @@ class MimicIVPGAge(
         insertMeasurement = conn.prepareStatement("""INSERT INTO ${graphName}.measurements(ts_id, timestamp, value) VALUES (?, ?, ?)""".trimIndent())
     }
 
-    override fun addPerson(subjectId: Int): Long {
+    override fun addPerson(subjectId: Int, c: Int): Long {
         conn.createStatement().use { st ->
             st.execute("LOAD 'age';")
             st.execute("SET search_path = ag_catalog, public;")
@@ -112,7 +112,7 @@ class MimicIVPGAge(
         insertMeasurement.setLong(1, tsId)
         insertMeasurement.setLong(2, row.timestamp)
         insertMeasurement.setLong(3, row.value as Long)
-        insertMeasurement.setString(4, row.type)
+        insertMeasurement.setString(4, row.label)
         insertMeasurement.executeUpdate()
     }
 

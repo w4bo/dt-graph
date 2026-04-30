@@ -18,7 +18,8 @@ class AsterixDBTSM private constructor(
     val port: String,
     val dataverse: String,
     val nodeControllersIPs: List<String>,
-    val maxConnections: Int? = 100
+    val maxConnections: Int? = 100,
+    val multiTs: Boolean
 ) : TSManager {
     val isConcurrent = nodeControllersIPs.size > 1
     val dataset = "${DATASET_PREFIX}0"
@@ -67,7 +68,7 @@ class AsterixDBTSM private constructor(
     override fun clear() {
         close()
         connection.createTSMEnvironment()
-        connection.createDataset()
+        connection.createDataset(multiTs)
     }
 
     companion object {
@@ -77,9 +78,10 @@ class AsterixDBTSM private constructor(
             host: String = System.getenv("ASTERIXDB_CC_HOST") ?: "localhost",
             port: String = props["default_cc_port"].toString(),
             controllerIps: List<String> = System.getenv("DEFAULT_NC_POOL")?.split(',') ?: listOf("localhost"),
-            maxConnections: Int? = (LASTFEEDPORT - FIRSTFEEDPORT) / 2
+            maxConnections: Int? = (LASTFEEDPORT - FIRSTFEEDPORT) / 2,
+            multiTs: Boolean = false
         ): AsterixDBTSM {
-            return AsterixDBTSM(g, host, port, dataverse, controllerIps, maxConnections)
+            return AsterixDBTSM(g, host, port, dataverse, controllerIps, maxConnections, multiTs)
         }
     }
 

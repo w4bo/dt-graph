@@ -175,7 +175,8 @@ class TestConfig {
                                 graph,
                                 host = setup.host,
                                 controllerIps = setup.controllerIPs,
-                                dataverse = "${dataset}_$size"
+                                dataverse = "${dataset}_$size",
+                                multiTs = false // I only need to read the data
                             )
                             graph.tsm = tsm
                             threads.forEach { thread ->

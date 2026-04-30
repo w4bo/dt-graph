@@ -3,10 +3,10 @@ datasets:
     sizes: [ "full" ]
 
   smartbench:
-    sizes: [ "large", "extralarge" ] #"small", "medium",
+    sizes: [ "small", "medium", "large", "extralarge" ] #
 
   mimic:
-    sizes: [ 1692200, 16922000, 9223372036854775807 ]
+    sizes: [ 1692200, 16922000, 9223372036854775807 ] #
 
 setups:
   c0:
@@ -33,7 +33,7 @@ defaults:
 runs:
   - approaches: [ "stgraph" ]
     datasets: [ "smartbench", "mimic" ]
-    modes: [ "NAIVE", "OPTIMIZED" ]
+    modes: [ "OPTIMIZED", "NAIVE" ] #,
     setups: [ "c1" ]
 
   - approaches: [ "stgraph" ]
@@ -46,11 +46,8 @@ runs:
     threads: [ 16 ]
     setups: [ "c2" ]
 
-  # - approaches: [ "neo4j", "pgage" ]
-  #   datasets: [ "smartbench", "mimic" ]
-
 ingestion:
-  enabled: false
+  enabled: true
   datasets: [ "synth", "smartbench", "mimic" ]
   setups: [ "c1", "c2", "c4" ] #
   threads: [ 1 ]

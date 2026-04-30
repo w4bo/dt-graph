@@ -12,17 +12,15 @@ import it.unibo.graph.inmemory.MemoryGraphACID
 import it.unibo.graph.interfaces.TS
 import it.unibo.graph.utils.*
 import it.unibo.stats.Loader
-import kotlinx.coroutines.asCoroutineDispatcher
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.Executors
 import java.util.logging.Logger
 
 data class TSRecord(
-    val type: String,
+    val label: String,
     val timestamp: Long,
     val location: String,
     val value: Any
@@ -151,13 +149,6 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
                 graph.addEdge(label, source, target)
             }
         }
-        //runBlocking {
-        //    val jobs = tsList
-        //        .map { row ->
-        //        launch(executor) { loadTS(row.key as AsterixDBTS, row.value) }
-        //    }
-        //    jobs.joinAll()
-        //}
         val list = tsList.toList()
         val chunkSize = list.size / threads
         val results = LongArray(threads)
@@ -228,7 +219,7 @@ class SmartBenchDataLoader(size: String, val threads: Int, host: String = "local
         val time = getTime {
             records.forEach { event ->
                 last = event.timestamp
-                ts.add(label = event.type, timestamp = last, location = event.location, value = event.value as Long, isUpdate = false, flush = false)
+                ts.add(label = event.label, timestamp = last, location = event.location, value = event.value as Long, isUpdate = false, flush = false)
             }
         }
         tsCard += records.size

@@ -100,8 +100,10 @@ class AsterixDBHTTPClient(
 
     fun stopFeed() = queryAsterixDB("USE $dataverse; STOP FEED $feedName;", blockOnError = false) // The feed could not exist yet
 
-    fun createDataset(): Boolean {
-        return queryAsterixDB("USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key $TSID, $ID;")
+    fun createDataset(multiTs: Boolean): Boolean {
+        var pk = "$TSID, $ID"
+        if (multiTs) pk = "$TSID, $LABEL, $ID"
+        return queryAsterixDB("USE $dataverse; CREATE DATASET $dataset($dataType) IF NOT EXISTS primary key $pk;")
     }
 
     fun createSpatialIndex(): Boolean {
