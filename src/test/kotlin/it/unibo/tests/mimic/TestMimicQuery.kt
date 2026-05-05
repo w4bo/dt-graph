@@ -129,18 +129,19 @@ class TestMimicQuery {
         override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 AND toFloat(m.value) > $mimicFilter RETURN p, t, m"
     }
 
-    class Q2PGAge(graph: String) : QPgAge(graph) {
+    class Q1PGAge(graph: String) : QPgAge(graph) {
         override fun query(): String = """
             SELECT *
             FROM (
                 SELECT *
                 FROM cypher('$graph'::name, $$
-                    MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})
+                    MATCH (p)--(t)
+                    WHERE p.c > 25000
                     RETURN DISTINCT p, t, id(t)
                 $$) AS (p agtype, t agtype, tsid bigint)
             ) t
-            JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE toFloat(m.value) > $mimicFilter;
+            JOIN $graph.measurements_csv m ON m.ts_id = t.tsid
+            WHERE m.value > $mimicFilter;
         """.trimIndent()
     }
 
@@ -173,18 +174,19 @@ class TestMimicQuery {
         // override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 UNWIND labels(m) AS label RETURN label, avg(toFloat(m.value))" same timing
     }
 
-    class Q3PGAge(graph: String) : QPgAge(graph) {
+    class Q2PGAge(graph: String) : QPgAge(graph) {
         override fun query(): String = """
-            SELECT t.category, avg(toFloat(m.value))
-            FROM (
-                SELECT *
-                FROM cypher('$graph'::name, $$
-                    MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})
-                    RETURN DISTINCT id(t), t.category
-                $$) AS (tsid bigint, category text)
-            ) t
-            JOIN $graph.measurements m ON m.ts_id = t.tsid
-            GROUP BY t.category;
+                SELECT m.label, avg(m.value)
+                FROM (
+                    SELECT *
+                    FROM cypher('$graph'::name, $$
+                        MATCH (p)--(t)
+                        WHERE p.c > 25000
+                        RETURN DISTINCT id(t)
+                    $$) AS (tsid bigint)
+                ) t
+                JOIN $graph.measurements_csv m ON m.ts_id = t.tsid
+                GROUP BY m.label
         """.trimIndent()
     }
 
@@ -215,19 +217,20 @@ class TestMimicQuery {
         override fun query(): String = "MATCH (p)-->(t)-->(m) WHERE toFloat(p.c) > 25000 AND toFloat(m.value) > $mimicFilter RETURN m.abbreviation, avg(toFloat(m.value))"
     }
 
-    class Q4PGAge(graph: String) : QPgAge(graph) {
+    class Q3PGAge(graph: String) : QPgAge(graph) {
         override fun query(): String = """
-            SELECT t.category, avg(toFloat(m.value))
-            FROM (
-                SELECT *
-                FROM cypher('$graph'::name, $$
-                    MATCH (p:Person)-->(t:TimeSeries {abbreviation: 'HR'})
-                    RETURN DISTINCT id(t), t.category
-                $$) AS (tsid bigint, category text)
-            ) t
-            JOIN $graph.measurements m ON m.ts_id = t.tsid
-            WHERE toFloat(m.value) > $mimicFilter
-            GROUP BY t.category;
+                SELECT m.label, avg(m.value)
+                FROM (
+                    SELECT *
+                    FROM cypher('$graph'::name, $$
+                        MATCH (p)--(t)
+                        WHERE p.c > 25000
+                        RETURN DISTINCT id(t)
+                    $$) AS (tsid bigint)
+                ) t
+                JOIN $graph.measurements_csv m ON m.ts_id = t.tsid
+                WHERE m.value > $mimicFilter
+                GROUP BY m.label
         """.trimIndent()
     }
 
@@ -283,13 +286,13 @@ fun main() {
             runQuery(query, "neo4j", threads = 1, numMachines = 1, "mimic", size.toString(), mode = QueryMode.OPTIMIZED)
         }
 
-        // listOf(
-        //     TestMimicQuery.Q1PGAge("mimic_$size"),
-        //     TestMimicQuery.Q2PGAge("mimic_$size"),
-        //     TestMimicQuery.Q3PGAge("mimic_$size"),
-        //     TestMimicQuery.Q4PGAge("mimic_$size")
-        // ).forEach { query ->
-        //     runQuery(query, "pgage", threads = 1, numMachines = -1, "mimic", size.toString(), mode = QueryMode.NAIVE)
-        // }
+        listOf(
+            TestMimicQuery.Q1PGAge("mimic_$size"),
+            TestMimicQuery.Q2PGAge("mimic_$size"),
+            TestMimicQuery.Q3PGAge("mimic_$size"),
+        ).forEach { query ->
+            println(query.javaClass.toString())
+            runQuery(query, "pgage", threads = 1, numMachines = -1, "mimic", size.toString(), mode = QueryMode.OPTIMIZED)
+        }
     }
 }
