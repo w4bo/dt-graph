@@ -1,3 +1,14 @@
+## [1.2.34](https://github.com/w4bo/dt-graph/compare/1.2.33...1.2.34) (2026-05-08)
+
+### Dependency updates
+
+* **deps:** update gradle to v8.14.5 ([#180](https://github.com/w4bo/dt-graph/issues/180)) ([6d65576](https://github.com/w4bo/dt-graph/commit/6d65576b5c3e9d0e9ec1fd8f8b6fc024edce1f1d))
+* **deps:** update plugin org.jetbrains.kotlin.plugin.serialization to v2.3.21 ([#177](https://github.com/w4bo/dt-graph/issues/177)) ([25c89b4](https://github.com/w4bo/dt-graph/commit/25c89b477c8589a89b532c495119fc5fa9c07f88))
+
+### Bug Fixes
+
+* **deps:** update jackson monorepo to v2.21.3 ([#179](https://github.com/w4bo/dt-graph/issues/179)) ([3b33a20](https://github.com/w4bo/dt-graph/commit/3b33a201f277601452f388825989332ee45585dd))
+
 ## [1.2.33](https://github.com/w4bo/dt-graph/compare/1.2.32...1.2.33) (2026-04-26)
 
 ### Dependency updates
