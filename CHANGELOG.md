@@ -1,3 +1,9 @@
+## [1.2.36](https://github.com/w4bo/dt-graph/compare/1.2.35...1.2.36) (2026-05-12)
+
+### Bug Fixes
+
+* **deps:** update dependency org.slf4j:slf4j-simple to v2.0.18 ([#182](https://github.com/w4bo/dt-graph/issues/182)) ([3e08d7d](https://github.com/w4bo/dt-graph/commit/3e08d7d1738b451b4ac875b18a5bf864e456bed8))
+
 ## [1.2.35](https://github.com/w4bo/dt-graph/compare/1.2.34...1.2.35) (2026-05-08)
 
 ### Bug Fixes
