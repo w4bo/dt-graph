@@ -1,3 +1,9 @@
+## [1.2.37](https://github.com/w4bo/dt-graph/compare/1.2.36...1.2.37) (2026-05-15)
+
+### Bug Fixes
+
+* **deps:** update dependency io.lettuce:lettuce-core to v7.5.2.release ([#183](https://github.com/w4bo/dt-graph/issues/183)) ([d3b4e4c](https://github.com/w4bo/dt-graph/commit/d3b4e4c4182bc5a482cd0b9b029854970eefcf0c))
+
 ## [1.2.36](https://github.com/w4bo/dt-graph/compare/1.2.35...1.2.36) (2026-05-12)
 
 ### Bug Fixes
