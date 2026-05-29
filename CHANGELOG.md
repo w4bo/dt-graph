@@ -1,3 +1,13 @@
+## [1.2.39](https://github.com/w4bo/dt-graph/compare/1.2.38...1.2.39) (2026-05-29)
+
+### Dependency updates
+
+* **deps:** update node.js to 24.16 ([#184](https://github.com/w4bo/dt-graph/issues/184)) ([2e6b9b6](https://github.com/w4bo/dt-graph/commit/2e6b9b631b36c04a664adfe491c4a64880801123))
+
+### Bug Fixes
+
+* **deps:** update jackson monorepo to v2.21.4 ([#186](https://github.com/w4bo/dt-graph/issues/186)) ([632e9aa](https://github.com/w4bo/dt-graph/commit/632e9aa397d1215789e9bc3d4528f7c9ca103ca1))
+
 ## [1.2.38](https://github.com/w4bo/dt-graph/compare/1.2.37...1.2.38) (2026-05-28)
 
 ### Bug Fixes
