@@ -1,3 +1,13 @@
+## [1.2.40](https://github.com/w4bo/dt-graph/compare/1.2.39...1.2.40) (2026-06-03)
+
+### Bug Fixes
+
+* **deps:** update jackson monorepo to v2.22.0 ([#187](https://github.com/w4bo/dt-graph/issues/187)) ([733cdd8](https://github.com/w4bo/dt-graph/commit/733cdd8765cafcad499ddeb84511867958a25a4f))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v6.0.3 ([#188](https://github.com/w4bo/dt-graph/issues/188)) ([c998f01](https://github.com/w4bo/dt-graph/commit/c998f0179cff6d603e72980114b3dce4251c70e3))
+
 ## [1.2.39](https://github.com/w4bo/dt-graph/compare/1.2.38...1.2.39) (2026-05-29)
 
 ### Dependency updates
