@@ -12,7 +12,7 @@ import kotlin.random.Random
 interface MimicIVLoader: Loader {
     fun addPerson(subjectId: Int, c: Int): Long
     fun addTimeseries(abbreviation: String, unitname: String?, category: String, label: String, itemid: Int, person: Long): Long
-    fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean)
+    fun addMeasurement(tsId: Long, row: TSRecord, isFirst: Boolean, isLast: Boolean)
 }
 
 abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIVLoader {
@@ -135,8 +135,9 @@ abstract class AbstractMimicIVLoader(val limit: Long, val threads: Int): MimicIV
         tsCard += events.size
         val time = getTime {
             events.forEachIndexed { index, pair ->
+                val isFirst = index == 0 || events[index - 1].first != events[index].first
                 val isLast = index + 1 == events.size || events[index].first != events[index + 1].first
-                addMeasurement(pair.first, pair.second, isLast = isLast)
+                addMeasurement(pair.first, pair.second, isFirst = isFirst, isLast = isLast)
             }
         }
         return time

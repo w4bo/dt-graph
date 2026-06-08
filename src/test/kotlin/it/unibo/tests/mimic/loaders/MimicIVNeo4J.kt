@@ -46,13 +46,6 @@ class MimicIVNeo4J(
     init {
         clearGraph()
         baseDir.mkdirs()
-
-        // WRITE HEADERS THROUGH WRITERS ONLY
-//        tsWriter.println("ts_id:ID(TimeSeries),itemid,abbreviation,unitname,category,label,:LABEL")
-//        hasParamsWriter.println(":START_ID(Person),:END_ID(TimeSeries),:TYPE")
-//        measurementWriter.println("measurement_id:ID(Measurement),ts_id,type,timestamp,value,:LABEL")
-//        hasMeasurementWriter.println(":START_ID(TimeSeries),:END_ID(Measurement),:TYPE")
-//        personWriter.println("person_id:ID(Person),subject_id,:LABEL")
         tsWriter.println("ts_id:ID(TimeSeries),:LABEL")
         hasParamsWriter.println(":START_ID(Person),:END_ID(TimeSeries),:TYPE")
         measurementWriter.println("measurement_id:ID(Measurement),ts_id,category,abbreviation,itemid,timestamp,value,:LABEL")
@@ -117,20 +110,6 @@ class MimicIVNeo4J(
             )
             return result.single()["id"].asLong()
         } else {
-
-            // val tsId = ++tsCounter
-            // hasParamsWriter.write("$person,$tsId,HAS_PARAMETERS\n")
-            // tsWriter.println(
-            //     listOf(
-            //         clean(tsId),
-            //         clean(itemid),
-            //         "\"" + clean(abbreviation) + "\"",
-            //         "\"" + clean(unitname) + "\"",
-            //         "\"" + clean(category) + "\"",
-            //         "\"" + clean(label) + "\"",
-            //         "TimeSeries"
-            //     ).joinToString(",")
-            // )
             if (!tsMap.contains(person)) {
                 val tsId = ++tsCounter
                 hasParamsWriter.write("$person,$tsId,HAS_PARAMETERS\n")
@@ -146,7 +125,7 @@ class MimicIVNeo4J(
         }
     }
 
-    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
+    override fun addMeasurement(tsId: Long, row: TSRecord, isFirst: Boolean, isLast: Boolean) {
         if (!csv) {
             session.run(
                 """

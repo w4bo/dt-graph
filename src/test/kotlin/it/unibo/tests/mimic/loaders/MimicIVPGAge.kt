@@ -13,7 +13,6 @@ class MimicIVPGAge(
 ) : AbstractMimicIVLoader(limit, threads = 1)  {
     private val graphName = "mimic_${if (limit == Long.MAX_VALUE) "full" else limit}"
     private val conn: Connection = DriverManager.getConnection(url, user, password)
-    // private var insertMeasurement: PreparedStatement
     private val baseDir = File("datasets/dump/pgage/mimic/$limit").apply { mkdirs() }
     private val tsWriter = File("$baseDir/ts.csv").printWriter()
 
@@ -21,7 +20,6 @@ class MimicIVPGAge(
     val tsMap = mutableMapOf<Long, Long>()
 
     init {
-        // conn.setAutoCommit(false)
         conn.createStatement().use { st ->
             // Helper function for safe execution
             fun safeExec(sql: String) {
@@ -77,9 +75,6 @@ class MimicIVPGAge(
                 )
                 """.trimIndent())
         }
-        // conn.commit()
-        // Prepare statement for inserting measurements
-        // insertMeasurement = conn.prepareStatement("""INSERT INTO ${graphName}.measurements(measurement_id, ts_id, timestamp, value, label, itemid, abbreviation, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""".trimIndent())
     }
 
     override fun addPerson(subjectId: Int, c: Int): Long {
@@ -123,27 +118,9 @@ class MimicIVPGAge(
         }
         return person
     }
-//    var closed = 0
+
     var measurementCounter = 0
-    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
-//        val ts = tsMap[tsId]!!
-//        val tmp = tsCache[row.label.toInt()]!!
-//        insertMeasurement.setInt(1, ++measurementCounter)
-//        insertMeasurement.setLong(2, ts)
-//        insertMeasurement.setLong(3, row.timestamp)
-//        insertMeasurement.setLong(4, row.value as Long)
-//        insertMeasurement.setString(5, tmp.abbreviation) // label
-//        insertMeasurement.setInt(6,  tmp.itemid)
-//        insertMeasurement.setString(7,  tmp.abbreviation)
-//        insertMeasurement.setString(8,  tmp.category)
-//        insertMeasurement.addBatch()
-//        if (measurementCounter % 1000 == 0 || isLast) {
-//            insertMeasurement.executeBatch()// .executeUpdate()
-//            closed++
-//        }
-//        if (measurementCounter % 1000 == 0 || isLast) {
-//            // conn.commit()
-//        }
+    override fun addMeasurement(tsId: Long, row: TSRecord, isFirst: Boolean, isLast: Boolean) {
         val ts = tsMap[tsId]!!
         val tmp = tsCache[row.label.toInt()]!!
         tsWriter.write(
@@ -161,10 +138,6 @@ class MimicIVPGAge(
     }
 
     override fun close() {
-        // conn.createStatement().use { it.execute("alter table ${graphName}.measurements add primary key(ts_id, label, timestamp)") }
-        // // conn.commit()
-        // println("People: $pId, closed: $closed, measurements: $measurementCounter")
-        // insertMeasurement.close()
         conn.close()
         tsWriter.close()
     }

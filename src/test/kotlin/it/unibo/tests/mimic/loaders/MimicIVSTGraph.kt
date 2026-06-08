@@ -47,7 +47,7 @@ class MimicIVSTGraph(
         return person
     }
 
-    override fun addMeasurement(tsId: Long, row: TSRecord, isLast: Boolean) {
+    override fun addMeasurement(tsId: Long, row: TSRecord, isFirst: Boolean, isLast: Boolean) {
         val ts = tsMap[tsId]!!
         val tmp = tsCache[row.label.toInt()]!!
         val properties = mutableListOf(
