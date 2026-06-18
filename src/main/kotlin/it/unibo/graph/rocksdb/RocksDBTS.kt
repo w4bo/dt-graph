@@ -10,7 +10,11 @@ import org.rocksdb.RocksDB
 class RocksDBTS(override val g: Graph, val id: Long, val db: RocksDB) : TS {
     override fun getTSId(): Long = id
 
+<<<<<<< HEAD
     override fun add(n: N, isUpdate: Boolean): N {
+=======
+    override fun add(n: N, isUpdate: Boolean, flush: Boolean): N {
+>>>>>>> feat-tssingletable
         db.put("$id|${n.fromTimestamp}".toByteArray(), n.serialize())
         return n
     }

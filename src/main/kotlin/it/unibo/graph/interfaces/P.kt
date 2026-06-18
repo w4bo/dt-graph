@@ -5,7 +5,10 @@ import it.unibo.graph.utils.GRAPH_SOURCE
 import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwiseSource
 import org.locationtech.jts.io.WKTReader
+<<<<<<< HEAD
 import org.rocksdb.*
+=======
+>>>>>>> feat-tssingletable
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.*
@@ -31,6 +34,7 @@ open class P(
 ) : Elem {
 
     companion object {
+<<<<<<< HEAD
         private val db: RocksDB
         private const val DB_NAME = "db_properties"
         init {
@@ -42,6 +46,8 @@ open class P(
             db = RocksDB.open(options, DB_NAME, cfDescriptors, cfHandles)
         }
 
+=======
+>>>>>>> feat-tssingletable
         fun fromByteArray(bytes: ByteArray, g: Graph): P {
             val buffer = ByteBuffer.wrap(bytes)
             val id = buffer.long
@@ -68,11 +74,19 @@ open class P(
                 PropType.STRING -> {             // Serialize String (using your serializeString method)
                     val v = readString(buffer, MAX_LENGTH_VALUE)
                     v.ifEmpty {
+<<<<<<< HEAD
                         String(db.get("$id".toByteArray()), Charsets.UTF_8)
                     }
                 }
                 PropType.GEOMETRY -> {
                     WKTReader().read(String(db.get("$id".toByteArray()), Charsets.UTF_8))
+=======
+                        String(g.dynamicDb!!.get("$id".toByteArray()), Charsets.UTF_8)
+                    }
+                }
+                PropType.GEOMETRY -> {
+                    WKTReader().read(String(g.dynamicDb!!.get("$id".toByteArray()), Charsets.UTF_8))
+>>>>>>> feat-tssingletable
                 }
                 else -> throw IllegalArgumentException("Unsupported type: $type")
             }
@@ -107,7 +121,11 @@ open class P(
             PropType.STRING -> {                                        // Serialize String
                 val value = value as String
                 if (value.length > MAX_LENGTH_VALUE) { // in place if the string is longer than 8 bytes
+<<<<<<< HEAD
                     db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+=======
+                    g.dynamicDb!!.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+>>>>>>> feat-tssingletable
                     repeat(8) { buffer.put(0.toByte()) } // Add 8 empty bytes (0x00)
                 } else { // in place if the string is shorter than or equal to 8 bytes
                     buffer.put(serializeString(value, MAX_LENGTH_VALUE))
@@ -115,7 +133,11 @@ open class P(
             }
             PropType.GEOMETRY -> {
                 val value = value.toString()
+<<<<<<< HEAD
                 db.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+=======
+                g.dynamicDb!!.put("$id".toByteArray(), value.toByteArray(StandardCharsets.UTF_8))
+>>>>>>> feat-tssingletable
             }
             else -> throw IllegalArgumentException("Unsupported type: $type")
         }
@@ -138,6 +160,7 @@ open class P(
                  }
                  next = elem.nextProp  // update the next pointer of the node
                  elem.nextProp = id
+<<<<<<< HEAD
 
                 // var prev: P? = null
                 // var cur: P = g.getProp(elem.nextProp!!)
@@ -186,6 +209,8 @@ open class P(
                 //             g.addProperty(lastP)
                 //     }
                 // }
+=======
+>>>>>>> feat-tssingletable
             }
 
             if (sourceType == NODE) g.addNode(elem as N) else g.addEdge(elem as R) // store the element again

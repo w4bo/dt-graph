@@ -4,7 +4,19 @@ import it.unibo.graph.interfaces.Elem
 import it.unibo.graph.interfaces.Graph
 import it.unibo.graph.interfaces.PropType
 import java.io.*
+<<<<<<< HEAD
 import java.util.*
+=======
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import java.util.*
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.math.max
+import kotlin.system.measureTimeMillis
+>>>>>>> feat-tssingletable
 
 // Serialize an object to byte array
 fun serialize(obj: Serializable): ByteArray {
@@ -87,6 +99,7 @@ data class TimeRange(
     val to: Long
 )
 
+<<<<<<< HEAD
 
 // Funzione loadTemporalRanges che prende già la mappa YAML
 fun loadTemporalRanges(
@@ -113,4 +126,46 @@ fun loadTemporalRanges(
             to = raw[1].toString().toLong()
         )
     }
+=======
+@OptIn(ExperimentalAtomicApi::class)
+val atomicPort = AtomicInt(FIRSTFEEDPORT)
+
+@OptIn(ExperimentalAtomicApi::class)
+fun incPort(): Int {
+    val port = atomicPort.fetchAndAdd(1)
+    if (port > LASTFEEDPORT) {
+        throw UnsupportedOperationException("Ports are exhausted")
+    }
+    return port
+}
+
+@OptIn(ExperimentalAtomicApi::class)
+fun resetPort() {
+    atomicPort.store(FIRSTFEEDPORT)
+}
+
+fun query(sql: String, host: String, dataverse: String): HttpURLConnection {
+    val connection = URI(host).toURL().openConnection() as HttpURLConnection
+    connection.requestMethod = "POST"
+    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+    connection.doOutput = true
+    val charset = Charsets.UTF_8
+    connection.outputStream.bufferedWriter(charset).use { writer ->
+        fun appendParam(key: String, value: String, first: Boolean = false) {
+            if (!first) writer.append('&')
+            writer.append(URLEncoder.encode(key, charset.name()))
+            writer.append('=')
+            writer.append(URLEncoder.encode(value, charset.name()))
+        }
+        appendParam("statement", sql, first = true)
+        appendParam("pretty", "true")
+        appendParam("mode", "immediate")
+        appendParam("dataverse", dataverse)
+    }
+    return connection
+}
+
+fun getTime(f: ()->Unit): Long {
+    return max(1, measureTimeMillis { f() })
+>>>>>>> feat-tssingletable
 }

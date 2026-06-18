@@ -2,6 +2,10 @@ package it.unibo.graph.inmemory
 
 import it.unibo.graph.interfaces.*
 import it.unibo.graph.utils.DUMMY_ID
+<<<<<<< HEAD
+=======
+import it.unibo.graph.utils.PATH
+>>>>>>> feat-tssingletable
 import it.unibo.graph.utils.serialize
 import java.io.File
 import java.io.IOException
@@ -11,14 +15,19 @@ import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
+<<<<<<< HEAD
 
 const val PATH = "db_graphm"
+=======
+import java.util.concurrent.ConcurrentLinkedQueue
+>>>>>>> feat-tssingletable
 
 interface Flushable {
     fun flushToDisk()
 }
 
 class MemoryGraphACID(
+<<<<<<< HEAD
     val wal: WriteAheadLog = WriteAheadLog(),
     path: String = PATH,
     nodeFile: String = "nodes.dat",
@@ -28,6 +37,17 @@ class MemoryGraphACID(
     rels: MutableList<R> = ArrayList(),
     props: MutableList<P> = ArrayList()
 ) : MemoryGraph(nodes, rels, props), Flushable {
+=======
+    path: String = PATH + "graph_acid/",
+    nodeFile: String = "nodes.dat",
+    edgeFile: String = "edges.dat",
+    propertyFile: String = "property.dat",
+    val wal: WriteAheadLog = WriteAheadLog(path = path),
+    nodes: MutableList<N> = ArrayList(),
+    edges: MutableList<R> = ArrayList(),
+    props: MutableList<P> = ArrayList(),
+) : MemoryGraph(nodes, edges, props, path), Flushable {
+>>>>>>> feat-tssingletable
     private val nodeChannel: FileChannel = FileChannel.open(File("$path/$nodeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val edgeChannel: FileChannel = FileChannel.open(File("$path/$edgeFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
     private val propertyChannel: FileChannel = FileChannel.open(File("$path/$propertyFile").toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE)
@@ -84,11 +104,19 @@ class MemoryGraphACID(
 
         fun readFromDisk(path: String = PATH, nodeFile: String = "nodes.dat", edgeFile: String = "edges.dat", propertyFile: String = "property.dat"): MemoryGraphACID {
             val nodes = mutableListOf<N>()
+<<<<<<< HEAD
             val rels = mutableListOf<R>()
             val props = mutableListOf<P>()
             val g = MemoryGraphACID(nodes = nodes, rels = rels, props = props)
             readObjectsFromFile("$path/$nodeFile", objectSize = NODE_SIZE, deserializer = { array -> N.fromByteArray(array, g) }, result = nodes)
             readObjectsFromFile("$path/$edgeFile", objectSize = EDGE_SIZE, deserializer = { array -> R.fromByteArray(array, g) }, result = rels)
+=======
+            val edges = mutableListOf<R>()
+            val props = mutableListOf<P>()
+            val g = MemoryGraphACID(nodes = nodes, edges = edges, props = props, path = path)
+            readObjectsFromFile("$path/$nodeFile", objectSize = NODE_SIZE, deserializer = { array -> N.fromByteArray(array, g) }, result = nodes)
+            readObjectsFromFile("$path/$edgeFile", objectSize = EDGE_SIZE, deserializer = { array -> R.fromByteArray(array, g) }, result = edges)
+>>>>>>> feat-tssingletable
             readObjectsFromFile("$path/$propertyFile", objectSize = PROPERTY_SIZE, deserializer = { array -> P.fromByteArray(array, g) }, result = props)
             return g
         }
@@ -96,6 +124,7 @@ class MemoryGraphACID(
 
     @Throws(IOException::class)
     override fun flushToDisk() {
+<<<<<<< HEAD
         synchronized(wal.toWrite) { // Lock the list to avoid concurrent modifications
             val iterator = wal.toWrite.iterator() // Create an iterator for the list
             while (iterator.hasNext()) {
@@ -114,6 +143,19 @@ class MemoryGraphACID(
                     iterator.remove()
                 }
             }
+=======
+        while (true) {
+            val it = wal.toWrite.poll() ?: break  // remove + get in O(1)
+            if (!it.flushedOnLog) continue
+            val file: FileChannel = when (it.file) {
+                WALSource.Nodes -> nodeChannel
+                WALSource.Edges -> edgeChannel
+                else -> propertyChannel
+            }
+
+            file.position(it.offset)
+            file.write(ByteBuffer.wrap(it.payload))
+>>>>>>> feat-tssingletable
         }
     }
 
@@ -136,6 +178,14 @@ class MemoryGraphACID(
         wal.log(WALSource.Properties, p.id * PROPERTY_SIZE, p.serialize())
         return super.addPropertyLocal(key, p)
     }
+<<<<<<< HEAD
+=======
+
+    override fun close() {
+        flushToDisk()
+        super.close()
+    }
+>>>>>>> feat-tssingletable
 }
 
 enum class WALSource { Nodes, Edges, Properties }
@@ -149,9 +199,15 @@ class WALRecord(val file: WALSource, val offset: Long, val payload: ByteArray, v
     }
 }
 
+<<<<<<< HEAD
 class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 1000) {
     private val logChannel: FileChannel
     val toWrite: MutableList<WALRecord> = mutableListOf()
+=======
+class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequency: Int = 10_000) {
+    private val logChannel: FileChannel
+    val toWrite = ConcurrentLinkedQueue<WALRecord>()
+>>>>>>> feat-tssingletable
     private var flushable: Flushable? = null
     private var i = 0
     init {
@@ -161,11 +217,19 @@ class WriteAheadLog(fileName: String = "wal.log", path: String = PATH, val frequ
         if (!Files.exists(Paths.get(path))) {
             Files.createDirectories(Paths.get(path))
         }
+<<<<<<< HEAD
         logChannel = FileChannel.open(File("$PATH/$fileName").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)
     }
 
     fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
         toWrite.add(WALRecord(fileChannel, offset, payload, true))
+=======
+        logChannel = FileChannel.open(File("$path/$fileName").toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND)
+    }
+
+    fun log(fileChannel: WALSource, offset: Long, payload: ByteArray) {
+        toWrite.offer(WALRecord(fileChannel, offset, payload, true))
+>>>>>>> feat-tssingletable
         i = (i + 1) % frequency
         if (i == 0) {
             val serializedRecords = toWrite.map { serialize(it) }

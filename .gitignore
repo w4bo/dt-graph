@@ -5,11 +5,16 @@ db_*
 *.log
 *.dat
 .kotlin/
+<<<<<<< HEAD
 src/main/resources/dataset/smartbench/big
 src/main/resources/dataset/smartbench/large
 /asterix_data
 datasets/dataset/smartbench/large/
 datasets/dataset/smartbench/big/
+=======
+/asterix_data
+datasets/**
+>>>>>>> feat-tssingletable
 
 # These are useless since we use gradle import
 .idea/

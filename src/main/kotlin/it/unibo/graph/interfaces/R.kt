@@ -9,12 +9,21 @@ enum class Direction { IN, OUT }
 const val EDGE_SIZE: Int = 68
 
 open class R(
+<<<<<<< HEAD
     final override val id: Long, // id of the relationship
     final override val label: Label, // label
     val fromN: Long, // from node
     val toN: Long, // to node
     var fromNextRel: Long? = null, // pointer to the next relationship of the `from node`
     var toNextRel: Long? = null, // pointer to the next relationship of the `to node`
+=======
+    final override val id: Long, // id of the edge
+    final override val label: Label, // label
+    val fromN: Long, // from node
+    val toN: Long, // to node
+    var fromNextRel: Long? = null, // pointer to the next edge of the `from node`
+    var toNextRel: Long? = null, // pointer to the next edge of the `to node`
+>>>>>>> feat-tssingletable
     final override val fromTimestamp: Long = Long.MIN_VALUE,
     final override var toTimestamp: Long = Long.MAX_VALUE,
     final override var nextProp: Long? = null,
@@ -23,6 +32,12 @@ open class R(
     @Transient val fromDisk: Boolean = false
 ): ElemP {
 
+<<<<<<< HEAD
+=======
+    constructor(id: Long, labelName: String, fromN: Long, toN: Long, fromNextRel: Long? = null, toNextRel: Long? = null, fromTimestamp: Long = Long.MIN_VALUE, toTimestamp: Long = Long.MAX_VALUE, nextProp: Long? = null, properties: MutableList<P> = mutableListOf(), g: Graph, fromDisk: Boolean = false)
+            : this(id, labelFromString(labelName), fromN, toN, fromNextRel, toNextRel, fromTimestamp, toTimestamp, nextProp, properties, g, fromDisk)
+
+>>>>>>> feat-tssingletable
     companion object {
         fun fromByteArray(bytes: ByteArray, g: Graph): R {
             val buffer = ByteBuffer.wrap(bytes)
@@ -30,7 +45,11 @@ open class R(
             val fromTimestamp = buffer.long
             val toTimestamp = buffer.long
             val labelOrdinal = buffer.int
+<<<<<<< HEAD
             val label = Labels.entries[labelOrdinal] // Convert ordinal to enum
+=======
+            val label = Label.entries[labelOrdinal]!! // Convert ordinal to enum
+>>>>>>> feat-tssingletable
             val nextProp = buffer.long.let { if (it == Long.MIN_VALUE) null else it }
             val fromN = buffer.long
             val toN = buffer.long
@@ -44,6 +63,7 @@ open class R(
 
     fun serialize(): ByteArray {
         val buffer = ByteBuffer.allocate(EDGE_SIZE)
+<<<<<<< HEAD
         buffer.putLong(id)                  // 8 bytes
         buffer.putLong(fromTimestamp)                // 8 bytes
         buffer.putLong(toTimestamp)                  // 8 bytes
@@ -53,6 +73,17 @@ open class R(
         buffer.putLong(toN)                          // 8 bytes
         buffer.putLong(fromNextRel?: Long.MIN_VALUE) // 8 bytes
         buffer.putLong(toNextRel?: Long.MIN_VALUE)   // 8 bytes
+=======
+        buffer.putLong(id)                           // 8 bytes
+        buffer.putLong(fromTimestamp)                // 8 bytes
+        buffer.putLong(toTimestamp)                  // 8 bytes
+        buffer.putInt(label.ordinal)                 // 4 bytes
+        buffer.putLong(nextProp?: Long.MIN_VALUE)           // 8 bytes
+        buffer.putLong(fromN)                        // 8 bytes
+        buffer.putLong(toN)                          // 8 bytes
+        buffer.putLong(fromNextRel?: Long.MIN_VALUE)        // 8 bytes
+        buffer.putLong(toNextRel?: Long.MIN_VALUE)          // 8 bytes
+>>>>>>> feat-tssingletable
         return buffer.array()                               // Total: 68 bytes
     }
 
@@ -60,8 +91,13 @@ open class R(
         if (!fromDisk && id != DUMMY_ID) {
             val from = g.getNode(fromN)
             val to = g.getNode(toN)
+<<<<<<< HEAD
             if (from.nextRel == null) { // this is the first edge
                 from.nextRel = id
+=======
+            if (from.nextEdge == null) { // this is the first edge
+                from.nextEdge = id
+>>>>>>> feat-tssingletable
             } else {
                 // No, when we add a new edge among the two same nodes, this is a not a new version of a previous edge
                 // for (it in from.getRels(direction = Direction.OUT, label = label)) {
@@ -70,6 +106,7 @@ open class R(
                 //         break
                 //     }
                 // }
+<<<<<<< HEAD
                 fromNextRel = from.nextRel
                 from.nextRel = id
             }
@@ -78,6 +115,16 @@ open class R(
             } else {
                 toNextRel = to.nextRel
                 to.nextRel = id
+=======
+                fromNextRel = from.nextEdge
+                from.nextEdge = id
+            }
+            if (to.nextEdge == null) { // this is the first edge
+                to.nextEdge = id
+            } else {
+                toNextRel = to.nextEdge
+                to.nextEdge = id
+>>>>>>> feat-tssingletable
             }
             g.addNode(from)
             g.addNode(to)

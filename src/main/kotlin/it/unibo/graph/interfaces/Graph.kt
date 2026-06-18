@@ -5,6 +5,7 @@ import it.unibo.graph.utils.NODE
 import it.unibo.graph.utils.decodeBitwise
 import it.unibo.graph.utils.encodeBitwise
 import org.locationtech.jts.io.WKTReader
+<<<<<<< HEAD
 
 interface Graph {
     var tsm: TSManager?
@@ -15,6 +16,22 @@ interface Graph {
     fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
     fun nextNodeId(): Long
     fun addNode(label: Label, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
+=======
+import org.rocksdb.RocksDB
+
+interface Graph {
+    val path: String
+    var dynamicDb: RocksDB?
+    var tsm: TSManager?
+
+    fun getTSM(): TSManager = tsm!!
+    fun close() {}
+    fun clear()
+    fun createNode(label: String, value: Long? = null, id: Long = nextNodeIdOffset(), from: Long, to: Long, isTs: Boolean): N = N(id, label, value = value, fromTimestamp = from, toTimestamp = to, isTs = isTs, g = this)
+    fun nextNodeIdOffset(): Long = encodeBitwise(GRAPH_SOURCE, nextNodeId())
+    fun nextNodeId(): Long
+    fun addNode(label: String, value: Long? = null, from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, isTs: Boolean = false): N = addNode(createNode(label = label, value = value, from = from, to = to, isTs = isTs))
+>>>>>>> feat-tssingletable
     fun addNode(n: N): N
     fun createProperty(sourceId: Long, sourceType: Boolean, key: String, value: Any, type: PropType, id: Long = nextPropertyId(), from: Long, to: Long): P =
         P(id, sourceId, sourceType, key, value, type, fromTimestamp = from, toTimestamp = to, g = this)
@@ -50,7 +67,11 @@ interface Graph {
         }
     }
 
+<<<<<<< HEAD
     fun createEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
+=======
+    fun createEdge(label: String, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long, to: Long): R = R(id, label, fromNode, toNode, fromTimestamp = from, toTimestamp = to, g = this)
+>>>>>>> feat-tssingletable
     fun nextEdgeId(): Long
     fun addEdge(r: R): R {
         val (source, key) = decodeBitwise(r.fromN)
@@ -65,12 +86,20 @@ interface Graph {
     fun addEdgeTS(tsId: Long, key: Long, r: R): R {
         val ts = tsm!!.getTS(tsId)
         val n = ts.get(key)
+<<<<<<< HEAD
         n.relationships += r
+=======
+        n.edges += r
+>>>>>>> feat-tssingletable
         ts.add(n, isUpdate = true)
         return r
     }
 
+<<<<<<< HEAD
     fun addEdge(label: Label, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
+=======
+    fun addEdge(label: String, fromNode: Long, toNode: Long, id: Long = nextEdgeId(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE): R = addEdge(createEdge(label, fromNode, toNode, id=id, from, to))
+>>>>>>> feat-tssingletable
     fun getProps(): MutableList<P>
     fun getNodes(): MutableList<N>
     fun getEdges(): MutableList<R>

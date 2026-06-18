@@ -1,5 +1,9 @@
 # Use the official OpenJDK 21 image (slim variant) as the base image
+<<<<<<< HEAD
 FROM openjdk:25-jdk-slim
+=======
+FROM openjdk:21-jdk-slim
+>>>>>>> feat-tssingletable
 
 # Set the maintainer label
 LABEL maintainer="MP <manuele.pasini@unibo.it>"

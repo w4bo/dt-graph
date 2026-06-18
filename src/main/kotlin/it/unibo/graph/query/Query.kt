@@ -1,12 +1,16 @@
 package it.unibo.graph.query
 
 import it.unibo.graph.interfaces.*
+<<<<<<< HEAD
 import it.unibo.graph.interfaces.Labels.HasTS
+=======
+>>>>>>> feat-tssingletable
 import it.unibo.graph.utils.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+<<<<<<< HEAD
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.Executors
@@ -23,6 +27,28 @@ fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: 
 
 @JvmName("queryJoin")
 fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true): List<Any> {
+=======
+import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicInteger
+import javax.management.Query
+import kotlin.math.max
+import kotlin.math.min
+
+enum class QueryMode {
+    NAIVE, OPTIMIZED
+}
+
+@JvmName("query")
+fun query(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Any> {
+    return query(g, listOf(match), where, by, from, to, timeaware, threads, mode)
+}
+
+@JvmName("queryJoin")
+fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList(), by: List<Aggregate> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = true, threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Any> {
+>>>>>>> feat-tssingletable
     val mapAliases: Map<String, Pair<Int, Int>> =
         match // get the aliases for each pattern
             .mapIndexed { patternIndex, pattern ->
@@ -33,12 +59,20 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
             }
             .reduce { acc, map -> acc + map }
     val joinFilters = where.filter { mapAliases[it.first]!!.first != mapAliases[it.second]!!.first } // Take the filters that refer to different patterns (i.e., filters for joining the patterns)
+<<<<<<< HEAD
     val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+=======
+    val pattern1 = search(g, match[0], (where - joinFilters).filter { mapAliases[it.first]!!.first == 0 }, from, to, timeaware, by = by, threads, mode) // compute the first pattern by removing all join filters and consider only the filters on the first pattern (i.e., patternIndex = 0)
+>>>>>>> feat-tssingletable
     var result =
         if (match.size == 1) {
             pattern1
         } else {
+<<<<<<< HEAD
             join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by)
+=======
+            join(g, pattern1, match, joinFilters, mapAliases, where, from, to, timeaware, by, threads, mode)
+>>>>>>> feat-tssingletable
         }
 
     result = result.flatMap { row -> replaceTemporalProperties(row, match, by, mapAliases, from, to, timeaware) }
@@ -49,7 +83,11 @@ fun query(g: Graph, match: List<List<Step?>>, where: List<Compare> = emptyList()
     return result5
 }
 
+<<<<<<< HEAD
 /**
+=======
+/*
+>>>>>>> feat-tssingletable
  * Join two patterns
  */
 private fun join(
@@ -62,6 +100,7 @@ private fun join(
     from: Long,
     to: Long,
     timeaware: Boolean,
+<<<<<<< HEAD
     by: List<Aggregate>
 ): List<Path> {
 
@@ -80,6 +119,19 @@ private fun join(
                 timeaware,
                 by = by
             ).map { Path(row.result + it.result, it.from, it.to) }
+=======
+    by: List<Aggregate>,
+    threads: Int,
+    mode: QueryMode
+): List<Path> {
+    val result = ConcurrentLinkedQueue<Path>()
+    // Funzione ricorsiva locale
+    fun rec(curMatch: MutableList<Step?>, index: Int, fromLimit: Long, toLimit: Long, row: Path, acc: MutableList<Path>) {
+        if (index >= match[1].size) {
+            val paths =
+                search(g, curMatch, (where - joinFilters).filter { mapAliases[it.first]!!.first == 1 }, fromLimit, toLimit, timeaware, by = by, threads, mode)
+                    .map { Path(row.result + it.result, it.from, it.to) }
+>>>>>>> feat-tssingletable
             acc.addAll(paths)
             return
         }
@@ -96,12 +148,20 @@ private fun join(
         if (curJoinFilters.isNotEmpty()) {
             val curJoinFilter = curJoinFilters.first()
             val cAlias = if (step.alias != curJoinFilter.first) curJoinFilter.first else curJoinFilter.second
+<<<<<<< HEAD
             val props = row.result[mapAliases[cAlias]!!.second]
                 .getProps(name = curJoinFilter.property, fromTimestamp = fromLimit, toTimestamp = toLimit, timeaware = timeaware)
             props.forEach { p ->
                 curMatch.add(
                     Step(
                         step.type,
+=======
+            val props = row.result[mapAliases[cAlias]!!.second].getProps(name = curJoinFilter.property, fromTimestamp = fromLimit, toTimestamp = toLimit, timeaware = timeaware)
+            props.forEach { p ->
+                curMatch.add(
+                    Step(
+                        step.label,
+>>>>>>> feat-tssingletable
                         step.properties + Filter(
                             curJoinFilter.property,
                             curJoinFilter.operator,
@@ -121,6 +181,7 @@ private fun join(
         }
     }
 
+<<<<<<< HEAD
     if (LIMIT <= 1) {
         // Single-thread
         pattern1.forEach { row ->
@@ -144,6 +205,20 @@ private fun join(
     }
 
     return result
+=======
+    val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
+     runBlocking {
+        val jobs = pattern1.map { row ->
+            launch(executor) {
+                val acc = mutableListOf<Path>()
+                rec(mutableListOf(), 0, max(from, row.from), min(to, row.to), row, acc)
+                result += acc
+            }
+        }
+        jobs.joinAll()
+    }
+    return result.toList()
+>>>>>>> feat-tssingletable
 }
 
 
@@ -342,12 +417,19 @@ fun aggregateNumbers(numbers: List<Any>, aggregationOperator: AggOperator, lastA
                 }
                 if (lastAggregation) v.first / v.second else v
             }
+<<<<<<< HEAD
             AggOperator.SUM -> {
                 cNumbers.sumOf { it.first }
             }
             AggOperator.MAX -> {
                 cNumbers.maxOf { it.first }
             }
+=======
+
+            AggOperator.SUM -> cNumbers.sumOf { it.first }
+            AggOperator.MAX -> cNumbers.maxOf { it.first }
+            AggOperator.COUNT -> cNumbers.sumOf { it.second }
+>>>>>>> feat-tssingletable
             else -> throw IllegalArgumentException("Unsupported aggregation operator: $aggregationOperator")
         }
     } else {
@@ -414,12 +496,21 @@ fun pushDownBy(index: Int, by: List<Aggregate>, match: List<Step?>): List<Aggreg
 
 fun pushDownFilters(index: Int, curPath: List<ElemP>, from: Long, to: Long, match: List<Step?>, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>): List<Filter> {
     val filters = mutableListOf<Filter>()
+<<<<<<< HEAD
     filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
     filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
+=======
+    if (from != Long.MIN_VALUE) filters += Filter(FROM_TIMESTAMP, Operators.GTE, from) // add the from filter
+    if (to != Long.MAX_VALUE) filters += Filter(TO_TIMESTAMP, Operators.LT, to) // add the to filter
+>>>>>>> feat-tssingletable
     if (index + 1 < match.size) { // If there is another step
         val nextMatch = match[index + 1] ?: return filters // select it
         val nextAlias = nextMatch.alias // and its alias (if any)
         filters += nextMatch.properties
+<<<<<<< HEAD
+=======
+        if (nextMatch.label != null) filters += Filter(LABEL, Operators.EQ, labelFromString(nextMatch.label!!))
+>>>>>>> feat-tssingletable
         if (nextAlias != null) { // If the alias is available
             val c = mapWhere[nextAlias] // Check whether this node is also part of a comparison
             if (c != null) { // if so...
@@ -442,6 +533,7 @@ fun whereClause(e: ElemP, path: List<ElemP>, alias: String, mapWhere: Map<String
     }
 }
 
+<<<<<<< HEAD
 class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from: Long, val to: Long, val priority: Int): Comparable<ExploredPath> {
     override fun compareTo(other: ExploredPath): Int = priority.compareTo(other.priority)
 }
@@ -466,12 +558,92 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
     runBlocking {
         while (true) {
             if (mutex.withLock { priorityQueue.isEmpty() }) {
+=======
+class ExploredPath(val e: ElemP, val index: Int, val path: List<ElemP>, val from: Long, val to: Long)
+
+fun buildAliasMap(match: List<Step?>): Map<String, Int> =
+    match
+        .mapIndexed { a, b -> Pair(a, b) }
+        .filter { it.second?.alias !== null }
+        .associate { it.second?.alias!! to it.first }
+
+fun buildWhereMap(where: List<Compare>, mapAlias: Map<String, Int>): Map<String, Compare> =
+    where
+        .associateBy {
+            mapAlias
+                .filterKeys { it in where.flatMap { listOf(it.first, it.second) }.toSet() }
+                .maxByOrNull { it.value }?.key!!
+        }
+
+fun initializeQueue(g: Graph, from: Long, to: Long): Queue<ExploredPath> {
+    val acc = ConcurrentLinkedQueue<ExploredPath>()
+    // val acc = ArrayDeque<ExploredPath>()
+    acc.addAll(g.getNodes().map { ExploredPath(it, 0, emptyList(), from, to) })
+    return acc
+}
+
+fun matchesStep(cur: ExploredPath, match: List<Step?>, by: List<Aggregate>, timeaware: Boolean, mapAlias: Map<String, Int>, mapWhere: Map<String, Compare>, mode: QueryMode): Boolean {
+    val step = match[cur.index]
+    val alias = step?.alias
+    val compare = alias?.let { mapWhere[it] }
+
+    return (step == null || ( // no filter
+                            (step.label == null || step.label == cur.e.label.name)  // filter on label
+                                && step
+                                    .properties
+                                    .filter { f ->  !(mode == QueryMode.OPTIMIZED && by.filter { it.operator != null }.map { it.property }.contains(f.property)) } // do not apply filter on the result of pushed-down group by (otherwise it would be like SELECT * FROM (SELECT SUM(value) as value ...) WHERE value > 10)
+                                    .all { f -> // for all filters...
+                                        cur.e
+                                            .getProps(name = f.property, fromTimestamp = cur.from, toTimestamp = cur.to, timeaware = timeaware) // ... a certain time-aware property must match
+                                            .any { p -> if (f.attrFirst) { Compare.apply(p.value, f.value, f.operator) } else { Compare.apply(f.value, p.value, f.operator) } }
+                                        })) // filter on properties
+                        && cur.e.timeOverlap(timeaware, cur.from, cur.to) // check time overlap
+                        && (compare == null || whereClause(cur.e, cur.path, alias, mapWhere, compare, timeaware, mapAlias))
+
+}
+
+fun updatePath(cur: ExploredPath): Triple<Long, Long, List<ElemP>> {
+    val newFrom = max(cur.e.fromTimestamp, cur.from)
+    val newTo = min(cur.e.toTimestamp, cur.to)
+    val newPath = cur.path + cur.e
+    return Triple(newFrom, newTo, newPath)
+}
+
+fun isCompletePath(path: List<Elem>, match: List<Step?>): Boolean =
+    path.size == match.size
+
+fun expandNode(cur: ExploredPath, path: List<ElemP>, from: Long, to: Long, match: List<Step?>): List<ExploredPath> {
+    val nextStep = match.getOrNull(cur.index + 1)
+    return (cur.e as N)
+        .getEdges(
+            direction = if (nextStep is EdgeStep) nextStep.direction else Direction.OUT,
+            includeHasTs = true
+        )
+        .map { ExploredPath(it, cur.index + 1, path, from, to) }
+}
+
+fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), from: Long = Long.MIN_VALUE, to: Long = Long.MAX_VALUE, timeaware: Boolean = false, by: List<Aggregate> = emptyList(), threads: Int = 1, mode: QueryMode = QueryMode.OPTIMIZED): List<Path> {
+    val executor = Executors.newFixedThreadPool(threads).asCoroutineDispatcher()
+    val wait = Semaphore(0) // Mutex(locked = true)
+    val completed = AtomicInteger(0)
+    var launched = 0
+
+    val acc = mutableListOf<Path>()
+    val mapAlias = buildAliasMap(match)
+    val mapWhere = buildWhereMap(where, mapAlias)
+    val queue = initializeQueue(g, from, to)
+
+    runBlocking {
+        while (true) {
+            if (queue.isEmpty()) {
+>>>>>>> feat-tssingletable
                 if (completed.get() < launched) {
                     wait.acquire()
                 } else {
                     break
                 }
             } else {
+<<<<<<< HEAD
                 val curElem = mutex.withLock { priorityQueue.removeAt(0) } // priorityQueue.poll()
                 val step: IStep? = match[curElem.index] // get the current step
                 val alias: String? = step?.alias // get the alias (if any)
@@ -536,12 +708,63 @@ fun search(g: Graph, match: List<Step?>, where: List<Compare> = emptyList(), fro
                                 val n = g.getNode(if (step is EdgeStep && step.direction === Direction.IN) { r.fromN } else { r.toN })
                                 mutex.withLock { priorityQueue.add(ExploredPath(n, curElem.index + 1, curPath, from, to, LOWPRIORITY)) }
                             }
+=======
+                val curElem = queue.poll()// .removeAt(0)
+                if (!matchesStep(curElem, match, by, timeaware, mapAlias, mapWhere, mode)) continue
+                val (newFrom, newTo, curPath) = updatePath(curElem)
+                if (isCompletePath(curPath, match)) {
+                    acc.add(Path(curPath, newFrom, newTo))
+                } else {
+                    if (curElem.index % 2 == 0) { // is node
+                        val toAdd = expandNode(curElem, curPath, newFrom, newTo, match)
+                        queue.addAll(toAdd)
+                    } else { // is edge...
+                        val r = (curElem.e as R)
+                        if (curElem.e.label.name == HasTS) { // ... to time series
+                            launched++
+                            launch(executor) {
+                                val pushDownBy: List<Aggregate>
+                                val pushDownFilter: List<Filter>
+                                val isGroupBy: Boolean
+                                if (mode == QueryMode.NAIVE) {
+                                    pushDownBy = emptyList()
+                                    pushDownFilter = emptyList()
+                                    isGroupBy = false
+                                } else {
+                                    pushDownBy = pushDownBy(curElem.index, by, match)
+                                    pushDownFilter = pushDownFilters(curElem.index, curPath, newFrom, newTo, match, mapAlias, mapWhere)
+                                    isGroupBy = by.isNotEmpty()
+                                }
+                                try {
+                                    val res = g.getTSM()
+                                        .getTS(r.toN, mode = TsMode.READ)
+                                        .getValues(pushDownBy, pushDownFilter, isGroupBy) // push down the filters from the next step
+                                        .map { ExploredPath(it, curElem.index + 1, curPath, newFrom, newTo) }
+                                    queue.addAll(res)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                } finally {
+                                    completed.incrementAndGet()
+                                    wait.release()
+                                }
+                            }
+                        } else { // ... or to graph node
+                            val step = match[curElem.index]
+                            val n = g.getNode(if (step is EdgeStep && step.direction === Direction.IN) { r.fromN } else { r.toN })
+                            queue.add(ExploredPath(n, curElem.index + 1, curPath, newFrom, newTo))
+>>>>>>> feat-tssingletable
                         }
                     }
                 }
             }
+<<<<<<< HEAD
 
         }
     }
+=======
+        }
+    }
+
+>>>>>>> feat-tssingletable
     return acc
 }
