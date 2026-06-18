@@ -50,7 +50,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.17")
     implementation("org.yaml:snakeyaml:2.6")
     implementation("org.postgresql:postgresql:42.7.3")
-    implementation("org.neo4j.driver:neo4j-java-driver-slim:4.4.21")
+    implementation("org.neo4j.driver:neo4j-java-driver-slim:4.4.24")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
