@@ -49,7 +49,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.slf4j:slf4j-simple:2.0.17")
     implementation("org.yaml:snakeyaml:2.6")
-    implementation("org.postgresql:postgresql:42.7.3")
+    implementation("org.postgresql:postgresql:42.7.11")
     implementation("org.neo4j.driver:neo4j-java-driver-slim:4.4.24")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
