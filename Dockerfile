@@ -1,7 +1,7 @@
 <<<<<<< HEAD
-FROM gradle:9.5-jdk17
+FROM gradle:9.6-jdk17
 =======
-FROM gradle:9.5-jdk17
+FROM gradle:9.6-jdk17
 >>>>>>> feat-tssingletable
 
 LABEL authors="manuele.pasini2"
