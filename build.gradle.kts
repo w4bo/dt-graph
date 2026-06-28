@@ -53,7 +53,7 @@ dependencies {
     implementation("org.neo4j.driver:neo4j-java-driver-slim:4.4.26")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation(platform("org.junit:junit-bom:6.1.0"))
+    testImplementation(platform("org.junit:junit-bom:6.1.1"))
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
