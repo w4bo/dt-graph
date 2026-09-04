@@ -47,7 +47,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.2")
     implementation("com.fasterxml.jackson.core:jackson-core:2.22.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-    implementation("org.slf4j:slf4j-simple:2.0.18")
+    implementation("org.slf4j:slf4j-simple:2.0.19")
     implementation("org.yaml:snakeyaml:2.7")
     implementation("org.postgresql:postgresql:42.7.13")
     implementation("org.neo4j.driver:neo4j-java-driver-slim:4.4.27")
