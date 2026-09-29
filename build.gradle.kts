@@ -38,7 +38,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    implementation("org.apache.commons:commons-lang3:3.20.0")
+    implementation("org.apache.commons:commons-lang3:3.21.0")
     implementation("org.rocksdb:rocksdbjni:10.10.1.1")
     implementation("org.json:json:20250107")
     implementation("org.locationtech.jts:jts-core:1.20.0")
